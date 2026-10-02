@@ -52,15 +52,16 @@ export interface Idoneo {
 }
 
 export interface SignatureLayoutOptions {
+  enabled?: boolean;
   alignment?: 'column-left' | 'center' | 'column-right';
   columnOffsetPercent?: number; // e.g. 58 (58% of page width, matching Image 2)
   signatureBlankLines?: number; // e.g. 2, 3 or 4 blank lines for hand signature
   useTwoColumnTable?: boolean; // true by default: creates perfectly balanced 2-column signature layout
   clientSignatureName?: string; // e.g. "GUSTAVO JOSE ACOSTA MUÑOZ"
-  clientSignatureDoc?: string; // e.g. "PASAPORTE No. 192629016"
-  lawyerSignatureTitle?: string; // e.g. "LCDO. ANTONY NATHANAEL TALLA COPRIS"
-  lawyerSignatureCedula?: string; // e.g. "CÉDULA NO. 8-849-2485"
-  lawyerSignatureIdoneidad?: string; // e.g. "IDONEIDAD 30553"
+  clientSignatureDoc?: string; // e.g. "PASAPORTE No. TEST-001"
+  lawyerSignatureTitle?: string; // e.g. "LETRADO DESIGNADO"
+  lawyerSignatureCedula?: string; // e.g. "CÉDULA NO. TEST-002"
+  lawyerSignatureIdoneidad?: string; // e.g. "IDONEIDAD TEST"
 }
 
 export interface PlaceholderDef {
@@ -103,6 +104,7 @@ export interface GeneratedDocument {
   fileSizeFormatted: string;
   dataSnapshot: Record<string, string>;
   fileBase64?: string; // Optional stored generated docx
+  signatureOptions?: SignatureLayoutOptions;
 }
 
 export interface ExtractionResult {

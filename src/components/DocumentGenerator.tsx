@@ -29,7 +29,8 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Client, Template, GeneratedDocument, PlaceholderDef, Idoneo, SignatureLayoutOptions } from '../types';
-import { generateAndDownloadDocx, determineSexAgeCategory } from '../services/docxService';
+import { generateAndDownloadDocx, determineSexAgeCategory, buildComprehensiveReplacementMap } from '../services/docxService';
+import { fieldDefault, documentTypeLabel, canonicalField } from '../services/fieldMapping';
 import { saveDocumentLog } from '../services/storageService';
 import { IDONEOS, DEFAULT_IDONEO, getIdoneoByName } from '../data/idoneos';
 
@@ -52,9 +53,14 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   onDocumentGenerated,
   onOpenTemplatesTab,
 }) => {
+  const templateBaseId = (template?: Template | null) => {
+    if (!template) return '';
+    return templates.find(item => item.id === template.id || template.id === `${item.id}-${getIdoneoByName(template.idoneo).id}`)?.id || template.id;
+  };
+
   const [selectedClientId, setSelectedClientId] = useState<string>(initialClient?.id || (clients[0]?.id ?? ''));
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
-    initialTemplate?.id || (templates[0]?.id ?? '')
+    templateBaseId(initialTemplate) || (templates[0]?.id ?? '')
   );
 
   // Selected Idoneo state
@@ -78,6 +84,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   
   // Find active template (checking direct ID or base template ID)
   const activeTemplate =
+    (templateBaseId(initialTemplate) === selectedTemplateId ? initialTemplate : null) ||
     templates.find((t) => t.id === selectedTemplateId) ||
     templates.find((t) => selectedTemplateId.startsWith(t.id)) ||
     initialTemplate ||
@@ -88,6 +95,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
 
   // Signature positioning and alignment state (Antes de generar)
   const [sigAlignment, setSigAlignment] = useState<'column-left' | 'center' | 'column-right'>('column-left');
+  const [sigEnabled, setSigEnabled] = useState(false);
   const [sigColumnOffset, setSigColumnOffset] = useState<number>(56); // 56% matching Image 2
   const [sigBlankLines, setSigBlankLines] = useState<number>(2);
   const [sigUseTable, setSigUseTable] = useState<boolean>(true);
@@ -104,12 +112,12 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   useEffect(() => {
     if (activeClient) {
       setCustomSigClientName(activeClient.fullName.toUpperCase());
-      const docLabel = activeClient.docType === 'cedula' ? 'CÉDULA No. ' : 'PASAPORTE No. ';
+      const docLabel = `${documentTypeLabel(activeClient.docType).toUpperCase()} No. `;
       const docVal = (activeClient.passportNumber || activeClient.personalNumber || '').toUpperCase();
       setCustomSigClientDoc(docVal ? `${docLabel}${docVal}` : 'PASAPORTE No. ');
     } else {
-      setCustomSigClientName('GUSTAVO JOSE ACOSTA MUÑOZ');
-      setCustomSigClientDoc('PASAPORTE No. 192629016');
+      setCustomSigClientName('');
+      setCustomSigClientDoc('');
     }
   }, [activeClient]);
 
@@ -117,8 +125,8 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   useEffect(() => {
     if (activeIdoneo) {
       setCustomSigLawyerTitle(activeIdoneo.formalTitle.toUpperCase());
-      setCustomSigLawyerCedula(activeIdoneo.cedula ? `CÉDULA NO. ${activeIdoneo.cedula.toUpperCase()}` : 'CÉDULA NO. 8-849-2485');
-      setCustomSigLawyerIdoneidad(activeIdoneo.idoneidad ? `IDONEIDAD ${activeIdoneo.idoneidad.toUpperCase()}` : 'IDONEIDAD 30553');
+      setCustomSigLawyerCedula(activeIdoneo.cedula ? `CÉDULA NO. ${activeIdoneo.cedula.toUpperCase()}` : '');
+      setCustomSigLawyerIdoneidad(activeIdoneo.idoneidad ? `IDONEIDAD ${activeIdoneo.idoneidad.toUpperCase()}` : '');
     }
   }, [activeIdoneo]);
 
@@ -133,7 +141,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
 
   const previewClientDoc = React.useMemo(() => {
     if (simulatedNameLength === 'short') return 'PASAPORTE No. P8829104';
-    return customSigClientDoc || (activeClient?.passportNumber ? `PASAPORTE No. ${activeClient.passportNumber}` : 'PASAPORTE No. 192629016');
+    return customSigClientDoc || (activeClient?.passportNumber ? `PASAPORTE No. ${activeClient.passportNumber}` : '[número pendiente]');
   }, [simulatedNameLength, customSigClientDoc, activeClient]);
 
   // Sync selected client if prop changes
@@ -146,7 +154,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   // Sync selected template if prop changes
   useEffect(() => {
     if (initialTemplate?.id) {
-      setSelectedTemplateId(initialTemplate.id);
+      setSelectedTemplateId(templateBaseId(initialTemplate));
       if (initialTemplate.idoneo) {
         setSelectedIdoneoId(getIdoneoByName(initialTemplate.idoneo).id);
       }
@@ -160,100 +168,9 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
     const initialValues: Record<string, string> = {};
 
     activeTemplate.placeholders.forEach((placeholderKey) => {
-      const cleanKey = placeholderKey.toLowerCase();
-
-      // Find matching definition default if present
       const def = activeTemplate.placeholderDefs?.find((d) => d.key === placeholderKey);
-      let val = def?.defaultValue || '';
-
-      // Idóneo specific overrides
-      if (
-        cleanKey.includes('abogado_nombre') ||
-        cleanKey.includes('nombre_abogado') ||
-        cleanKey.includes('letrado_nombre') ||
-        cleanKey.includes('abogado') ||
-        cleanKey.includes('idoneo') ||
-        cleanKey.includes('idóneo')
-      ) {
-        val = activeIdoneo.formalTitle;
-      } else if (
-        cleanKey.includes('abogado_colegiado') ||
-        cleanKey.includes('colegiado') ||
-        cleanKey.includes('n_colegiado')
-      ) {
-        val = activeIdoneo.colegiado;
-      }
-
-      if (activeClient) {
-        if (cleanKey.includes('cedula/pasaporte') || cleanKey.includes('cédula/pasaporte') || cleanKey.includes('cedula_pasaporte') || cleanKey.includes('tipo_documento') || cleanKey.includes('tipo de documento')) {
-          val = activeClient.docType === 'cedula' ? 'Cédula' : activeClient.docType === 'dni' ? 'DNI' : 'Pasaporte';
-        } else if (cleanKey.includes('nombre_completo') || cleanKey.includes('fullname') || cleanKey === 'cliente' || cleanKey === 'nombre' || cleanKey === '(nombre)' || cleanKey.includes('nombre')) {
-          if (!cleanKey.includes('abogado') && !cleanKey.includes('letrado') && !cleanKey.includes('idoneo')) {
-            val = activeClient.fullName || `${activeClient.firstName} ${activeClient.lastName}`.trim();
-          }
-        } else if (cleanKey.includes('nombres') || cleanKey.includes('firstname')) {
-          val = activeClient.firstName || '';
-        } else if (cleanKey.includes('apellidos') || cleanKey.includes('lastname')) {
-          val = activeClient.lastName || '';
-        } else if (
-          cleanKey.includes('identidad') ||
-          cleanKey.includes('numero de identidad') ||
-          cleanKey.includes('número de identidad') ||
-          cleanKey.includes('numero_identidad') ||
-          cleanKey.includes('pasaporte') ||
-          cleanKey.includes('número de pasaporte') ||
-          cleanKey.includes('numero de pasaporte') ||
-          cleanKey.includes('cedula') ||
-          cleanKey.includes('cédula') ||
-          cleanKey.includes('documento') ||
-          cleanKey.includes('passport') ||
-          cleanKey.includes('dni') ||
-          cleanKey.includes('nie')
-        ) {
-          val = activeClient.passportNumber || activeClient.personalNumber || '';
-        } else if (cleanKey.includes('nacionalidad') || cleanKey.includes('nationality')) {
-          val = activeClient.nationality || '';
-        } else if (cleanKey.includes('pais_emisor') || cleanKey.includes('pais') || cleanKey.includes('país')) {
-          val = activeClient.issuingCountry || activeClient.nationality || '';
-        } else if (cleanKey.includes('fecha_nacimiento') || cleanKey.includes('nacimiento') || cleanKey.includes('birth')) {
-          val = activeClient.birthDate || '';
-        } else if (cleanKey.includes('vencimiento') || cleanKey.includes('caducidad') || cleanKey.includes('expiry')) {
-          val = activeClient.expiryDate || '';
-        } else if (
-          cleanKey.includes('sexo/edad') ||
-          cleanKey.includes('sexo_edad') ||
-          cleanKey.includes('sexo-edad') ||
-          cleanKey.includes('edad/sexo') ||
-          cleanKey.includes('condicion') ||
-          cleanKey.includes('condición') ||
-          cleanKey.includes('sexo') ||
-          cleanKey.includes('genero') ||
-          cleanKey.includes('gender')
-        ) {
-          val = activeClient.sexAgeCategory || determineSexAgeCategory(activeClient.birthDate, activeClient.sex).category;
-        } else if (cleanKey.includes('telefono') || cleanKey.includes('phone') || cleanKey.includes('movil')) {
-          val = activeClient.phone || '';
-        } else if (cleanKey.includes('email') || cleanKey.includes('correo')) {
-          val = activeClient.email || '';
-        } else if (cleanKey.includes('direccion') || cleanKey.includes('dirección') || cleanKey.includes('domicilio') || cleanKey.includes('address')) {
-          val = activeClient.address || '';
-        } else if (cleanKey.includes('ciudad') || cleanKey.includes('city')) {
-          val = activeClient.city || val || 'Madrid';
-        }
-      }
-
-      // Date defaults
-      if (!val && (cleanKey.includes('fecha_firma') || cleanKey.includes('fecha_solicitud') || cleanKey.includes('fecha_declaracion') || cleanKey === 'fecha')) {
-        val = new Date().toLocaleDateString('es-ES', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        });
-      }
-
-      if (!val && cleanKey.includes('ciudad')) {
-        val = 'Madrid';
-      }
+      const category = activeClient ? activeClient.sexAgeCategory || determineSexAgeCategory(activeClient.birthDate, activeClient.sex).category : '';
+      const val = fieldDefault(placeholderKey, activeClient, activeIdoneo, category) || def?.defaultValue || '';
 
       initialValues[placeholderKey] = val;
     });
@@ -281,18 +198,23 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
       return;
     }
 
+    if (isGenerating) return;
+    if (!activeClient) { setErrorMessage('Selecciona un cliente revisado antes de generar.'); return; }
+    const missing = activeTemplate.placeholders.filter(key => !formValues[key]?.trim());
+    if (missing.length) { setErrorMessage(`Completa los campos: ${missing.join(', ')}`); return; }
     setIsGenerating(true);
     setErrorMessage(null);
     setGenerationSuccess(false);
 
     try {
       const signatureOptions: SignatureLayoutOptions = {
+        enabled: sigEnabled,
         alignment: sigAlignment,
         columnOffsetPercent: sigColumnOffset,
         signatureBlankLines: sigBlankLines,
         useTwoColumnTable: sigUseTable,
-        clientSignatureName: previewClientName,
-        clientSignatureDoc: previewClientDoc,
+        clientSignatureName: customSigClientName,
+        clientSignatureDoc: customSigClientDoc,
         lawyerSignatureTitle: customSigLawyerTitle,
         lawyerSignatureCedula: customSigLawyerCedula,
         lawyerSignatureIdoneidad: customSigLawyerIdoneidad,
@@ -319,10 +241,10 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
       }
 
       const newDoc: GeneratedDocument = {
-        id: `doc-${Date.now()}`,
+        id: `doc-${crypto.randomUUID()}`,
         title: `${activeTemplate.name} - ${activeIdoneo.name} (${activeClient ? activeClient.fullName : 'Cliente'})`,
         fileName: result.fileName,
-        templateId: activeTemplate.id,
+        templateId: templateBaseId(activeTemplate),
         templateName: activeTemplate.name,
         clientId: activeClient ? activeClient.id : 'sin-cliente',
         clientName: activeClient ? activeClient.fullName : 'CLIENTE DIRECTO',
@@ -330,6 +252,13 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         generatedAt: new Date().toISOString(),
         fileSizeFormatted: result.sizeFormatted,
         dataSnapshot: { ...formValues, _idoneo: activeIdoneo.name },
+        signatureOptions,
+        fileBase64: await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result).split(',')[1]);
+          reader.onerror = () => reject(new Error('No se pudo archivar el documento.'));
+          reader.readAsDataURL(result.blob);
+        }),
       };
 
       saveDocumentLog(newDoc);
@@ -443,7 +372,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                   <strong className="text-slate-900">Nacimiento:</strong> {activeClient.birthDate || 'N/A'}
                 </span>
                 <span>
-                  <strong className="text-slate-900">Condición:</strong> {activeClient.sexAgeCategory || 'VARÓN'}
+                  <strong className="text-slate-900">Condición:</strong> {activeClient.sexAgeCategory || 'Sin verificar'}
                 </span>
               </div>
             )}
@@ -528,7 +457,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       const jsonStr = JSON.stringify(
                         {
                           tipo_documento: activeClient.docType === 'cedula' ? 'Cédula de Identidad' : 'Pasaporte',
@@ -537,7 +466,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                           nacionalidad: activeClient.nationality.toUpperCase(),
                           pais_emisor: (activeClient.issuingCountry || activeClient.nationality || '').toUpperCase(),
                           fecha_nacimiento: activeClient.birthDate || '',
-                          sexo: activeClient.sex || 'M',
+                          sexo: activeClient.sex || '',
                           condicion_juridica: (activeClient.sexAgeCategory || determineSexAgeCategory(activeClient.birthDate, activeClient.sex).category).toUpperCase(),
                           domicilio: (activeClient.address || '').toUpperCase(),
                           telefono: activeClient.phone || '',
@@ -546,7 +475,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                         null,
                         2
                       );
-                      navigator.clipboard.writeText(jsonStr);
+                      try { await navigator.clipboard.writeText(jsonStr); } catch { setErrorMessage('No se pudo copiar el JSON. Verifica los permisos del navegador.'); return; }
                       setCopiedJson(true);
                       setTimeout(() => setCopiedJson(false), 2000);
                     }}
@@ -574,7 +503,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                       nacionalidad: activeClient.nationality.toUpperCase(),
                       pais_emisor: (activeClient.issuingCountry || activeClient.nationality || '').toUpperCase(),
                       fecha_nacimiento: activeClient.birthDate || '',
-                      sexo: activeClient.sex || 'M',
+                      sexo: activeClient.sex || '',
                       condicion_juridica: (activeClient.sexAgeCategory || determineSexAgeCategory(activeClient.birthDate, activeClient.sex).category).toUpperCase(),
                       domicilio: (activeClient.address || '').toUpperCase(),
                       telefono: activeClient.phone || '',
@@ -722,6 +651,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                       onChange={(e) => handleFieldChange(placeholderKey, e.target.value)}
                       className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-semibold"
                     >
+                      <option value="">Selecciona / verifica</option>
                       {def.options.map((opt) => (
                         <option key={opt} value={opt}>
                           {opt}
@@ -743,6 +673,10 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
 
           {/* Signature Studio & Document Sheet Preview (Antes de Generar) */}
           <div className="pt-6 border-t border-slate-200">
+            <label className="flex items-center gap-2 p-3 mb-3 bg-amber-50 rounded-xl text-sm">
+              <input type="checkbox" checked={sigEnabled} onChange={e => setSigEnabled(e.target.checked)} />
+              Aplicar este bloque de firmas al Word (requiere ACEPTO PODER y OTORGO PODER en una misma línea). Sin activarlo se conserva la plantilla original.
+            </label>
             <div className="bg-slate-900 text-white rounded-2xl p-5 sm:p-7 border border-slate-800 shadow-xl mb-6">
               {/* Header */}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-800">
@@ -757,7 +691,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                       </h3>
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1">
                         <Check className="w-3 h-3" />
-                        Alineación Notarial Garantizada
+                        Simulación de firmas
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 mt-1 max-w-2xl">
@@ -1004,7 +938,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                         type="text"
                         value={customSigClientDoc}
                         onChange={(e) => setCustomSigClientDoc(e.target.value.toUpperCase())}
-                        placeholder="Ej. PASAPORTE No. 192629016"
+                        placeholder="Ej. PASAPORTE No. TEST-001"
                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white font-medium focus:ring-1 focus:ring-amber-500"
                       />
                     </div>
@@ -1028,27 +962,16 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
               <div className="mt-5 bg-slate-950/60 p-3 sm:p-5 rounded-2xl border border-slate-800">
                 <div className="text-center text-xs font-semibold text-slate-400 mb-3 flex items-center justify-center gap-2">
                   <Eye className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Vista Previa de la Hoja de Documento (Área Baja de Firmas)</span>
+                  <span>Vista de texto y simulación del bloque de firmas</span>
                 </div>
 
                 <div className="bg-white text-slate-900 rounded-xl p-6 sm:p-10 shadow-2xl border border-slate-300 font-serif relative overflow-hidden max-w-2xl mx-auto">
-                  {/* Subtle top legal header */}
-                  <div className="text-center font-sans uppercase font-extrabold tracking-widest text-slate-800 text-xs sm:text-sm mb-4 border-b border-slate-200 pb-2.5">
-                    PODER ESPECIAL DE REPRESENTACIÓN LEGAL
-                  </div>
-                  <div className="text-center font-bold text-[11px] uppercase text-slate-700 mb-4 tracking-wide font-sans">
-                    HONORABLE SEÑOR DIRECTOR GENERAL DEL SERVICIO NACIONAL DE MIGRACIÓN:
-                  </div>
-
-                  {/* Main legal paragraph */}
-                  <p className="text-[11px] sm:text-xs leading-relaxed text-justify mb-3 text-slate-800">
-                    Yo, <strong className="font-bold underline decoration-amber-500/50 uppercase">{previewClientName}</strong>, {activeClient?.sexAgeCategory || 'varón, mayor de edad'}, de nacionalidad <span className="font-semibold">{formValues['(nacionalidad)'] || activeClient?.nationality || 'venezolana'}</span>, con {previewClientDoc}, por este medio otorgo poder especial, amplio y suficiente al letrado <strong className="font-bold">{customSigLawyerTitle}</strong>, con {customSigLawyerCedula}, {customSigLawyerIdoneidad}, con oficinas ubicadas en la Calle 50 &amp; Elvira Méndez, Edificio El Ejecutivo, Piso 5 Oficina 2, tel. 830-5220, lugar en donde recibe notificaciones personales y judiciales, para que en mi nombre y representación tramite los trámites pertinentes ante esta honorable institución.
-                  </p>
-
-                  <p className="text-[11px] sm:text-xs leading-relaxed text-justify mb-6 text-slate-800">
-                    El letrado queda debidamente facultado para recibir, desistir, sustituir, revocar, renunciar, reasumir y cuantas acciones considere necesarias para el mejor ejercicio del presente poder.
-                    <br />
-                    <span className="block mt-2 italic text-slate-600 font-sans text-[11px]">Del señor Director,</span>
+                  <div className="text-center font-sans font-bold mb-4">Texto de la plantilla seleccionada · {activeTemplate.name}</div>
+                  <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-800">
+                    {activeTemplate.samplePreviewText ? activeTemplate.samplePreviewText.replace(/\{\{[^{}]+\}\}|\{[^{}]+\}|\([^()]+\)|\[[^\[\]]+\]/g, marker => {
+                      const map = buildComprehensiveReplacementMap(formValues, activeClient);
+                      return map[marker] ?? Object.entries(map).find(([key]) => canonicalField(key) === canonicalField(marker))?.[1] ?? marker;
+                    }) : 'Vista de texto no disponible para esta plantilla anterior. El documento Word conserva el contenido y formato del archivo cargado.'}
                   </p>
 
                   {/* THE SIGNATURE AREA - EXACT REPLICA OF IMAGE 2 */}

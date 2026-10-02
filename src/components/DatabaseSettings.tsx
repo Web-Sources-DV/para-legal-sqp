@@ -85,7 +85,9 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
 
   const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+    if (!confirm('Restaurar este respaldo reemplazará los datos incluidos. Exporta primero tus datos actuales. ¿Continuar?')) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -100,6 +102,7 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
         }
       }
     };
+    reader.onerror = () => setFeedbackMessage({ type: 'error', text: 'No se pudo leer el respaldo.' });
     reader.readAsText(file);
   };
 
@@ -290,15 +293,15 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
               <FileCode className="w-5 h-5 text-amber-700" />
             </div>
             <h4 className="font-bold text-slate-900 text-sm mb-1">
-              Descargar App en Archivo HTML
+              Descargar versión HTML anterior
             </h4>
             <p className="text-xs text-slate-600 leading-relaxed mb-4">
-              Obtén toda la aplicación encapsulada en el archivo <code className="font-mono font-bold text-amber-900">sqp-para-legal.html</code> para abrirla con doble clic en cualquier equipo sin conexión a internet ni servidor.
+              Descarga la versión anterior e independiente en <code className="font-mono font-bold text-amber-900">sqp-para-legal.html</code>. No incorpora las correcciones de esta app y requiere conexión para cargar sus recursos externos.
             </p>
           </div>
 
           <a
-            href="/sqp-para-legal.html"
+            href="./sqp-para-legal.html"
             download="sqp-para-legal.html"
             className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs transition-colors shadow-sm"
           >

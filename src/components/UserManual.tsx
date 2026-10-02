@@ -40,8 +40,8 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleCopy = (tag: string) => {
-    navigator.clipboard.writeText(tag);
+  const handleCopy = async (tag: string) => {
+    try { await navigator.clipboard.writeText(tag); } catch { alert('No se pudo copiar. Selecciona el marcador y cópialo manualmente.'); return; }
     setCopiedTag(tag);
     setTimeout(() => setCopiedTag(null), 2000);
   };

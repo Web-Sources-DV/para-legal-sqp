@@ -1,6 +1,5 @@
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
 
@@ -188,15 +187,18 @@ async function startServer() {
     try {
       const { imageBase64, mimeType = 'image/jpeg' } = req.body;
 
-      if (!imageBase64) {
+      if (typeof imageBase64 !== 'string' || !imageBase64) {
         return res.status(400).json({
           success: false,
           error: 'No se proporcionó la imagen del documento o pasaporte.',
         });
       }
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) return res.status(400).json({ success: false, error: 'Formato de imagen no compatible.' });
 
       // Clean base64 string if it contains data URI prefix
       const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+]+;base64,/, '');
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(cleanBase64)) return res.status(400).json({ success: false, error: 'La imagen no contiene datos base64 válidos.' });
+      if (!process.env.GEMINI_API_KEY) return res.status(503).json({ success: false, error: 'OCR asistido no configurado. Usa el motor OCR local.' });
 
       const ai = getGeminiClient();
 
@@ -222,9 +224,9 @@ DIRECTIVAS ESTRICTAS DE OCR:
       try {
         parsedData = JSON.parse(responseText);
       } catch (parseErr) {
-        console.error('Error parsing JSON from Gemini response:', responseText);
-        parsedData = {};
+        return res.status(502).json({ success: false, error: 'La lectura no produjo un JSON válido. Reintenta o usa OCR local.' });
       }
+      if (!parsedData || typeof parsedData !== 'object' || Array.isArray(parsedData) || !Object.values(parsedData).some(value => typeof value === 'string' && value.trim())) return res.status(502).json({ success: false, error: 'No se pudieron leer datos de identidad.' });
 
       return res.json({
         success: true,
@@ -247,6 +249,11 @@ DIRECTIVAS ESTRICTAS DE OCR:
   // API Routes: OCR Passport, Cédula & ID Data Extraction
   app.post('/api/extract-passport', handleOcrExtraction);
   app.post('/api/ocr-extract', handleOcrExtraction);
+  app.use('/api', (_req, res, next) => {
+    // These download endpoints are handled below.
+    if (_req.path === '/download-html-app') return next();
+    res.status(404).json({ success: false, error: 'Acción no disponible.' });
+  });
 
   // Serve and download standalone HTML app
   app.get('/sqp-para-legal.html', (_req, res) => {
@@ -258,6 +265,7 @@ DIRECTIVAS ESTRICTAS DE OCR:
 
   // Vite development middleware or static production serving
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

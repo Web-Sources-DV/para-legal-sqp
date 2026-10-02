@@ -1,6 +1,7 @@
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import saveAs from 'file-saver';
+import { FIELD_ALIASES, canonicalField, fieldDefault, documentTypeLabel } from './fieldMapping';
 import { Template, PlaceholderDef, Client, SignatureLayoutOptions } from '../types';
 
 /**
@@ -125,6 +126,7 @@ export async function parseDocxFile(
   placeholders: string[];
   placeholderDefs: PlaceholderDef[];
   fileBase64: string;
+  previewText: string;
 }> {
   const uint8 = new Uint8Array(fileBuffer);
   const zip = new PizZip(uint8);
@@ -209,7 +211,7 @@ export async function parseDocxFile(
       }
 
       // 3. Single Braces: {tag}
-      const sglMatches = text.match(/\{([^{}]+)\}/g);
+      const sglMatches = text.match(/(?<!\{)\{([^{}]+)\}(?!\})/g);
       if (sglMatches) {
         for (const raw of sglMatches) {
           const inner = raw.slice(1, -1).trim();
@@ -231,31 +233,10 @@ export async function parseDocxFile(
       }
     }
 
-    // Also do fallback check on whole cleaned XML for split words
-    const strippedXml = xmlContent.replace(/<[^>]+>/g, '');
-    for (const kw of coreKeywords) {
-      if (strippedXml.toLowerCase().includes(`(${kw.toLowerCase()})`)) {
-        rawTagsSet.add(`(${kw})`);
-      }
-      if (strippedXml.toLowerCase().includes(`{{${kw.toLowerCase()}}}`)) {
-        rawTagsSet.add(`{{${kw}}}`);
-      }
-      if (strippedXml.toLowerCase().includes(`{${kw.toLowerCase()}}`)) {
-        rawTagsSet.add(`{${kw}}`);
-      }
-      if (strippedXml.toLowerCase().includes(`[${kw.toLowerCase()}]`)) {
-        rawTagsSet.add(`[${kw}]`);
-      }
-    }
   }
-
-  // Ensure mandatory 4 fields are always easily recognizable if present in any form
+  if (!zip.file('word/document.xml')) throw new Error('El archivo no es una plantilla Word válida.');
   const placeholders = Array.from(rawTagsSet);
-
-  // If no placeholders detected at all, suggest the standard default 4 placeholders
-  if (placeholders.length === 0) {
-    placeholders.push('(nombre)', '(numero de identidad)', '(nacionalidad)', '(cedula/pasaporte)');
-  }
+  if (!placeholders.length) throw new Error('La plantilla no tiene marcadores. Añade campos como {{nombre}} o {{numero_identidad}} en Word.');
 
   const placeholderDefs: PlaceholderDef[] = placeholders.map((key) => {
     return inferPlaceholderDef(key);
@@ -267,6 +248,7 @@ export async function parseDocxFile(
     placeholders,
     placeholderDefs,
     fileBase64,
+    previewText: extractParagraphsFromWordXml(zip.file('word/document.xml')!.asText()).join('\n'),
   };
 }
 
@@ -305,6 +287,10 @@ export function inferPlaceholderDef(rawKey: string): PlaceholderDef {
   let defaultValue = '';
   let options: string[] | undefined = undefined;
 
+  if (canonicalField(rawKey) === 'docType') return { key: rawKey, label: 'Tipo de documento', category: 'pasaporte', type: 'select', options: ['Pasaporte', 'Cédula', 'DNI', 'Carnet de Extranjería / NIE', 'Documento de identidad'] };
+  const field = canonicalField(rawKey);
+  const lawyerLabels = { lawyerName: 'Nombre del letrado', lawyerCedula: 'Cédula del letrado', lawyerIdoneidad: 'Idoneidad del letrado', lawyerColegiado: 'Número de colegiado' };
+  if (field in lawyerLabels) return { key: rawKey, label: lawyerLabels[field], category: 'legal', type: 'text' };
   // 1. Nombre / Nombre Completo
   if (
     cleanKey === 'nombre' ||
@@ -388,13 +374,14 @@ export function inferPlaceholderDef(rawKey: string): PlaceholderDef {
   else if (cleanKey.includes('fecha') || cleanKey.includes('date')) {
     label = label || 'Fecha';
     category = 'fechas';
-    defaultValue = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    if (field === 'date') defaultValue = new Date().toLocaleDateString('es-PA', { day: 'numeric', month: 'long', year: 'numeric' });
+    else type = 'date';
   }
   // 11. Ciudad
   else if (cleanKey.includes('ciudad') || cleanKey.includes('city') || cleanKey.includes('lugar')) {
     label = label || 'Ciudad';
     category = 'fechas';
-    defaultValue = 'Madrid';
+    defaultValue = '';
   }
   // 12. Sexo / Edad (Condición Legal: Varón, Mujer, Joven, Menor)
   else if (
@@ -410,7 +397,7 @@ export function inferPlaceholderDef(rawKey: string): PlaceholderDef {
     category = 'pasaporte';
     type = 'select';
     options = ['VARÓN', 'MUJER', 'JOVEN', 'MENOR'];
-    defaultValue = 'VARÓN';
+    defaultValue = '';
   }
   // 13. Sexo simple / Género (Varón, Mujer, Joven, Menor)
   else if (cleanKey.includes('sexo') || cleanKey.includes('genero') || cleanKey.includes('gender')) {
@@ -418,7 +405,7 @@ export function inferPlaceholderDef(rawKey: string): PlaceholderDef {
     category = 'pasaporte';
     type = 'select';
     options = ['VARÓN', 'MUJER', 'JOVEN', 'MENOR'];
-    defaultValue = 'VARÓN';
+    defaultValue = '';
   }
   // 14. Detalles legales
   else if (cleanKey.includes('motivo') || cleanKey.includes('facultades') || cleanKey.includes('objeto') || cleanKey.includes('descripcion') || cleanKey.includes('clausula')) {
@@ -497,7 +484,8 @@ export function determineSexAgeCategory(
   }
 
   const age = calculateAgeFromBirthDate(birthDate);
-  const normalizedSex = (sex || 'M').trim().toUpperCase();
+  const normalizedSex = (sex || '').trim().toUpperCase();
+  if (!['M', 'F', 'VARON', 'VARÓN', 'MUJER', 'MASCULINO', 'FEMENINO'].includes(normalizedSex)) return { category: '', age, explanation: 'Verifica la condición antes de generar.' };
   const isFemale = normalizedSex === 'F' || normalizedSex.startsWith('FEM') || normalizedSex === 'MUJER';
 
   if (age !== null) {
@@ -598,549 +586,26 @@ export function buildComprehensiveReplacementMap(
   client?: Client | null
 ): Record<string, string> {
   const map: Record<string, string> = {};
-
-  // Extract base values - formatted according to uppercase/lowercase rules
-  const rawFullName = (
-    data['(nombre)'] ||
-    data['nombre'] ||
-    data['nombre_completo'] ||
-    data['(nombre_completo)'] ||
-    data['nombre completo'] ||
-    data['(nombre completo)'] ||
-    data['{{nombre}}'] ||
-    data['{{nombre_completo}}'] ||
-    client?.fullName ||
-    (client ? `${client.firstName} ${client.lastName}` : '') ||
-    'CLIENTE IDENTIFICADO'
-  ).toString().trim();
-  const fullName = rawFullName.toUpperCase();
-
-  const rawPassportNumber = (
-    data['(numero de identidad)'] ||
-    data['(número de identidad)'] ||
-    data['numero de identidad'] ||
-    data['número de identidad'] ||
-    data['(numero_identidad)'] ||
-    data['(número_identidad)'] ||
-    data['numero_identidad'] ||
-    data['número_identidad'] ||
-    data['(identidad)'] ||
-    data['identidad'] ||
-    data['(número de pasaporte)'] ||
-    data['(numero de pasaporte)'] ||
-    data['número de pasaporte'] ||
-    data['numero de pasaporte'] ||
-    data['numero_pasaporte'] ||
-    data['(numero_pasaporte)'] ||
-    data['(pasaporte)'] ||
-    data['pasaporte'] ||
-    data['{{numero de identidad}}'] ||
-    data['{{número de identidad}}'] ||
-    data['{{numero_identidad}}'] ||
-    data['{{numero_pasaporte}}'] ||
-    data['{{pasaporte}}'] ||
-    client?.passportNumber ||
-    client?.personalNumber ||
-    ''
-  ).toString().trim();
-  const passportNumber = rawPassportNumber.toUpperCase();
-
-  // EXCEPTION: Nationality is maintained in lowercase (minúsculas)
-  const rawNationality = (
-    data['(nacionalidad)'] ||
-    data['nacionalidad'] ||
-    data['{{nacionalidad}}'] ||
-    client?.nationality ||
-    ''
-  ).toString().trim();
-  const nationality = rawNationality.toLowerCase();
-
-  // Document type: "Cédula" or "Pasaporte"
-  let docTypeVal = (
-    data['(cedula/pasaporte)'] ||
-    data['(cédula/pasaporte)'] ||
-    data['cedula/pasaporte'] ||
-    data['cédula/pasaporte'] ||
-    data['cedula_pasaporte'] ||
-    data['(cedula_pasaporte)'] ||
-    data['tipo_documento'] ||
-    data['(tipo_documento)'] ||
-    data['tipo de documento'] ||
-    data['{{cedula/pasaporte}}'] ||
-    data['{{tipo_documento}}'] ||
-    (client?.docType === 'cedula' ? 'Cédula' : 'Pasaporte')
-  ).toString().trim();
-
-  if (!docTypeVal) {
-    docTypeVal = client?.docType === 'cedula' ? 'Cédula' : 'Pasaporte';
+  const values: Record<string, string> = {};
+  const category = client?.sexAgeCategory || determineSexAgeCategory(client?.birthDate, client?.sex).category;
+  for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
+    values[field] = fieldDefault(aliases[0], client, undefined, category);
   }
-  docTypeVal = docTypeVal.toUpperCase();
-
-  const rawBirthDate = (
-    data['(fecha_nacimiento)'] ||
-    data['fecha_nacimiento'] ||
-    data['(fecha de nacimiento)'] ||
-    data['fecha de nacimiento'] ||
-    client?.birthDate ||
-    ''
-  ).toString().trim();
-  const birthDate = rawBirthDate.toUpperCase();
-
-  const rawIssuingCountry = (
-    data['(pais_emisor)'] ||
-    data['pais_emisor'] ||
-    data['(país emisor)'] ||
-    data['país emisor'] ||
-    client?.issuingCountry ||
-    client?.nationality ||
-    ''
-  ).toString().trim();
-  const issuingCountry = rawIssuingCountry.toUpperCase();
-
-  const rawAddress = (
-    data['(direccion)'] ||
-    data['direccion'] ||
-    data['(dirección)'] ||
-    data['dirección'] ||
-    data['(domicilio)'] ||
-    data['domicilio'] ||
-    client?.address ||
-    ''
-  ).toString().trim();
-  const address = rawAddress.toUpperCase();
-
-  const rawPhone = (
-    data['(telefono)'] ||
-    data['telefono'] ||
-    data['(teléfono)'] ||
-    data['teléfono'] ||
-    client?.phone ||
-    ''
-  ).toString().trim();
-  const phone = rawPhone.toUpperCase();
-
-  const rawEmail = (
-    data['(email)'] ||
-    data['email'] ||
-    data['(correo)'] ||
-    data['correo'] ||
-    client?.email ||
-    ''
-  ).toString().trim();
-  const email = rawEmail.toUpperCase();
-
-  const rawCity = (
-    data['(ciudad_firma)'] ||
-    data['ciudad_firma'] ||
-    data['(ciudad)'] ||
-    data['ciudad'] ||
-    client?.city ||
-    'Madrid'
-  ).toString().trim();
-  const city = rawCity.toUpperCase();
-
-  const formattedToday = new Date().toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-
-  const rawDateVal = (
-    data['(fecha_firma)'] ||
-    data['fecha_firma'] ||
-    data['(fecha)'] ||
-    data['fecha'] ||
-    formattedToday
-  ).toString().trim();
-  const dateVal = rawDateVal.toUpperCase();
-
-  // 5. (sexo) y (sexo/edad) / Condición Legal: VARÓN, MUJER, JOVEN o MENOR (nunca masculino/femenino)
-  let explicitSexAge = (
-    data['(sexo/edad)'] ||
-    data['(sexo / edad)'] ||
-    data['(SEXO/EDAD)'] ||
-    data['(SEXO / EDAD)'] ||
-    data['(Sexo/Edad)'] ||
-    data['(sexo_edad)'] ||
-    data['(SEXO_EDAD)'] ||
-    data['(sexo-edad)'] ||
-    data['(condicion)'] ||
-    data['(condición)'] ||
-    data['(CONDICION)'] ||
-    data['(CONDICIÓN)'] ||
-    data['(edad/sexo)'] ||
-    data['(EDAD/SEXO)'] ||
-    data['sexo/edad'] ||
-    data['sexo / edad'] ||
-    data['sexo_edad'] ||
-    data['condicion'] ||
-    data['condición'] ||
-    data['{{sexo/edad}}'] ||
-    data['{{sexo_edad}}'] ||
-    data['{{condicion}}'] ||
-    data['[sexo/edad]'] ||
-    data['(sexo)'] ||
-    data['sexo'] ||
-    data['(genero)'] ||
-    data['genero'] ||
-    client?.sexAgeCategory ||
-    ''
-  ).toString().trim();
-
-  let normalizedSexCategory = '';
-  const upperExplicit = explicitSexAge.toUpperCase();
-  if (['VARÓN', 'MUJER', 'JOVEN', 'MENOR', 'VARON'].includes(upperExplicit)) {
-    normalizedSexCategory = upperExplicit === 'VARON' ? 'VARÓN' : upperExplicit;
-  } else {
-    const determined = determineSexAgeCategory(
-      client?.birthDate || data['(fecha_nacimiento)'] || data['fecha_nacimiento'],
-      client?.sex || data['(sexo)'] || data['sexo']
-    );
-    normalizedSexCategory = determined.category;
+  // Explicit edits always win, including an intentionally empty value.
+  for (const [key, value] of Object.entries(data)) {
+    if (!key.startsWith('_') && value != null) values[canonicalField(key)] = String(value).trim();
   }
-  const sexAgeVal = normalizedSexCategory.toUpperCase();
-  const sex = sexAgeVal; // En (sexo) se coloca estrictamente VARÓN, MUJER, JOVEN o MENOR
-
-  // Populate all user-defined values from data with casing rules applied
-  Object.keys(data).forEach((key) => {
-    if (data[key] !== undefined && data[key] !== null) {
-      const isNat = isNationalityKey(key);
-      const val = isNat
-        ? String(data[key]).trim().toLowerCase()
-        : String(data[key]).trim().toUpperCase();
-      const bareKey = key.replace(/^[\({<\[]+|[\)}>\]]+$/g, '').trim();
-      if (bareKey) {
-        map[`(${bareKey})`] = val;
-        map[`(${bareKey.toLowerCase()})`] = val;
-        map[`(${bareKey.toUpperCase()})`] = val;
-        map[`{{${bareKey}}}`] = val;
-        map[`{${bareKey}}`] = val;
-        map[`[${bareKey}]`] = val;
-      }
-      if (key.startsWith('(') && key.endsWith(')')) {
-        map[key] = val;
-      }
+  const add = (key: string, value: string) => {
+    const bare = key.replace(/^[({\[\s]+|[)}\]\s]+$/g, '');
+    const formatted = canonicalField(key) === 'nationality' ? value.toLowerCase() : value.toUpperCase();
+    for (const alias of new Set([bare, bare.toLowerCase(), bare.toUpperCase()])) {
+      for (const [a,b] of [['(',')'], ['{{','}}'], ['{','}'], ['[',']']]) map[a+alias+b] = formatted;
     }
-  });
-
-  // 1. (nombre) / Full Name Aliases - STRICTLY DELIMITED ONLY
-  [
-    '(nombre)',
-    '(NOMBRE)',
-    '(Nombre)',
-    '(nombre_completo)',
-    '(NOMBRE_COMPLETO)',
-    '(Nombre_Completo)',
-    '(nombre completo)',
-    '(NOMBRE COMPLETO)',
-    '(Nombre Completo)',
-    '(cliente)',
-    '(CLIENTE)',
-    '(Cliente)',
-    '(fullName)',
-    '(fullname)',
-    '(FULLNAME)',
-    '{{nombre}}',
-    '{{NOMBRE}}',
-    '{{nombre_completo}}',
-    '{{nombre completo}}',
-    '{nombre}',
-    '{nombre_completo}',
-    '[nombre]',
-    '[NOMBRE]',
-    '[nombre_completo]',
-  ].forEach((k) => {
-    map[k] = fullName;
-  });
-
-  // 2. (numero de identidad) / (número de pasaporte) / Identity Number Aliases - STRICTLY DELIMITED ONLY
-  [
-    '(numero de identidad)',
-    '(NUMERO DE IDENTIDAD)',
-    '(Numero de Identidad)',
-    '(número de identidad)',
-    '(NÚMERO DE IDENTIDAD)',
-    '(Número de Identidad)',
-    '(numero_identidad)',
-    '(NUMERO_IDENTIDAD)',
-    '(número_identidad)',
-    '(NÚMERO_IDENTIDAD)',
-    '(identidad)',
-    '(IDENTIDAD)',
-    '(Identidad)',
-    '(cedula)',
-    '(CÉDULA)',
-    '(cédula)',
-    '(CEDULA)',
-    '(número de pasaporte)',
-    '(NÚMERO DE PASAPORTE)',
-    '(Número de Pasaporte)',
-    '(numero de pasaporte)',
-    '(NUMERO DE PASAPORTE)',
-    '(Numero de Pasaporte)',
-    '(numero_pasaporte)',
-    '(NUMERO_PASAPORTE)',
-    '(número_pasaporte)',
-    '(NÚMERO_PASAPORTE)',
-    '(pasaporte)',
-    '(PASAPORTE)',
-    '(Pasaporte)',
-    '(passportNumber)',
-    '(passport_number)',
-    '(passport)',
-    '(PASSPORT)',
-    '(documento)',
-    '(DOCUMENTO)',
-    '(Documento)',
-    '(numero_documento)',
-    '(número_documento)',
-    '(numero de documento)',
-    '(número de documento)',
-    '(NÚMERO DE DOCUMENTO)',
-    '{{numero de identidad}}',
-    '{{número de identidad}}',
-    '{{NUMERO DE IDENTIDAD}}',
-    '{{NÚMERO DE IDENTIDAD}}',
-    '{{numero_identidad}}',
-    '{{identidad}}',
-    '{{número de pasaporte}}',
-    '{{numero de pasaporte}}',
-    '{{NUMERO DE PASAPORTE}}',
-    '{{pasaporte}}',
-    '{{PASAPORTE}}',
-    '{{numero_pasaporte}}',
-    '{numero de identidad}',
-    '{número de identidad}',
-    '{identidad}',
-    '{número de pasaporte}',
-    '{numero de pasaporte}',
-    '{pasaporte}',
-    '[numero de identidad]',
-    '[número de identidad]',
-    '[NUMERO DE IDENTIDAD]',
-    '[identidad]',
-    '[número de pasaporte]',
-    '[numero de pasaporte]',
-    '[pasaporte]',
-    '[PASAPORTE]',
-  ].forEach((k) => {
-    map[k] = passportNumber;
-  });
-
-  // 3. (nacionalidad) / Nationality Aliases - STRICTLY DELIMITED ONLY
-  [
-    '(nacionalidad)',
-    '(NACIONALIDAD)',
-    '(Nacionalidad)',
-    '(nationality)',
-    '(NATIONALITY)',
-    '(país_origen)',
-    '(pais_origen)',
-    '(PAÍS_ORIGEN)',
-    '{{nacionalidad}}',
-    '{{NACIONALIDAD}}',
-    '{nacionalidad}',
-    '[nacionalidad]',
-    '[NACIONALIDAD]',
-  ].forEach((k) => {
-    map[k] = nationality;
-  });
-
-  // 4. (cedula/pasaporte) / Document Type Aliases - STRICTLY DELIMITED ONLY
-  [
-    '(cedula/pasaporte)',
-    '(cédula/pasaporte)',
-    '(CEDULA/PASAPORTE)',
-    '(CÉDULA/PASAPORTE)',
-    '(Cedula/Pasaporte)',
-    '(Cédula/Pasaporte)',
-    '(cedula / pasaporte)',
-    '(cédula / pasaporte)',
-    '(CEDULA / PASAPORTE)',
-    '(CÉDULA / PASAPORTE)',
-    '(cedula_pasaporte)',
-    '(cédula_pasaporte)',
-    '(CEDULA_PASAPORTE)',
-    '(CÉDULA_PASAPORTE)',
-    '(tipo_documento)',
-    '(TIPO_DOCUMENTO)',
-    '(tipo de documento)',
-    '(TIPO DE DOCUMENTO)',
-    '(Tipo de Documento)',
-    '(tipo documento)',
-    '(TIPO DOCUMENTO)',
-    '(document_type)',
-    '{{cedula/pasaporte}}',
-    '{{cédula/pasaporte}}',
-    '{{tipo_documento}}',
-    '{cedula/pasaporte}',
-    '{cédula/pasaporte}',
-    '{tipo_documento}',
-    '[cedula/pasaporte]',
-    '[cédula/pasaporte]',
-    '[tipo_documento]',
-  ].forEach((k) => {
-    map[k] = docTypeVal;
-  });
-
-  // Additional standard helpers - STRICTLY DELIMITED ONLY
-  [
-    '(fecha_nacimiento)',
-    '(FECHA_NACIMIENTO)',
-    '(fecha de nacimiento)',
-    '(FECHA DE NACIMIENTO)',
-    '(nacimiento)',
-    '(NACIMIENTO)',
-    '{{fecha_nacimiento}}',
-    '{fecha_nacimiento}',
-    '[fecha_nacimiento]',
-  ].forEach((k) => {
-    map[k] = birthDate;
-  });
-
-  [
-    '(pais_emisor)',
-    '(PAIS_EMISOR)',
-    '(país emisor)',
-    '(PAÍS EMISOR)',
-    '(pais)',
-    '(país)',
-    '(PAÍS)',
-    '{{pais_emisor}}',
-    '{pais_emisor}',
-    '[pais_emisor]',
-  ].forEach((k) => {
-    map[k] = issuingCountry;
-  });
-
-  [
-    '(direccion)',
-    '(dirección)',
-    '(DIRECCION)',
-    '(DIRECCIÓN)',
-    '(domicilio)',
-    '(DOMICILIO)',
-    '{{direccion}}',
-    '{{dirección}}',
-    '{direccion}',
-    '[direccion]',
-    '[dirección]',
-  ].forEach((k) => {
-    map[k] = address;
-  });
-
-  [
-    '(telefono)',
-    '(teléfono)',
-    '(TELEFONO)',
-    '(TELÉFONO)',
-    '(movil)',
-    '(móvil)',
-    '(MÓVIL)',
-    '{{telefono}}',
-    '{{teléfono}}',
-    '{telefono}',
-    '[telefono]',
-    '[teléfono]',
-  ].forEach((k) => {
-    map[k] = phone;
-  });
-
-  [
-    '(email)',
-    '(EMAIL)',
-    '(correo)',
-    '(CORREO)',
-    '(correo_electronico)',
-    '(correo electrónico)',
-    '(CORREO ELECTRÓNICO)',
-    '{{email}}',
-    '{{correo}}',
-    '{email}',
-    '[email]',
-    '[correo]',
-  ].forEach((k) => {
-    map[k] = email;
-  });
-
-  [
-    '(ciudad_firma)',
-    '(CIUDAD_FIRMA)',
-    '(ciudad)',
-    '(CIUDAD)',
-    '(lugar)',
-    '(LUGAR)',
-    '{{ciudad_firma}}',
-    '{ciudad_firma}',
-    '[ciudad_firma]',
-  ].forEach((k) => {
-    map[k] = city;
-  });
-
-  [
-    '(fecha_firma)',
-    '(FECHA_FIRMA)',
-    '(fecha)',
-    '(FECHA)',
-    '(fecha_hoy)',
-    '(FECHA_HOY)',
-    '(fecha_solicitud)',
-    '(FECHA_SOLICITUD)',
-    '{{fecha_firma}}',
-    '{fecha_firma}',
-    '[fecha_firma]',
-  ].forEach((k) => {
-    map[k] = dateVal;
-  });
-
-  [
-    '(sexo)',
-    '(SEXO)',
-    '(genero)',
-    '(género)',
-    '(GÉNERO)',
-    '{{sexo}}',
-    '{sexo}',
-    '[sexo]',
-  ].forEach((k) => {
-    map[k] = sex;
-  });
-
-  // 13. (sexo/edad) / Condición Legal / Edad y Sexo - STRICTLY DELIMITED ONLY
-  [
-    '(sexo/edad)',
-    '(SEXO/EDAD)',
-    '(Sexo/Edad)',
-    '(sexo / edad)',
-    '(SEXO / EDAD)',
-    '(sexo_edad)',
-    '(SEXO_EDAD)',
-    '(sexo-edad)',
-    '(condicion)',
-    '(condición)',
-    '(CONDICION)',
-    '(CONDICIÓN)',
-    '(Condicion)',
-    '(Condición)',
-    '(edad/sexo)',
-    '(EDAD/SEXO)',
-    '(edad_sexo)',
-    '{{sexo/edad}}',
-    '{{sexo_edad}}',
-    '{{condicion}}',
-    '{{condición}}',
-    '{sexo/edad}',
-    '{sexo_edad}',
-    '{condicion}',
-    '[sexo/edad]',
-    '[sexo_edad]',
-    '[condicion]',
-    '[condición]',
-    '[SEXO/EDAD]',
-  ].forEach((k) => {
-    map[k] = sexAgeVal;
-  });
-
+  };
+  for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
+    aliases.forEach(alias => add(alias, values[field] || ''));
+  }
+  Object.entries(data).filter(([key]) => !key.startsWith('_')).forEach(([key]) => add(key, values[canonicalField(key)] || ''));
   return map;
 }
 
@@ -1192,183 +657,64 @@ function sliceOriginalRunsToXml(
  * 4. EXCEPTION: (nacionalidad) is formatted in lowercase (minúsculas) and NOT bold (sin negrita).
  * 5. ALL pre-existing bold text and font formatting in the source document are 100% PRESERVED.
  */
-function replaceTokensInWordXml(xml: string, replacementMap: Record<string, string>): string {
-  // Filter to ONLY enclosed keys (starting and ending with delimiters)
-  const enclosedKeys = Object.keys(replacementMap).filter((k) => {
-    const t = k.trim();
-    return (
-      (t.startsWith('(') && t.endsWith(')')) ||
-      (t.startsWith('{{') && t.endsWith('}}')) ||
-      (t.startsWith('{') && t.endsWith('}')) ||
-      (t.startsWith('[') && t.endsWith(']'))
-    );
-  });
+function xmlUnescape(text: string): string {
+  return text.replace(/&#(x[0-9a-f]+|\d+);/gi, (_, code) => String.fromCodePoint(code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : Number(code)))
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+}
 
-  // Sort keys by length descending so longer tokens like (número de pasaporte) replace before (pasaporte)
-  const sortedKeys = enclosedKeys.sort((a, b) => b.length - a.length);
-
-  return xml.replace(/<w:p\b([^>]*)>([\s\S]*?)<\/w:p>/gi, (fullParagraph, pAttrs, pInner) => {
-    // Parse individual runs to preserve each run's distinct formatting (<w:rPr> including bold, font, etc.)
-    const parsedRuns: ParsedRun[] = [];
-    const rRegex = /<w:r\b[^>]*>([\s\S]*?)<\/w:r>/gi;
-    let rMatch;
-    let runningCharIndex = 0;
-    let combinedText = '';
-
-    while ((rMatch = rRegex.exec(pInner)) !== null) {
-      const rInner = rMatch[1];
-      const rPrMatch = rInner.match(/<w:rPr\b[^>]*>[\s\S]*?<\/w:rPr>/i);
-      const rPr = rPrMatch ? rPrMatch[0] : '';
-
-      const tInsideRegex = /<w:t\b[^>]*>([\s\S]*?)<\/w:t>/gi;
-      let tInsideMatch;
-      let runText = '';
-      while ((tInsideMatch = tInsideRegex.exec(rInner)) !== null) {
-        runText += tInsideMatch[1];
-      }
-
-      if (runText.length > 0) {
-        parsedRuns.push({
-          rPr,
-          text: runText,
-          startIndex: runningCharIndex,
-          endIndex: runningCharIndex + runText.length,
-        });
-        runningCharIndex += runText.length;
-        combinedText += runText;
-      }
+// Keep drawings, hyperlinks, bookmarks, tables, breaks and field codes intact.
+// Only text nodes that overlap a marker are changed, including split Word runs.
+export function replaceTokensInWordXml(xml: string, replacementMap: Record<string, string>): string {
+  const values = new Map(Object.entries(replacementMap).map(([key, value]) => [canonicalField(key), value]));
+  return xml.replace(/<w:p\b([^>]*)>((?:(?!<w:p\b)[\s\S])*?)<\/w:p>/gi, (paragraph, attrs, inner) => {
+    const nodes: { start: number; end: number; text: string; replacement?: string }[] = [];
+    let combined = '';
+    for (const match of inner.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/gi)) {
+      const text = xmlUnescape(match[1]);
+      nodes.push({ start: combined.length, end: combined.length + text.length, text });
+      combined += text;
     }
-
-    // Fallback if runs weren't standard but <w:t> exists
-    if (parsedRuns.length === 0) {
-      const tRegex = /<w:t\b[^>]*>([\s\S]*?)<\/w:t>/gi;
-      let tMatch;
-      while ((tMatch = tRegex.exec(pInner)) !== null) {
-        combinedText += tMatch[1];
+    const edits: {start: number; end: number; value: string; nationality: boolean}[] = [];
+    for (const match of combined.matchAll(/\{\{[^{}]+\}\}|(?<!\{)\{[^{}]+\}(?!\})|\([^()]+\)|\[[^\[\]]+\]/g)) {
+      const field = canonicalField(match[0]);
+      if (!values.has(field)) continue;
+      edits.push({ start: match.index!, end: match.index! + match[0].length, value: values.get(field)!, nationality: field === 'nationality' });
+    }
+    if (!edits.length) return paragraph;
+    const replacements: {text: string; inserted?: boolean; nationality?: boolean}[][] = [];
+    for (const node of nodes) {
+      let cursor = node.start;
+      const fragments: {text: string; inserted?: boolean; nationality?: boolean}[] = [];
+      for (const edit of edits) {
+        if (edit.end <= node.start || edit.start >= node.end) continue;
+        if (edit.start > cursor) fragments.push({ text: node.text.slice(cursor - node.start, edit.start - node.start) });
+        if (edit.start >= node.start) fragments.push({ text: edit.value, inserted: true, nationality: edit.nationality });
+        cursor = Math.min(node.end, edit.end);
       }
-      if (!combinedText) return fullParagraph;
-      parsedRuns.push({
-        rPr: '',
-        text: combinedText,
-        startIndex: 0,
-        endIndex: combinedText.length,
-      });
+      if (cursor < node.end) fragments.push({ text: node.text.slice(cursor - node.start) });
+      replacements.push(fragments);
     }
-
-    // Extract paragraph properties <w:pPr> if present
-    const pPrMatch = pInner.match(/<w:pPr\b[^>]*>[\s\S]*?<\/w:pPr>/i);
-    const pPrXml = pPrMatch ? pPrMatch[0] : '';
-
-    // Extract base run properties <w:rPr> from the paragraph if present
-    let baseRPr = parsedRuns[0]?.rPr || '';
-    if (!baseRPr && pPrXml) {
-      const rPrInPPr = pPrXml.match(/<w:rPr\b[^>]*>[\s\S]*?<\/w:rPr>/i);
-      if (rPrInPPr && rPrInPPr[0]) {
-        baseRPr = rPrInPPr[0];
-      }
-    }
-
-    interface MatchOccurrence {
-      start: number;
-      end: number;
-      rawMatch: string;
-      replacementVal: string;
-      isNationality: boolean;
-    }
-
-    const matches: MatchOccurrence[] = [];
-
-    // 1. Direct key search
-    for (const key of sortedKeys) {
-      const escapedKey = key.replace(/[.*+?^${}()|[\]\/\\]/g, '\\$&');
-      const reg = new RegExp(escapedKey, 'g');
-      let m;
-      while ((m = reg.exec(combinedText)) !== null) {
-        const isNat = isNationalityKey(key);
-        matches.push({
-          start: m.index,
-          end: m.index + m[0].length,
-          rawMatch: m[0],
-          replacementVal: isNat ? replacementMap[key].toLowerCase() : replacementMap[key].toUpperCase(),
-          isNationality: isNat,
-        });
-      }
-    }
-
-    // 2. Flexible internal spacing search for parentheses e.g. ( nombre ) or ( número de pasaporte )
-    for (const key of sortedKeys) {
-      if (key.startsWith('(') && key.endsWith(')')) {
-        const inner = key.slice(1, -1).trim();
-        const escapedInner = inner.replace(/[.*+?^${}()|[\]\/\\]/g, '\\$&');
-        const parenRegex = new RegExp(`\\(\\s*${escapedInner}\\s*\\)`, 'gi');
-        let m;
-        while ((m = parenRegex.exec(combinedText)) !== null) {
-          const isNat = isNationalityKey(key);
-          matches.push({
-            start: m.index,
-            end: m.index + m[0].length,
-            rawMatch: m[0],
-            replacementVal: isNat ? replacementMap[key].toLowerCase() : replacementMap[key].toUpperCase(),
-            isNationality: isNat,
-          });
+    let index = 0;
+    const updated = inner.replace(/<w:r\b([^>]*)>([\s\S]*?)<\/w:r>/gi, (run, runAttrs, runInner) => {
+      const originalProps = runInner.match(/<w:rPr\b[^>]*>[\s\S]*?<\/w:rPr>/i)?.[0] || '';
+      const content = runInner.replace(originalProps, '');
+      let result = '';
+      let position = 0;
+      const wrap = (body: string, props = originalProps) => body ? `<w:r${runAttrs}>${props}${body}</w:r>` : '';
+      for (const match of content.matchAll(/<w:t\b([^>]*)>[\s\S]*?<\/w:t>/gi)) {
+        result += wrap(content.slice(position, match.index));
+        const fragments = replacements[index++] || [];
+        for (const fragment of fragments) {
+          const props = fragment.inserted ? (fragment.nationality ? makeNotBoldRPr(originalProps) : makeBoldRPr(originalProps)) : originalProps;
+          const text = xmlEscape(fragment.text).replace(/\r?\n/g, '</w:t><w:br/><w:t xml:space="preserve">');
+          result += wrap(`<w:t xml:space="preserve">${text}</w:t>`, props);
         }
+        position = match.index! + match[0].length;
       }
-    }
-
-    if (matches.length === 0) {
-      return fullParagraph;
-    }
-
-    // Sort matches by start position ascending, and longer length first if same start
-    matches.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
-
-    // Remove overlapping matches
-    const filteredMatches: MatchOccurrence[] = [];
-    let lastEnd = -1;
-    for (const m of matches) {
-      if (m.start >= lastEnd) {
-        filteredMatches.push(m);
-        lastEnd = m.end;
-      }
-    }
-
-    if (filteredMatches.length === 0) {
-      return fullParagraph;
-    }
-
-    // Build replacement runs preserving the exact original run styles for all un-replaced text
-    let newRunsXml = '';
-    let curIndex = 0;
-
-    for (const m of filteredMatches) {
-      // Preceding plain text - slices original runs to preserve any pre-existing bold or styling
-      if (m.start > curIndex) {
-        newRunsXml += sliceOriginalRunsToXml(parsedRuns, curIndex, m.start, baseRPr);
-      }
-
-      // Find host run where this token replacement starts to inherit its font / base attributes
-      const hostRun = parsedRuns.find((r) => r.startIndex <= m.start && m.start < r.endIndex) || parsedRuns[0];
-      const hostRPr = hostRun ? hostRun.rPr : baseRPr;
-
-      // Replaced token run
-      if (m.isNationality) {
-        // EXCEPTION: NATIONALITY must be in lowercase and NOT bold
-        newRunsXml += `<w:r>${makeNotBoldRPr(hostRPr)}<w:t xml:space="preserve">${xmlEscape(m.replacementVal)}</w:t></w:r>`;
-      } else {
-        // ALL OTHER REPLACEMENTS: must be in UPPERCASE and BOLD
-        newRunsXml += `<w:r>${makeBoldRPr(hostRPr)}<w:t xml:space="preserve">${xmlEscape(m.replacementVal)}</w:t></w:r>`;
-      }
-
-      curIndex = m.end;
-    }
-
-    // Trailing plain text - slices original runs to preserve pre-existing styles
-    if (curIndex < combinedText.length) {
-      newRunsXml += sliceOriginalRunsToXml(parsedRuns, curIndex, combinedText.length, baseRPr);
-    }
-
-    // Construct the updated paragraph preserving pPr
-    return `<w:p${pAttrs}>${pPrXml}${newRunsXml}</w:p>`;
+      result += wrap(content.slice(position));
+      return result || `<w:r${runAttrs}>${originalProps}<w:t/></w:r>`;
+    });
+    return `<w:p${attrs}>${updated}</w:p>`;
   });
 }
 
@@ -1381,176 +727,41 @@ function replaceTokensInWordXml(xml: string, replacementMap: Record<string, stri
  */
 export function formatAndAlignSignatureBlockInWordXml(
   xml: string,
-  sigOptions?: SignatureLayoutOptions,
+  options?: SignatureLayoutOptions,
   replacementMap?: Record<string, string>,
   client?: Client | null
 ): string {
-  const hasAcepto = /ACEPTO/i.test(xml);
-  const hasOtorgo = /OTORGO/i.test(xml);
-
-  if (!hasAcepto && !hasOtorgo) {
-    return xml;
+  if (!options?.enabled) return xml;
+  const paragraphs = Array.from(xml.matchAll(/<w:p\b[^>]*>((?:(?!<w:p\b)[\s\S])*?)<\/w:p>/gi));
+  const plain = (p: RegExpMatchArray) => extractParagraphsFromWordXml(p[0]).join(' ').trim();
+  const first = paragraphs.findIndex(p => /ACEPTO\s*PODER/i.test(plain(p)) && /OTORGO\s*PODER/i.test(plain(p)));
+  const last = first < 0 ? -1 : paragraphs.findIndex((p, i) => i > first && i <= first + 6 && /^(?:C[EÉ]DULA|PASAPORTE|DNI|NIE)\b/i.test(plain(p)));
+  if (first < 0 || last < 0) throw new Error('No se encontró un bloque de firmas compatible. Desactiva Aplicar bloque de firmas para conservar el formato original.');
+  const start = paragraphs[first].index!;
+  const end = paragraphs[last].index! + paragraphs[last][0].length;
+  if (/<w:(?:tbl|tc|drawing|sectPr)\b/.test(xml.slice(start, end))) throw new Error('El bloque de firmas tiene una estructura compleja. Conserva el formato de tu plantilla desactivando el bloque de firmas.');
+  const name = options.clientSignatureName || client?.fullName || '';
+  const document = options.clientSignatureDoc || `${documentTypeLabel(client?.docType)} No. ${client?.passportNumber || ''}`;
+  const lawyer = options.lawyerSignatureTitle || '';
+  const cedula = options.lawyerSignatureCedula || '';
+  const idoneidad = options.lawyerSignatureIdoneidad || '';
+  if (!name || !lawyer) throw new Error('Completa los nombres del cliente y del letrado en el bloque de firmas.');
+  const blanks = Math.max(1, Math.min(5, options.signatureBlankLines ?? 2));
+  const align = options.alignment === 'center' ? 'center' : options.alignment === 'column-right' ? 'right' : 'left';
+  const left = ['ACEPTO PODER', ...Array(blanks).fill(''), lawyer, cedula, idoneidad];
+  const right = ['OTORGO PODER:', ...Array(blanks).fill(''), name, document, ''];
+  const section = xml.match(/<w:pgSz\b[^>]*w:w="(\d+)"/);
+  const margin = xml.match(/<w:pgMar\b[^>]*>/)?.[0] || '';
+  const width = Math.max(3000, Number(section?.[1] || 11906) - Number(margin.match(/w:left="(\d+)"/)?.[1] || 1440) - Number(margin.match(/w:right="(\d+)"/)?.[1] || 1440));
+  const offset = Math.round(width * Math.max(25, Math.min(75, options.columnOffsetPercent ?? 56)) / 100);
+  let block = '';
+  if (options.useTwoColumnTable !== false) {
+    const cell = (lines: string[], cellWidth: number) => `<w:tc><w:tcPr><w:tcW w:w="${cellWidth}" w:type="dxa"/></w:tcPr>${lines.map(line => p(line.toUpperCase(), { bold: true, align })).join('')}</w:tc>`;
+    block = `<w:tbl><w:tblPr><w:tblW w:w="${width}" w:type="dxa"/><w:tblBorders>${['top','left','bottom','right','insideH','insideV'].map(side => `<w:${side} w:val="nil"/>`).join('')}</w:tblBorders></w:tblPr><w:tblGrid><w:gridCol w:w="${offset}"/><w:gridCol w:w="${width-offset}"/></w:tblGrid><w:tr>${cell(left, offset)}${cell(right, width-offset)}</w:tr></w:tbl>`;
+  } else {
+    block = left.map((line,i) => `<w:p><w:pPr><w:tabs><w:tab w:val="${align}" w:pos="${offset}"/></w:tabs></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${xmlEscape(line.toUpperCase())}</w:t><w:tab/><w:t xml:space="preserve">${xmlEscape(right[i].toUpperCase())}</w:t></w:r></w:p>`).join('');
   }
-
-  const lawyerTitle = (
-    sigOptions?.lawyerSignatureTitle ||
-    replacementMap?.['(abogado_nombre)'] ||
-    replacementMap?.['abogado_nombre'] ||
-    'LCDO. ANTONY NATHANAEL TALLA COPRIS'
-  ).toUpperCase();
-
-  const lawyerCedula = (
-    sigOptions?.lawyerSignatureCedula ||
-    replacementMap?.['(abogado_cedula)'] ||
-    replacementMap?.['abogado_cedula'] ||
-    'CÉDULA NO. 8-849-2485'
-  ).toUpperCase();
-
-  const lawyerIdoneidad = (
-    sigOptions?.lawyerSignatureIdoneidad ||
-    replacementMap?.['(abogado_idoneidad)'] ||
-    replacementMap?.['abogado_idoneidad'] ||
-    'IDONEIDAD 30553'
-  ).toUpperCase();
-
-  const rawClientName = (
-    sigOptions?.clientSignatureName ||
-    replacementMap?.['(nombre)'] ||
-    replacementMap?.['nombre'] ||
-    client?.fullName ||
-    'CLIENTE IDENTIFICADO'
-  ).toUpperCase();
-
-  const docTypeLabel = client?.docType === 'cedula' ? 'CÉDULA No. ' : 'PASAPORTE No. ';
-  const docNum = (
-    client?.passportNumber ||
-    client?.personalNumber ||
-    replacementMap?.['(numero de identidad)'] ||
-    ''
-  ).toUpperCase();
-  const rawClientDoc =
-    sigOptions?.clientSignatureDoc || (docNum ? `${docTypeLabel}${docNum}` : 'PASAPORTE No. ');
-
-  const blankLinesCount = Math.max(1, Math.min(5, sigOptions?.signatureBlankLines ?? 2));
-  const useTable = sigOptions?.useTwoColumnTable !== false;
-
-  // Offset default: 56% (matching Image 2)
-  const offset = sigOptions?.columnOffsetPercent || 56;
-  const totalWidthDxa = 9300;
-  const col2WidthDxa = Math.round((totalWidthDxa * (100 - offset)) / 100);
-  const col1WidthDxa = totalWidthDxa - col2WidthDxa;
-
-  if (useTable) {
-    let blankParagraphs = '';
-    for (let i = 0; i < blankLinesCount; i++) {
-      blankParagraphs += `<w:p><w:pPr><w:spacing w:after="160"/><w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r></w:p>`;
-    }
-
-    const tableXml = `<w:tbl>
-  <w:tblPr>
-    <w:tblW w:w="${totalWidthDxa}" w:type="dxa"/>
-    <w:jc w:val="both"/>
-    <w:tblBorders>
-      <w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>
-      <w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>
-      <w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>
-      <w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>
-      <w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>
-      <w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>
-    </w:tblBorders>
-    <w:tblCellMar>
-      <w:top w:w="40" w:type="dxa"/>
-      <w:left w:w="60" w:type="dxa"/>
-      <w:bottom w:w="40" w:type="dxa"/>
-      <w:right w:w="60" w:type="dxa"/>
-    </w:tblCellMar>
-  </w:tblPr>
-  <w:tblGrid>
-    <w:gridCol w:w="${col1WidthDxa}"/>
-    <w:gridCol w:w="${col2WidthDxa}"/>
-  </w:tblGrid>
-  <w:tr>
-    <w:tc>
-      <w:tcPr>
-        <w:tcW w:w="${col1WidthDxa}" w:type="dxa"/>
-        <w:vAlign w:val="top"/>
-      </w:tcPr>
-      <w:p>
-        <w:pPr><w:spacing w:after="240"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
-        <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>ACEPTO PODER</w:t></w:r>
-      </w:p>
-      ${blankParagraphs}
-      <w:p>
-        <w:pPr><w:spacing w:after="40"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
-        <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>${xmlEscape(lawyerTitle)}</w:t></w:r>
-      </w:p>
-      <w:p>
-        <w:pPr><w:spacing w:after="40"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
-        <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>${xmlEscape(lawyerCedula)}</w:t></w:r>
-      </w:p>
-      ${lawyerIdoneidad ? `<w:p>
-        <w:pPr><w:spacing w:after="40"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
-        <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>${xmlEscape(lawyerIdoneidad)}</w:t></w:r>
-      </w:p>` : ''}
-    </w:tc>
-    <w:tc>
-      <w:tcPr>
-        <w:tcW w:w="${col2WidthDxa}" w:type="dxa"/>
-        <w:vAlign w:val="top"/>
-      </w:tcPr>
-      <w:p>
-        <w:pPr><w:spacing w:after="240"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
-        <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>OTORGO PODER:</w:t></w:r>
-      </w:p>
-      ${blankParagraphs}
-      <w:p>
-        <w:pPr><w:spacing w:after="40"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
-        <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>${xmlEscape(rawClientName)}</w:t></w:r>
-      </w:p>
-      <w:p>
-        <w:pPr><w:spacing w:after="40"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
-        <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>${xmlEscape(rawClientDoc)}</w:t></w:r>
-      </w:p>
-    </w:tc>
-  </w:tr>
-</w:tbl>`;
-
-    // Matches from paragraph containing ACEPTO PODER through the following signature paragraphs
-    const sigBlockRegex = /<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?ACEPTO[\s\S]*?<\/w:p>(?:[\s\S]*?<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?(?:IDONEIDAD|PASAPORTE|C[EÉ]DULA|No\.\s*\d+)[\s\S]*?<\/w:p>)/i;
-
-    if (sigBlockRegex.test(xml)) {
-      return xml.replace(sigBlockRegex, tableXml);
-    }
-  }
-
-  // Fallback or Tab-based: ensure every signature paragraph has an explicit tab stop and all runs are bold
-  return xml.replace(/<w:p\b([^>]*)>([\s\S]*?)<\/w:p>/gi, (pFull, pAttrs, pInner) => {
-    const isSigP = /ACEPTO|OTORGO|IDONEIDAD|PASAPORTE|CÉDULA|CEDULA/i.test(pInner);
-    if (!isSigP) return pFull;
-
-    let updatedPInner = pInner;
-
-    // Enforce bold on all runs within signature paragraphs
-    updatedPInner = updatedPInner.replace(/<w:r\b([^>]*)>([\s\S]*?)<\/w:r>/gi, (rFull, rAttrs, rInner) => {
-      if (/<w:rPr\b[^>]*>/i.test(rInner)) {
-        if (!/<w:b\b/i.test(rInner)) {
-          return `<w:r${rAttrs}>${rInner.replace(/(<w:rPr\b[^>]*>)/i, '$1<w:b/><w:bCs/>')}</w:r>`;
-        }
-        return rFull;
-      }
-      return `<w:r${rAttrs}><w:rPr><w:b/><w:bCs/></w:rPr>${rInner}</w:r>`;
-    });
-
-    const tabStopXml = `<w:tabs><w:tab w:val="left" w:pos="5400"/></w:tabs>`;
-    if (/<w:pPr\b[^>]*>/i.test(updatedPInner)) {
-      if (!/<w:tabs\b/i.test(updatedPInner)) {
-        updatedPInner = updatedPInner.replace(/(<w:pPr\b[^>]*>)/i, `$1${tabStopXml}`);
-      }
-    } else {
-      updatedPInner = `<w:pPr>${tabStopXml}</w:pPr>${updatedPInner}`;
-    }
-    return `<w:p${pAttrs}>${updatedPInner}</w:p>`;
-  });
+  return xml.slice(0, start) + block + xml.slice(end);
 }
 
 /**
@@ -1568,6 +779,8 @@ export async function generateAndDownloadDocx(
     throw new Error('La plantilla seleccionada no contiene datos de archivo .docx válidos.');
   }
 
+  const missing = template.placeholders.filter(key => !String(data[key] ?? '').trim());
+  if (missing.length) throw new Error(`Completa los campos: ${missing.join(', ')}`);
   const binaryString = atob(template.fileData);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
@@ -1600,32 +813,6 @@ export async function generateAndDownloadDocx(
     }
   }
 
-  // 3. Fallback pass with Docxtemplater for any remaining {{tag}} or {tag} structures
-  const docXmlAfterReplace = zip.file('word/document.xml')?.asText() || '';
-  if (docXmlAfterReplace.includes('{{') || /\{[a-zA-Z0-9_]+\}/.test(docXmlAfterReplace)) {
-    const hasDoubleBraces = docXmlAfterReplace.includes('{{');
-    const delimiters = hasDoubleBraces
-      ? { start: '{{', end: '}}' }
-      : { start: '{', end: '}' };
-
-    try {
-      const doc = new Docxtemplater(zip, {
-        paragraphLoop: true,
-        linebreaks: true,
-        delimiters,
-        nullGetter: (part) => {
-          const key = part.value;
-          return replacementMap[key] || replacementMap[`(${key})`] || '';
-        },
-      });
-      doc.render(replacementMap);
-    } catch (docxTemplaterErr) {
-      // If Docxtemplater encountered syntax quirks on custom user symbols,
-      // direct XML replacement above has already handled the substitutions cleanly.
-      console.warn('Docxtemplater optional pass warning (handled by direct XML replacer):', docxTemplaterErr);
-    }
-  }
-
   const outBlob = zip.generate({
     type: 'blob',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -1641,7 +828,7 @@ export async function generateAndDownloadDocx(
   const safeTemplateName = template.name.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_');
   const dateStamp = new Date().toISOString().split('T')[0];
 
-  const finalFileName = customDownloadFileName || `${safeTemplateName}_${clientName}_${dateStamp}.docx`;
+  const finalFileName = (customDownloadFileName ? customDownloadFileName.replace(/[<>:"/\\|?*]/g, '_').replace(/\.docx$/i, '') + '.docx' : '') || `${safeTemplateName}_${clientName}_${dateStamp}.docx`;
 
   saveAs(outBlob, finalFileName);
 

@@ -47,6 +47,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
 
   // Handle completion of scanner
   const handleExtractionComplete = (result: ExtractionResult) => {
+    setActiveClient(null);
     setExtractionResult(result);
     setCurrentStep(2);
   };
@@ -60,7 +61,12 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
       fullName: client.fullName,
       passportNumber: client.passportNumber,
       nationality: client.nationality,
-      documentType: client.docType === 'cedula' ? 'Cédula' : 'Pasaporte',
+      docType: client.docType,
+      documentType: client.docType,
+      issueDate: client.issueDate,
+      personalNumber: client.personalNumber,
+      placeOfBirth: client.placeOfBirth,
+      sexAgeCategory: client.sexAgeCategory,
       issuingCountry: client.issuingCountry || client.nationality,
       birthDate: client.birthDate,
       expiryDate: client.expiryDate,
@@ -76,17 +82,18 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
 
   // Handle manual input start
   const handleStartManual = () => {
+    setActiveClient(null);
     setExtractionResult({
       firstName: '',
       lastName: '',
       fullName: '',
       passportNumber: '',
-      nationality: 'ESPAÑOLA',
+      nationality: '',
       documentType: 'Pasaporte',
-      issuingCountry: 'ESPAÑA',
+      issuingCountry: '',
       birthDate: '',
       expiryDate: '',
-      sex: 'M',
+      sex: '',
       method: 'manual',
       rawOcrText: '',
       confidenceScore: 100,
@@ -233,9 +240,9 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
 
           {/* Step 3 */}
           <div
-            onClick={() => (activeClient || extractionResult) && setCurrentStep(3)}
+            onClick={() => activeClient && setCurrentStep(3)}
             className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
-              !activeClient && !extractionResult ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+              !activeClient ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
             } ${
               currentStep === 3
                 ? 'bg-amber-500/15 border-amber-500 text-slate-950 shadow-sm ring-1 ring-amber-500/50'
@@ -402,8 +409,9 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
       {/* Step 2: Data Review */}
       {currentStep === 2 && extractionResult && (
         <DataReviewStep
-          extraction={extractionResult}
+          extraction={activeClient ? { ...extractionResult, ...activeClient, imagePreview: activeClient.passportImageBase64 } : extractionResult}
           existingClients={clients}
+          selectedClient={activeClient}
           onConfirmClient={handleConfirmClient}
           onRescan={() => setCurrentStep(1)}
         />

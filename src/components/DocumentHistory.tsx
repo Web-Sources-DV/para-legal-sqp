@@ -1,3 +1,4 @@
+import saveAs from 'file-saver';
 import React, { useState } from 'react';
 import {
   FolderOpen,
@@ -46,21 +47,28 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
 
   const handleDelete = (id: string, title: string) => {
     if (confirm(`¿Eliminar el registro del documento "${title}" del historial?`)) {
-      deleteDocumentLog(id);
+      try { deleteDocumentLog(id); } catch (error: any) { alert(error.message || 'No se pudo eliminar el registro.'); return; }
       onDocumentsChange();
       if (viewingDoc?.id === id) setViewingDoc(null);
     }
   };
 
   const handleRegenerateFromSnapshot = async (doc: GeneratedDocument) => {
-    const tpl = templates.find((t) => t.id === doc.templateId);
+    if (doc.fileBase64) {
+      try {
+        const bytes = Uint8Array.from(atob(doc.fileBase64), c => c.charCodeAt(0));
+        saveAs(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), doc.fileName);
+      } catch { alert('El archivo guardado no se pudo leer. Restaura un respaldo válido.'); }
+      return;
+    }
+    const tpl = templates.find((t) => t.id === doc.templateId) || templates.find(t => doc.templateId.startsWith(t.id + '-'));
     if (!tpl) {
       alert('La plantilla original ya no existe en el sistema.');
       return;
     }
 
     try {
-      await generateAndDownloadDocx(tpl, doc.dataSnapshot, doc.fileName);
+      await generateAndDownloadDocx(tpl, doc.dataSnapshot, doc.fileName, clients.find(c => c.id === doc.clientId), doc.signatureOptions);
     } catch (err: any) {
       alert(`Error al regenerar documento: ${err.message}`);
     }
@@ -242,7 +250,7 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                 <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
                   {Object.entries(viewingDoc.dataSnapshot).map(([k, v]) => (
                     <div key={k} className="p-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 bg-white hover:bg-slate-50">
-                      <span className="font-mono text-amber-800 font-semibold">{`{{${k}}}`}</span>
+                      <span className="font-mono text-amber-800 font-semibold">{k}</span>
                       <span className="font-medium text-slate-800 max-w-sm break-words">{v || '(Vacío)'}</span>
                     </div>
                   ))}
