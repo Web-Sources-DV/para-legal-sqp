@@ -12,6 +12,10 @@ import {
   Upload,
   CheckCircle,
 } from 'lucide-react';
+import { AuthGate, useAppUser } from './components/AuthGate';
+import { canView, canManage, canOpenTab } from './services/accessPolicy';
+import { UserManagement } from './components/UserManagement';
+import { AnalyticsPage } from './components/AnalyticsPage';
 import { Header } from './components/Header';
 import { GenerationWizard } from './components/GenerationWizard';
 import { DocumentGenerator } from './components/DocumentGenerator';
@@ -31,8 +35,11 @@ import {
 } from './services/storageService';
 import { Client, Template, GeneratedDocument, DatabaseStats, ActiveTab } from './types';
 
-export function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('wizard');
+function WorkspaceApp() {
+  const user = useAppUser();
+  const [activeTab, setRequestedTab] = useState<ActiveTab>('wizard');
+  const setActiveTab = (tab: ActiveTab) => { if (canOpenTab(user, tab)) setRequestedTab(tab); };
+  useEffect(() => { if (!canOpenTab(user,activeTab)) setRequestedTab('wizard'); }, [user.role, activeTab]);
   const [wizardSession, setWizardSession] = useState(0);
   const [clients, setClients] = useState<Client[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -88,7 +95,7 @@ export function App() {
       unsubscribeCloud();
       unsubscribeUpdates();
     };
-  }, []);
+  }, [user.id, user.role, user.active]);
 
   // Handler to jump to generator with specific client
   const handleGenerateForClient = (client: Client) => {
@@ -113,6 +120,7 @@ export function App() {
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800 antialiased selection:bg-amber-500 selection:text-slate-950">
       {/* Top Professional Legal Header */}
       <Header
+        user={user}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         stats={stats}
@@ -125,6 +133,7 @@ export function App() {
         }}
       />
 
+      {syncState.error && <div role="alert" className="bg-red-50 text-red-800 p-4 text-center">No se pudieron cargar los datos: {syncState.error} <button onClick={() => window.location.reload()} className="underline">Reintentar</button></div>}
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab 1: Guided Wizard */}
@@ -178,6 +187,7 @@ export function App() {
         {/* Tab 3: Clients CRM */}
         {activeTab === 'clients' && (
           <ClientManager
+            canViewHistory={canView(user,'history')}
             clients={clients}
             documents={documents}
             onClientsChange={refreshData}
@@ -196,8 +206,9 @@ export function App() {
         )}
 
         {/* Tab 5: Generated Documents History */}
-        {activeTab === 'history' && (
+        {activeTab === 'history' && canView(user, 'history') && (
           <DocumentHistory
+            canEdit={canManage(user, 'history')}
             documents={documents}
             templates={templates}
             clients={clients}
@@ -211,8 +222,9 @@ export function App() {
         )}
 
         {/* Tab 6: Local Database Storage & Backups */}
-        {activeTab === 'database' && (
+        {activeTab === 'database' && canView(user, 'database') && (
           <DatabaseSettings
+            canEdit={canManage(user, 'database')}
             stats={stats}
             syncState={syncState}
             onDatabaseReload={refreshData}
@@ -223,6 +235,8 @@ export function App() {
         {activeTab === 'manual' && (
           <UserManual onNavigateTab={(tab) => setActiveTab(tab)} />
         )}
+        {activeTab === 'users' && canView(user, 'users') && <UserManagement />}
+        {activeTab === 'analytics' && canView(user, 'analytics') && <AnalyticsPage />}
       </main>
 
       {/* Modern Legal Footer */}
@@ -243,7 +257,7 @@ export function App() {
               <span>📖 Manual de Uso & Guía Paso a Paso</span>
             </button>
             <span className="text-[11px] text-slate-400">
-              Datos guardados en <strong className="text-slate-700">este navegador</strong> · Exporta respaldos periódicamente
+              Datos compartidos con acceso por usuario · Supabase
             </span>
             <span className="text-[11px] text-slate-400">
               Compatibilidad nativa con <strong className="text-slate-700">Microsoft Word (.docx)</strong>
@@ -255,4 +269,6 @@ export function App() {
   );
 }
 
+export function App() { return <AuthGate><WorkspaceApp /></AuthGate>; }
 export default App;
+

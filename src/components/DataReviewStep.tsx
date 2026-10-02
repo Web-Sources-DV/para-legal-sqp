@@ -29,7 +29,7 @@ interface DataReviewStepProps {
   selectedClient?: Client | null;
   extraction: ExtractionResult;
   existingClients: Client[];
-  onConfirmClient: (client: Client, nextAction: 'generate' | 'save_only') => void;
+  onConfirmClient: (client: Client, nextAction: 'generate' | 'save_only') => void | Promise<void>;
   onRescan: () => void;
 }
 
@@ -201,7 +201,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
     }
   };
 
-  const handleContinue = (nextAction: 'generate' | 'save_only') => {
+  const handleContinue = async (nextAction: 'generate' | 'save_only') => {
     setReviewError(null);
     if (!formData.fullName?.trim() || !formData.passportNumber?.trim()) { setReviewError('Completa el nombre y el número de identidad con los datos reales.'); return; }
     if (associateMode === 'existing' && !selectedExistingId) { setReviewError('Selecciona el cliente que deseas actualizar.'); return; }
@@ -237,7 +237,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
       documentCount: existingClients.find(c => associateMode === 'existing' && c.id === selectedExistingId)?.documentCount || 0,
     };
 
-    try { onConfirmClient(finalClient, nextAction); } catch (error: any) { setReviewError(error.message || 'No se pudo guardar el cliente.'); }
+    try { await onConfirmClient(finalClient, nextAction); } catch (error: any) { setReviewError(error.message || 'No se pudo guardar el cliente.'); }
   };
 
   return (
@@ -827,3 +827,4 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
     </div>
   );
 };
+

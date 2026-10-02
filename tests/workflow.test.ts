@@ -4,7 +4,7 @@ import PizZip from 'pizzip';
 import { canonicalField, fieldDefault } from '../src/services/fieldMapping';
 import { buildComprehensiveReplacementMap, parseDocxFile, replaceTokensInWordXml, formatAndAlignSignatureBlockInWordXml, generateAndDownloadDocx } from '../src/services/docxService';
 import { buildStructuredDocumentJson, parseVisualDocumentText, parseMRZ } from '../src/services/ocrService';
-import { saveClient, saveTemplate, saveDocumentLog, deleteDocumentLog, getClients, getTemplates, getGeneratedDocuments, importDatabaseJson, exportFullDatabaseJson } from '../src/services/storageService';
+import { saveClient, saveTemplate, saveDocumentLog, deleteDocumentLog, getClients, getTemplates, getGeneratedDocuments, importDatabaseJson, exportFullDatabaseJson } from '../src/services/localStorageService';
 import type { Client, Template, GeneratedDocument } from '../src/types';
 
 const storage = new Map<string, string>();
@@ -138,3 +138,4 @@ test('invalid backups leave current data intact; quota failure rolls back all af
   assert.equal(importDatabaseJson(JSON.stringify(backup)).success, true);
   assert.equal(getClients()[0].fullName, 'NUEVO');
 });
+

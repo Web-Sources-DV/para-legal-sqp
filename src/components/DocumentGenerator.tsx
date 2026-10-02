@@ -261,7 +261,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         }),
       };
 
-      saveDocumentLog(newDoc);
+      await saveDocumentLog(newDoc);
       setLastGeneratedDoc(newDoc);
       setGenerationSuccess(true);
 
@@ -1101,3 +1101,4 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
     </div>
   );
 };
+

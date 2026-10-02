@@ -105,7 +105,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     }
   };
 
-  const handleSaveNewTemplate = () => {
+  const handleSaveNewTemplate = async () => {
     if (!newTemplateData) return;
 
     const assignedIdoneoObj =
@@ -131,16 +131,16 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     };
 
     if (!templateToSave.name.trim()) { setUploadError('Escribe un nombre para la plantilla.'); return; }
-    try { saveTemplate(templateToSave); } catch (error: any) { setUploadError(error.message || 'No se pudo guardar la plantilla.'); return; }
+    try { await saveTemplate(templateToSave); } catch (error: any) { setUploadError(error.message || 'No se pudo guardar la plantilla.'); return; }
     onTemplatesChange();
     setNewTemplateData(null);
     setUploadSuccessMessage(`¡Plantilla "${templateToSave.name}" guardada con éxito en la base de datos!`);
     setTimeout(() => setUploadSuccessMessage(null), 5000);
   };
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (confirm(`¿Estás seguro de eliminar la plantilla "${name}"?`)) {
-      try { deleteTemplate(id); } catch (error: any) { setUploadError(error.message || 'No se pudo eliminar la plantilla.'); return; }
+      try { await deleteTemplate(id); } catch (error: any) { setUploadError(error.message || 'No se pudo eliminar la plantilla.'); return; }
       onTemplatesChange();
       if (viewingTemplate?.id === id) setViewingTemplate(null);
     }
@@ -629,3 +629,4 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     </div>
   );
 };
+
