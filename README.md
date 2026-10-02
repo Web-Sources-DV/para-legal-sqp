@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Abre http://localhost:3000. El motor local usa Tesseract y descarga sus recursos de idioma en el primer uso. Para OCR asistido, configura `GEMINI_API_KEY` en un archivo `.env` del servidor. Nunca pongas esa clave en variables `VITE_*` ni en el navegador.
+Abre http://localhost:3000. El motor local usa Tesseract y descarga sus recursos de idioma en el primer uso. El escaneo funciona exclusivamente con OCR local Tesseract, sin IA generativa ni claves de API. Las imágenes se procesan en el navegador. La primera carga requiere internet para descargar el motor y los idiomas; no se garantiza uso sin conexión hasta disponer de esos recursos.
 
 ```sh
 npm run lint
@@ -20,7 +20,7 @@ npm run build
 npm start
 ```
 
-`npm run build:web` genera exclusivamente la app estática para GitHub Pages. Pages permite el OCR local; el OCR asistido necesita un servidor. La versión HTML anterior es una aplicación independiente y no incorpora estas correcciones de React.
+`npm run build:web` genera exclusivamente la app estática para GitHub Pages. Pages permite el OCR local sin servidor de extracción. La versión HTML anterior es una aplicación independiente y no incorpora estas correcciones de React.
 
 ## Flujo
 
@@ -43,8 +43,8 @@ Los perfiles de letrados son los que ya venían en el repositorio. Confirma sus 
 - Validación de dígitos MRZ y pruebas con imágenes de documentos de cada país, usando datos ficticios.
 - Almacenamiento en IndexedDB para archivos grandes y, si necesitas varios usuarios, autenticación y una base de datos con acceso por usuario.
 - Catálogo editable de letrados, campos obligatorios por plantilla y vista previa paginada de Word/PDF.
-- Pruebas reales de cámara en Android/iPhone y OCR asistido con una clave configurada.
+- Pruebas reales de cámara en Android/iPhone y precisión del OCR con documentos reales.
 
 ## Verificación
 
-Las pruebas incluyen asignación de campos, edición de valores, OCR sin datos inventados, sustitución de marcadores divididos entre fragmentos de Word, conservación de imágenes y enlaces, generación del archivo, firmas y restauración ante fallos de almacenamiento. La cámara física y el proveedor externo requieren verificación adicional en el dispositivo y servidor de destino.
+Las pruebas incluyen asignación de campos, edición de valores, OCR sin datos inventados, sustitución de marcadores divididos entre fragmentos de Word, conservación de imágenes y enlaces, generación del archivo, firmas y restauración ante fallos de almacenamiento. La cámara física y la precisión sobre documentos reales requieren verificación adicional en el dispositivo de destino.

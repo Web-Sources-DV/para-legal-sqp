@@ -17,7 +17,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { ExtractionResult } from '../types';
-import { extractWithLiteralOCR, extractWithTesseract } from '../services/ocrService';
+import { extractWithTesseract } from '../services/ocrService';
 import { preprocessDocumentForOCR, PreprocessedImages } from '../services/imagePreprocessing';
 
 interface PassportScannerProps {
@@ -30,7 +30,6 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   onCancel,
 }) => {
   const [activeTab, setActiveTab] = useState<'upload' | 'camera'>('upload');
-  const [engine, setEngine] = useState<'tesseract' | 'ocr'>('tesseract');
   const [opticalFilter, setOpticalFilter] = useState<'enhanced' | 'binarized' | 'original'>('enhanced');
   const [preprocessedPreview, setPreprocessedPreview] = useState<PreprocessedImages | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -159,7 +158,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
     processImage(photoBase64, 'image/jpeg');
   };
 
-  // Resize / optimize image before sending to AI/OCR to guarantee first-try reading
+  // Resize / optimize image before sending to OCR local to guarantee first-try reading
   const optimizeImageIfNeeded = (dataUrl: string): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -224,42 +223,20 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
           ? preprocessed.original
           : preprocessed.enhanced;
 
-      if (engine === 'tesseract') {
-        setProcessingStatus('Iniciando motor OCR óptico local (Tesseract spa+eng)...');
-        const result = await extractWithTesseract(imageToScan, (prog, status) => {
-          setProgressPercent(Math.max(30, prog));
-          setProcessingStatus(status);
-        }, { ...preprocessed, enhanced: imageToScan });
-        result.imagePreview = preprocessed.enhanced || optimizedBase64;
+      setProcessingStatus('Iniciando OCR local (Tesseract spa+eng)...');
+      const result = await extractWithTesseract(imageToScan, (prog, status) => {
+        if (!mountedRef.current) return;
+        setProgressPercent(Math.max(30, prog));
+        setProcessingStatus(status);
+      }, { ...preprocessed, enhanced: imageToScan });
+      result.imagePreview = preprocessed.enhanced || optimizedBase64;
+      if (mountedRef.current) {
         setProgressPercent(100);
-        setProcessingStatus('¡Lectura OCR completada y JSON estructurado con éxito!');
-        if (mountedRef.current) onExtractionComplete(result);
-      } else {
-        setProcessingStatus('Escaneando caracteres literales con OCR de alta resolución...');
-        setProgressPercent(50);
-        const result = await extractWithLiteralOCR(imageToScan, mimeType, { ...preprocessed, enhanced: imageToScan });
-        result.imagePreview = preprocessed.enhanced || optimizedBase64;
-        setProgressPercent(100);
-        setProcessingStatus('¡Lectura OCR literal completada y estructurada en JSON!');
-        if (mountedRef.current) onExtractionComplete(result);
+        setProcessingStatus('Lectura OCR completada. Revisa los datos detectados.');
+        onExtractionComplete(result);
       }
     } catch (err: any) {
-      console.error('Extraction error:', err);
-      // Resilient fallback to Tesseract
-      if (engine === 'ocr') {
-        setProcessingStatus('Conectando con motor local OCR Tesseract...');
-        try {
-          const fallback = await extractWithTesseract(imageBase64);
-          fallback.imagePreview = imageBase64;
-          fallback.notes = 'Lectura completada con motor local OCR Tesseract.';
-          onExtractionComplete(fallback);
-          return;
-        } catch (tessErr: any) {
-          setErrorMessage(`Error en lectura OCR: ${err.message || 'No se pudo leer el documento.'}`);
-        }
-      } else {
-        setErrorMessage(`Error en el reconocimiento OCR: ${err.message}`);
-      }
+      if (mountedRef.current) setErrorMessage(`Error en OCR local: ${err.message || 'No se pudo leer el documento. Intenta otra fotografía.'}`);
     } finally {
       processingRef.current = false;
       if (mountedRef.current) setIsProcessing(false);
@@ -320,39 +297,14 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Lectura óptica de caracteres (OCR) sin inventar texto: extrae datos exactos a formato JSON para plasmar en tu documento Word
+              Lectura óptica de caracteres (OCR) sin inventar texto: detecta datos para revisar y guardar en formato JSON para plasmar en tu documento Word
             </p>
           </div>
         </div>
 
-        {/* Engine selector */}
-        <div className="flex items-center bg-slate-800/90 p-1 rounded-lg border border-slate-700">
-          <button
-            id="btn-engine-tesseract"
-            type="button"
-            onClick={() => setEngine('tesseract')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              engine === 'tesseract'
-                ? 'bg-amber-500 text-slate-950 shadow-sm font-semibold'
-                : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            <Cpu className="w-3.5 h-3.5" />
-            <span>Motor OCR Óptico Local</span>
-          </button>
-          <button
-            id="btn-engine-ocr"
-            type="button"
-            onClick={() => setEngine('ocr')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              engine === 'ocr'
-                ? 'bg-amber-500 text-slate-950 shadow-sm font-semibold'
-                : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>OCR Alta Fidelidad</span>
-          </button>
+        <div className="flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs text-amber-300">
+          <Cpu className="w-4 h-4" />
+          <span>OCR local · Tesseract · Sin IA generativa</span>
         </div>
 
         {onCancel && (

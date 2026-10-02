@@ -284,7 +284,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
               </div>
               <div>
                 <span className="font-bold text-xs text-slate-900 block">Escanear Pasaporte</span>
-                <span className="text-[11px] text-slate-500 block">Con IA Gemini & OCR</span>
+                <span className="text-[11px] text-slate-500 block">Con OCR local Tesseract</span>
               </div>
             </button>
 

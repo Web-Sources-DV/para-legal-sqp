@@ -43,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
                   SQP PARA LEGAL
                 </span>
                 <span className="text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-sans font-semibold hidden sm:inline-block">
-                  Docx AI Engine
+                  OCR y plantillas Word
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-sans tracking-wide">

@@ -385,7 +385,7 @@ export function buildStructuredDocumentJson(
     codigo_mrz_linea2: data.mrzLine2 || '',
     codigo_mrz_linea3: data.mrzLine3 || '',
     confianza_lectura_porcentaje: data.confidenceScore ?? 0,
-    metodo_extraccion: data.method === 'tesseract' ? 'OCR Óptico Local (Tesseract.js)' : 'OCR Asistido de Alta Fidelidad',
+    metodo_extraccion: data.method === 'manual' ? 'Revisión manual' : 'OCR Óptico Local (Tesseract.js)',
     timestamp_extraccion: new Date().toISOString(),
   };
 }
@@ -440,10 +440,10 @@ export async function extractWithTesseract(
       onProgress(75, 'Ejecutando pase secundario de alta fidelidad binarizado...');
     }
     const retBin = await worker.recognize(preprocessed.binarized);
+    rawText += '\n' + retBin.data.text;
     const mrzBin = parseMRZ(retBin.data.text);
     if (mrzBin.passportNumber || mrzBin.fullName) {
       mrzResult = mrzBin;
-      rawText += '\n' + retBin.data.text;
       confidence = Math.max(confidence, Math.round(retBin.data.confidence));
     }
   }
@@ -481,6 +481,8 @@ export async function extractWithTesseract(
     issuingCountry,
     birthDate,
     expiryDate,
+    issueDate: visualResult.issueDate || '',
+    placeOfBirth: visualResult.placeOfBirth || '',
     sex,
     docType,
     documentType,
@@ -503,91 +505,6 @@ export async function extractWithTesseract(
 
   return baseResult;
 }
-
-/**
- * Performs high-precision OCR extraction via literal optical reader endpoint.
- * Strictly avoids creative AI writing, returning verified structured JSON.
- */
-export async function extractWithLiteralOCR(
-  imageBase64: string,
-  mimeType: string = 'image/jpeg',
-  preparedImages?: PreprocessedImages
-): Promise<ExtractionResult> {
-  // Preprocess image to enhance readability
-  const preprocessed = preparedImages || await preprocessDocumentForOCR(imageBase64);
-  const readyImage = preprocessed.enhanced || imageBase64;
-
-  try {
-    const response = await fetch('/api/ocr-extract', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      signal: AbortSignal.timeout(60000),
-      body: JSON.stringify({
-        imageBase64: readyImage,
-        mimeType: readyImage.match(/^data:([^;]+);/)?.[1] || mimeType,
-      }),
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `Error en el servicio OCR (${response.status})`);
-    }
-
-    const data = await response.json();
-    if (!data.success || !data.data) {
-      throw new Error(data.error || 'No se pudieron extraer datos válidos del documento.');
-    }
-
-    const res = data.data;
-    const fullName = res.fullName || `${res.firstName || ''} ${res.lastName || ''}`.trim();
-    const docTypeStr = res.documentType || (res.passportNumber ? 'Pasaporte' : 'Cédula de Identidad');
-    const isCedula =
-      docTypeStr.toLowerCase().includes('cedula') ||
-      docTypeStr.toLowerCase().includes('cédula') ||
-      docTypeStr.toLowerCase().includes('dni') ||
-      docTypeStr.toLowerCase().includes('carnet');
-
-    const result: ExtractionResult = {
-      firstName: res.firstName || '',
-      lastName: res.lastName || '',
-      fullName: fullName || '',
-      passportNumber: res.passportNumber || '',
-      nationality: res.nationality || '',
-      issuingCountry: res.issuingCountry || res.nationality || '',
-      birthDate: res.birthDate || '',
-      expiryDate: res.expiryDate || '',
-      issueDate: res.issueDate || '',
-      sex: res.sex || '',
-      docType: isCedula ? 'cedula' : 'pasaporte',
-      documentType: docTypeStr,
-      personalNumber: res.personalNumber || '',
-      placeOfBirth: res.placeOfBirth || '',
-      mrzLine1: res.mrzLine1 || '',
-      mrzLine2: res.mrzLine2 || '',
-      mrzLine3: res.mrzLine3 || '',
-      confidenceScore: res.confidenceScore ?? 0,
-      notes: 'Lectura óptica OCR literal procesada exitosamente en formato JSON.',
-      method: 'ocr',
-      imagePreview: preprocessed.enhanced,
-    };
-
-    result.extractedJson = buildStructuredDocumentJson(result);
-    return result;
-  } catch (error: any) {
-    console.warn('[OCR Service] Primary reader error, falling back to local Tesseract OCR:', error);
-    const fallback = await extractWithTesseract(readyImage);
-    fallback.notes = 'Datos procesados con motor OCR local Tesseract tras conmutación automática.';
-    fallback.extractedJson = buildStructuredDocumentJson(fallback);
-    return fallback;
-  }
-}
-
-/**
- * Backward compatibility alias for extractWithGeminiAI
- */
-export const extractWithGeminiAI = extractWithLiteralOCR;
 
 /**
  * Helper: Converts File/Blob to Base64 Data URI
