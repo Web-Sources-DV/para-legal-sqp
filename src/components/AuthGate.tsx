@@ -33,6 +33,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     };
     void load();
     const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        revision++;
+        if(active) { setActiveUser(null);setUser(null);setRecovery(false);setPassword('');setNewPassword('');setMessage('');setLoading(false); }
+        return;
+      }
       if (event === 'PASSWORD_RECOVERY') setRecovery(true);
       // Supabase auth callbacks must not await another auth request.
       setTimeout(() => { if (active) void load(); }, 0);
