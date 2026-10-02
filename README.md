@@ -22,7 +22,7 @@ Daryl administra usuarios desde **Usuarios**: habilita cuentas con contraseña i
 4. La carga inicial del HTML antiguo, y cualquier reemplazo posterior, corresponde exclusivamente a Daryl desde **Base de Datos → Reemplazar archivo HTML anterior**. El archivo ya no se sirve como recurso público en el despliegue. Los administradores pueden descargarlo cuando Daryl lo cargue. El código histórico del repositorio público y las copias descargadas previamente siguen existiendo; esta versión no puede revocar esas copias.
 5. Configura en Supabase **Authentication → URL Configuration** la URL de Para Legal entre las Redirect URLs permitidas, sin quitar las URLs de otras aplicaciones del proyecto. Es necesario para la recuperación por correo. Para desarrollo, añade `http://localhost:3000/`.
 
-El proyecto Supabase reutilizado es SQP-Financing. Las nuevas tablas tienen el prefijo `pl_`; las tablas anteriores `sqp_` no se modifican. Auth es compartido, pero los perfiles, permisos y el almacenamiento de sesión de Para Legal son independientes. Una cuenta existente sin perfil activo `pl_profiles` no puede entrar.
+Para Legal utiliza exclusivamente el proyecto `fipcnxfxxngdjunrlbat` y las tablas `pl_`. Cotizador y financiamiento usan otro proyecto (`bcmzhicashtsdzlmqrif`), con cuentas y permisos independientes. Una cuenta existente sin perfil activo `pl_profiles` no puede entrar. El nombre visible anterior del proyecto, SQP-Financing, no define su uso actual.
 
 ## Uso semanal
 
@@ -55,3 +55,8 @@ Las pruebas de Node comprueban interfaz por roles, semanas y porcentajes, asigna
 
 El asesor de seguridad no reportó fallos de RLS en las tablas nuevas. El proyecto ya tiene desactivada la protección contra contraseñas filtradas; habilítala desde Authentication si el plan lo permite. Consulta la [guía oficial de seguridad de contraseñas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 
+
+
+## Identidad visual
+
+El SVG oficial está en `public/favicon.svg` y sus mismas formas se muestran en `AppLogo`. Usarlo en la interfaz y el favicon. **Los documentos de Para Legal no llevan logo**; no agregar membretes ni imágenes a los archivos Word generados.
