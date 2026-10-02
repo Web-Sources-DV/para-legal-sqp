@@ -15,10 +15,11 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { GeneratedDocument, Template, Client } from '../types';
-import { deleteDocumentLog } from '../services/storageService';
+import { deleteDocumentLog, updateDocumentLog } from '../services/storageService';
 import { generateAndDownloadDocx } from '../services/docxService';
 
 interface DocumentHistoryProps {
+  canEdit?: boolean;
   documents: GeneratedDocument[];
   templates: Template[];
   clients: Client[];
@@ -27,6 +28,7 @@ interface DocumentHistoryProps {
 }
 
 export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
+  canEdit = false,
   documents,
   templates,
   clients,
@@ -45,9 +47,10 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
     );
   });
 
-  const handleDelete = (id: string, title: string) => {
+  const handleDelete = async (id: string, title: string) => {
+    if (!canEdit) return;
     if (confirm(`¿Eliminar el registro del documento "${title}" del historial?`)) {
-      try { deleteDocumentLog(id); } catch (error: any) { alert(error.message || 'No se pudo eliminar el registro.'); return; }
+      try { await deleteDocumentLog(id); } catch (error: any) { alert(error.message || 'No se pudo eliminar el registro.'); return; }
       onDocumentsChange();
       if (viewingDoc?.id === id) setViewingDoc(null);
     }
@@ -188,13 +191,18 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                         >
                           <Download className="w-4 h-4" />
                         </button>
-                        <button
+                        {canEdit && <button title="Editar título del registro" className="p-1.5 text-slate-700 border rounded-lg" onClick={async () => {
+                          const title=prompt('Título del registro:',doc.title);
+                          if(!title?.trim()) return;
+                          try { await updateDocumentLog({...doc,title:title.trim()}); onDocumentsChange(); } catch(e: any) { alert(e.message); }
+                        }}>Editar</button>}
+                        {canEdit && (<button
                           title="Eliminar del Registro"
                           onClick={() => handleDelete(doc.id, doc.fileName)}
                           className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors border border-red-200"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </button>)}
                       </div>
                     </td>
                   </tr>
@@ -281,3 +289,4 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
     </div>
   );
 };
+

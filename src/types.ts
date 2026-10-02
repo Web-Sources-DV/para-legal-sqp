@@ -129,7 +129,7 @@ export interface ExtractionResult {
   mrzLine3?: string;
   confidenceScore?: number;
   notes?: string;
-  method: 'ocr' | 'tesseract' | 'ai' | 'manual';
+  method: 'ocr' | 'tesseract' | 'ai' | 'manual' | 'users' | 'analytics';
   rawOcrText?: string;
   imagePreview?: string;
   extractedJson?: Record<string, any>;
@@ -144,3 +144,4 @@ export interface DatabaseStats {
   lastBackupDate?: string;
   storageUsageEstimateKb: number;
 }
+

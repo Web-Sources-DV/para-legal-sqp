@@ -14,19 +14,12 @@ async function startServer() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  app.use('/api', (_req, res, next) => {
-    // These download endpoints are handled below.
-    if (_req.path === '/download-html-app') return next();
+  app.use('/api', (_req, res) => {
     res.status(404).json({ success: false, error: 'Acción no disponible.' });
   });
 
-  // Serve and download standalone HTML app
-  app.get('/sqp-para-legal.html', (_req, res) => {
-    res.sendFile(path.join(process.cwd(), 'public', 'sqp-para-legal.html'));
-  });
-  app.get('/api/download-html-app', (_req, res) => {
-    res.download(path.join(process.cwd(), 'public', 'sqp-para-legal.html'), 'sqp-para-legal.html');
-  });
+  // The legacy download is available only through authenticated Supabase access.
+  app.get('/sqp-para-legal.html', (_req, res) => { res.status(404).send('Accede desde la aplicación con una cuenta autorizada.'); });
 
   // Vite development middleware or static production serving
   if (process.env.NODE_ENV !== 'production') {
@@ -53,3 +46,4 @@ startServer().catch((err) => {
   console.error('Failed to start server:', err);
   process.exit(1);
 });
+

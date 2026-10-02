@@ -21,6 +21,7 @@ import { Client, GeneratedDocument } from '../types';
 import { saveClient, deleteClient } from '../services/storageService';
 
 interface ClientManagerProps {
+  canViewHistory?: boolean;
   clients: Client[];
   documents: GeneratedDocument[];
   onClientsChange: () => void;
@@ -29,6 +30,7 @@ interface ClientManagerProps {
 }
 
 export const ClientManager: React.FC<ClientManagerProps> = ({
+  canViewHistory = false,
   clients,
   documents,
   onClientsChange,
@@ -58,7 +60,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
 
   const nationalities = Array.from(new Set(clients.map((c) => c.nationality))).filter(Boolean);
 
-  const handleSaveModal = (e: React.FormEvent) => {
+  const handleSaveModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingClient?.fullName || !editingClient?.passportNumber) {
       alert('Por favor completa al menos el nombre y el número de pasaporte.');
@@ -88,15 +90,15 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
       documentCount: editingClient.documentCount || 0,
     };
 
-    try { saveClient(clientToSave); } catch (error: any) { alert(error.message || 'No se pudo guardar el cliente.'); return; }
+    try { await saveClient(clientToSave); } catch (error: any) { alert(error.message || 'No se pudo guardar el cliente.'); return; }
     onClientsChange();
     setEditingClient(null);
     setIsNewClientModalOpen(false);
   };
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (confirm(`¿Estás seguro de eliminar el cliente "${name}" de la base de datos local?`)) {
-      try { deleteClient(id); } catch (error: any) { alert(error.message || 'No se pudo eliminar el cliente.'); return; }
+      try { await deleteClient(id); } catch (error: any) { alert(error.message || 'No se pudo eliminar el cliente.'); return; }
       onClientsChange();
       if (viewingClient?.id === id) setViewingClient(null);
     }
@@ -116,7 +118,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Base de datos local permanente en el navegador para generación recurrente de contratos y poderes.
+            Directorio compartido para generación recurrente de contratos y poderes.
           </p>
         </div>
 
@@ -555,6 +557,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                 )}
               </div>
 
+              {canViewHistory && <>
               {/* Generated Docs for this client */}
               <div className="border-t border-slate-100 pt-4">
                 <h5 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">
@@ -581,6 +584,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                 )}
               </div>
 
+              </>}
               <div className="border-t border-slate-200 pt-4 flex justify-between gap-3">
                 <button
                   type="button"
@@ -609,3 +613,4 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
     </div>
   );
 };
+

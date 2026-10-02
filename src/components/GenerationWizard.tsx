@@ -103,8 +103,8 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
   };
 
   // Handle confirmation in Data Review step
-  const handleConfirmClient = (client: Client, nextAction: 'generate' | 'save_only') => {
-    saveClient(client);
+  const handleConfirmClient = async (client: Client, nextAction: 'generate' | 'save_only') => {
+    await saveClient(client);
     onClientsChange();
     setActiveClient(client);
 
@@ -453,3 +453,4 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
     </div>
   );
 };
+

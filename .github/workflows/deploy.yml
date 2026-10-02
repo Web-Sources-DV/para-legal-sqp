@@ -29,13 +29,18 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build static app
-        run: npm run lint && npm run build:web
+        run: pnpm run lint && pnpm test && pnpm run build:web
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -48,3 +53,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+

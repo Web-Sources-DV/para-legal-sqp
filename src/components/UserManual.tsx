@@ -789,7 +789,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                     Almacenamiento Local & Migración de BD
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                    La base de datos Firebase ha sido desvinculada según tu solicitud. Tus plantillas, clientes y registros permanecen resguardados de forma local en el navegador, listos para conectarse a tu nueva base de datos en cuanto la indiques.
+                    Los datos se comparten mediante Supabase con cuentas y permisos. Los administradores consultan el historial y la base de datos; solo Daryl Villa puede administrarlos, gestionar usuarios y consultar estadísticas. Los datos del navegador anterior se migran desde Base de Datos con la cuenta principal.
                   </p>
                 </div>
                 <button
@@ -874,7 +874,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                   <span>¿Dónde se guardan los datos de mis clientes y pasaportes?</span>
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Todos los registros se almacenan dentro del almacenamiento seguro de tu navegador web (<code className="font-mono">localStorage</code>). Ningún dato confidencial de clientes queda guardado en servidores externos. Recuerda realizar copias de seguridad periódicas en la pestaña <strong>Base de Datos</strong>.
+                  El OCR procesa la imagen en tu navegador. Al guardar un cliente o generar un documento, sus datos y archivos se almacenan en Supabase y se comparten con los usuarios habilitados según sus permisos. Daryl Villa puede descargar respaldos desde <strong>Base de Datos</strong>.
                 </p>
               </div>
             </div>
@@ -884,3 +884,4 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
     </div>
   );
 };
+
