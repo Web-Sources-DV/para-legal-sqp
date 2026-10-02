@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Scale, FileText, Users, FolderOpen, Database, Sparkles, PlusCircle, LayoutDashboard, FileCode2, BookOpen, Cloud, RefreshCw, Download } from 'lucide-react';
+import { Scale, FileText, Users, FolderOpen, Database, Sparkles, PlusCircle, LayoutDashboard, FileCode2, BookOpen, Cloud, RefreshCw, Download, LogOut } from 'lucide-react';
 import { ActiveTab, DatabaseStats } from '../types';
 import { CloudSyncState } from '../services/storageService';
 import { AppUser, canView } from '../services/accessPolicy';
@@ -34,10 +34,23 @@ export const Header: React.FC<HeaderProps> = ({
   const [newPassword,setNewPassword]=useState('');
   const [passwordBusy,setPasswordBusy]=useState(false);
   const [passwordMessage,setPasswordMessage]=useState('');
+  const [signingOut,setSigningOut]=useState(false);
+  const [signOutError,setSignOutError]=useState('');
+  const handleSignOut = async () => {
+    if(signingOut) return;
+    setSigningOut(true);setSignOutError('');
+    try {
+      const {error}=await supabase.auth.signOut({scope:'local'});
+      if(error) throw error;
+    } catch(error: any) {
+      setSignOutError(error.message || 'No se pudo cerrar sesión. Inténtalo de nuevo.');
+      setSigningOut(false);
+    }
+  };
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20 gap-4">
+        <div className="flex flex-wrap items-center justify-between min-h-16 sm:min-h-20 gap-3 py-3">
           {/* Logo & Brand */}
           <div
             className="flex items-center gap-3.5 cursor-pointer group"
@@ -63,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Quick Action Button & Cloud Badge */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Database Status Indicator */}
             {canView(user, 'databaseStatus') && (            <div
               title="Datos compartidos con permisos de Supabase."
@@ -92,14 +105,24 @@ export const Header: React.FC<HeaderProps> = ({
               <Sparkles className="w-4 h-4 text-slate-950" />
               <span>Nuevo Documento</span>
             </button>
+            <button
+              id="btn-sign-out"
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="inline-flex items-center gap-2 min-h-11 px-4 py-2 rounded-xl border border-red-300/60 bg-red-700 hover:bg-red-600 text-white font-semibold text-sm whitespace-nowrap shrink-0 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              <LogOut className="w-4 h-4" aria-hidden="true" />
+              <span>{signingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}</span>
+            </button>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 py-2 text-xs text-slate-300">
           <span>{user.displayName} · {user.role === 'owner' ? 'Acceso completo' : user.role === 'admin' ? 'Administrador de consulta' : 'Usuario'}</span>
-          <button className="underline" onClick={async () => { const {error} = await supabase.auth.signOut(); if(error) alert(error.message); }}>Cerrar sesión</button>
           <button className="underline" onClick={()=>{setChangingPassword(true);setPasswordMessage('');}}>Cambiar contraseña</button>
         </div>
+        {signOutError && <p role="alert" className="rounded-lg bg-red-950 text-red-100 p-3 text-sm mb-3">{signOutError}</p>}
         {changingPassword && <form className="p-4 bg-slate-800 rounded-lg space-y-3 mb-3" onSubmit={async e=>{
           e.preventDefault();setPasswordBusy(true);
           const {error}=await supabase.auth.updateUser({password:newPassword});
