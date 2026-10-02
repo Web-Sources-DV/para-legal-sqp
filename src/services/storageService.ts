@@ -7,20 +7,6 @@ const STORAGE_KEYS = {
   LAST_BACKUP: 'sqp_last_backup_v2',
 };
 
-// Known sample template IDs and client names to purge if present
-const SAMPLE_TEMPLATE_IDS = new Set([
-  'tpl-poder-especial',
-  'tpl-contrato-servicios',
-  'tpl-solicitud-residencia',
-]);
-
-const SAMPLE_CLIENT_NAMES = new Set([
-  'ELENA MORALES VEGA',
-  'CARLOS ANDRÉS RESTREPO GÓMEZ',
-  'MARIANA SOFIA GONZÁLEZ CRUZ',
-  'DAVID MILLER SMITH',
-]);
-
 // Initial in-memory & localStorage clean states
 const INITIAL_CLIENTS: Client[] = [];
 const INITIAL_TEMPLATES: Template[] = [];
@@ -129,11 +115,7 @@ export function getStoredClients(): Client[] {
     const parsed: Client[] = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
 
-    return parsed.filter(
-      (c) =>
-        !c.id.startsWith('sample-') &&
-        !SAMPLE_CLIENT_NAMES.has((c.fullName || '').trim().toUpperCase())
-    );
+    return parsed;
   } catch (e) {
     console.error('Error reading clients from storage:', e);
     return [];
@@ -141,11 +123,7 @@ export function getStoredClients(): Client[] {
 }
 
 export function saveClients(clients: Client[]): void {
-  const filtered = clients.filter(
-    (c) =>
-      !c.id.startsWith('sample-') &&
-      !SAMPLE_CLIENT_NAMES.has((c.fullName || '').trim().toUpperCase())
-  );
+  const filtered = clients;
   localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(filtered));
   updateSyncState({
     cloudClientsCount: filtered.length,
@@ -210,9 +188,7 @@ export function getStoredTemplates(): Template[] {
     const parsed: Template[] = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
 
-    return parsed.filter(
-      (tpl) => !tpl.isDefault && !SAMPLE_TEMPLATE_IDS.has(tpl.id)
-    );
+    return parsed;
   } catch (e) {
     console.error('Error reading templates from storage:', e);
     return [];
@@ -220,9 +196,7 @@ export function getStoredTemplates(): Template[] {
 }
 
 export function saveTemplates(templates: Template[]): void {
-  const filtered = templates.filter(
-    (tpl) => !tpl.isDefault && !SAMPLE_TEMPLATE_IDS.has(tpl.id)
-  );
+  const filtered = templates;
   localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(filtered));
   updateSyncState({
     cloudTemplatesCount: filtered.length,
@@ -286,15 +260,14 @@ export function getStoredDocuments(): GeneratedDocument[] {
 
 export function saveDocumentLog(docItem: GeneratedDocument): void {
   const docs = getStoredDocuments();
+  if (docs.some(doc => doc.id === docItem.id)) return;
   docs.unshift(docItem);
-  localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(docs));
 
   // Increment template usage locally
   const templates = getStoredTemplates();
   const tpl = templates.find((t) => t.id === docItem.templateId);
   if (tpl) {
     tpl.usageCount = (tpl.usageCount || 0) + 1;
-    localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(templates));
   }
 
   // Increment client document count locally
@@ -302,8 +275,12 @@ export function saveDocumentLog(docItem: GeneratedDocument): void {
   const cli = clients.find((c) => c.id === docItem.clientId);
   if (cli) {
     cli.documentCount = (cli.documentCount || 0) + 1;
-    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
   }
+  writeStorageTransaction({
+    [STORAGE_KEYS.DOCUMENTS]: JSON.stringify(docs),
+    [STORAGE_KEYS.TEMPLATES]: JSON.stringify(templates),
+    [STORAGE_KEYS.CLIENTS]: JSON.stringify(clients),
+  });
 
   updateSyncState({
     cloudDocumentsCount: docs.length,
@@ -313,21 +290,24 @@ export function saveDocumentLog(docItem: GeneratedDocument): void {
 }
 
 export function deleteDocumentLog(id: string): void {
-  const docs = getStoredDocuments().filter((d) => d.id !== id);
-  localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(docs));
-  updateSyncState({
-    cloudDocumentsCount: docs.length,
-    lastSyncTime: new Date().toLocaleTimeString(),
-  });
+  const docs = getStoredDocuments();
+  const deleted = docs.find(doc => doc.id === id);
+  if (!deleted) return;
+  const clients = getStoredClients().map(client => client.id === deleted.clientId ? { ...client, documentCount: Math.max(0, (client.documentCount || 0) - 1) } : client);
+  const templates = getStoredTemplates().map(template => template.id === deleted.templateId ? { ...template, usageCount: Math.max(0, (template.usageCount || 0) - 1) } : template);
+  const remaining = docs.filter(doc => doc.id !== id);
+  writeStorageTransaction({ [STORAGE_KEYS.DOCUMENTS]: JSON.stringify(remaining), [STORAGE_KEYS.CLIENTS]: JSON.stringify(clients), [STORAGE_KEYS.TEMPLATES]: JSON.stringify(templates) });
+  updateSyncState({ cloudDocumentsCount: remaining.length, lastSyncTime: new Date().toLocaleTimeString() });
   notifyDataListeners();
 }
 
 export function clearAllDocuments(): void {
-  localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify([]));
-  updateSyncState({
-    cloudDocumentsCount: 0,
-    lastSyncTime: new Date().toLocaleTimeString(),
+  writeStorageTransaction({
+    [STORAGE_KEYS.DOCUMENTS]: '[]',
+    [STORAGE_KEYS.CLIENTS]: JSON.stringify(getStoredClients().map(client => ({ ...client, documentCount: 0 }))),
+    [STORAGE_KEYS.TEMPLATES]: JSON.stringify(getStoredTemplates().map(template => ({ ...template, usageCount: 0 }))),
   });
+  updateSyncState({ cloudDocumentsCount: 0, lastSyncTime: new Date().toLocaleTimeString() });
   notifyDataListeners();
 }
 
@@ -375,23 +355,32 @@ export function exportFullDatabaseJson(): string {
 export function importDatabaseJson(jsonString: string): { success: boolean; message: string } {
   try {
     const data = JSON.parse(jsonString);
-    if (!data.clients && !data.templates && !data.documents) {
+    if (!data || typeof data !== 'object' || Array.isArray(data) || !['clients', 'templates', 'documents'].some(key => key in data)) {
       return {
         success: false,
         message: 'El archivo JSON no contiene una estructura válida de respaldo de SQP Legal.',
       };
     }
 
-    if (Array.isArray(data.clients)) {
-      saveClients(data.clients);
+    const fields = { clients: STORAGE_KEYS.CLIENTS, templates: STORAGE_KEYS.TEMPLATES, documents: STORAGE_KEYS.DOCUMENTS };
+    const required = {
+      clients: ['id', 'fullName', 'passportNumber', 'firstName', 'lastName', 'nationality', 'issuingCountry', 'birthDate', 'expiryDate', 'sex', 'createdAt', 'updatedAt'],
+      templates: ['id', 'name', 'description', 'category', 'fileName', 'fileData', 'createdAt', 'updatedAt'],
+      documents: ['id', 'title', 'fileName', 'templateId', 'templateName', 'clientId', 'clientName', 'passportNumber', 'generatedAt', 'fileSizeFormatted'],
+    };
+    const writes: Record<string, string> = {};
+    for (const [field, key] of Object.entries(fields)) {
+      if (!(field in data)) continue;
+      const items = data[field];
+      if (!Array.isArray(items) || items.some(item => !item || required[field].some(name => typeof item[name] !== 'string') || !item.id.trim())) throw new Error(`Estructura inválida: ${field}. No se modificó el respaldo actual.`);
+      if (new Set(items.map(item => item.id)).size !== items.length) throw new Error(`Identificadores duplicados en ${field}.`);
+      if (field === 'clients' && items.some(item => !['pasaporte', 'cedula', 'dni', 'nie', 'otro'].includes(item.docType))) throw new Error('Tipo de documento inválido.');
+      if (field === 'templates' && items.some(item => !Array.isArray(item.placeholders) || item.placeholders.some(tag => typeof tag !== 'string') || !Array.isArray(item.placeholderDefs) || item.placeholderDefs.some(def => !def || typeof def.key !== 'string' || typeof def.label !== 'string'))) throw new Error('Marcadores de plantilla inválidos.');
+      if (field === 'documents' && items.some(item => !item.dataSnapshot || typeof item.dataSnapshot !== 'object' || Array.isArray(item.dataSnapshot) || Object.values(item.dataSnapshot).some(value => typeof value !== 'string'))) throw new Error('Datos de historial inválidos.');
+      writes[key] = JSON.stringify(items);
     }
-    if (Array.isArray(data.templates)) {
-      saveTemplates(data.templates);
-    }
-    if (Array.isArray(data.documents)) {
-      localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(data.documents));
-    }
-
+    writeStorageTransaction(writes);
+    updateSyncState({ cloudClientsCount: getStoredClients().length, cloudTemplatesCount: getStoredTemplates().length, cloudDocumentsCount: getStoredDocuments().length });
     notifyDataListeners();
     return {
       success: true,
@@ -399,6 +388,18 @@ export function importDatabaseJson(jsonString: string): { success: boolean; mess
     };
   } catch (err: any) {
     return { success: false, message: `Error al procesar el archivo JSON: ${err.message}` };
+  }
+}
+
+// Roll back every affected key if the browser runs out of storage mid-operation.
+function writeStorageTransaction(writes: Record<string, string>): void {
+  const before = Object.fromEntries(Object.keys(writes).map(key => [key, localStorage.getItem(key)]));
+  try {
+    Object.entries(writes).forEach(([key, value]) => localStorage.setItem(key, value));
+  } catch (error) {
+    Object.keys(writes).forEach(key => localStorage.removeItem(key));
+    Object.entries(before).forEach(([key, value]) => { if (value !== null) localStorage.setItem(key, value); });
+    throw new Error('No se pudo guardar: el almacenamiento del navegador está lleno o bloqueado. Exporta un respaldo y libera espacio.');
   }
 }
 
@@ -446,8 +447,10 @@ export function initializeCloudSync(): () => void {
 
   notifyDataListeners();
 
+  const onStorage = (event: StorageEvent) => { if (event.key?.startsWith('sqp_') || event.key === null) notifyDataListeners(); };
+  window.addEventListener('storage', onStorage);
   return () => {
-    // No-op cleanup
+    window.removeEventListener('storage', onStorage);
   };
 }
 

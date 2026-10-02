@@ -43,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
                   SQP PARA LEGAL
                 </span>
                 <span className="text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-sans font-semibold hidden sm:inline-block">
-                  Docx AI Engine
+                  OCR y plantillas Word
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-sans tracking-wide">
@@ -67,13 +67,13 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <a
-              href="/sqp-para-legal.html"
+              href="./sqp-para-legal.html"
               download="sqp-para-legal.html"
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 text-xs font-semibold shadow-sm transition-all"
-              title="Descargar esta aplicación en un archivo HTML independiente"
+              title="Descargar la versión HTML anterior; sus funciones son independientes de esta app"
             >
               <Download className="w-3.5 h-3.5 text-amber-400" />
-              <span>App en HTML</span>
+              <span>Versión HTML anterior</span>
             </a>
 
             <button

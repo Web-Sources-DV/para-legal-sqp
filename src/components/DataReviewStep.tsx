@@ -26,6 +26,7 @@ import { determineSexAgeCategory, calculateAgeFromBirthDate } from '../services/
 import { buildStructuredDocumentJson } from '../services/ocrService';
 
 interface DataReviewStepProps {
+  selectedClient?: Client | null;
   extraction: ExtractionResult;
   existingClients: Client[];
   onConfirmClient: (client: Client, nextAction: 'generate' | 'save_only') => void;
@@ -37,36 +38,42 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
   existingClients,
   onConfirmClient,
   onRescan,
+  selectedClient,
 }) => {
   const initialCategory = useMemo(() => {
     return determineSexAgeCategory(extraction.birthDate, extraction.sex).category;
   }, [extraction.birthDate, extraction.sex]);
 
+  const [newClientId] = useState(() => `cli-${crypto.randomUUID()}`);
+  const [reviewError, setReviewError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'form' | 'json'>('form');
 
   const [formData, setFormData] = useState<Partial<Client>>({
-    id: `cli-${Date.now()}`,
+    id: selectedClient?.id || newClientId,
     firstName: extraction.firstName || '',
     lastName: extraction.lastName || '',
     fullName: extraction.fullName || `${extraction.firstName || ''} ${extraction.lastName || ''}`.trim(),
     passportNumber: extraction.passportNumber || '',
     docType: extraction.docType || 'pasaporte',
-    nationality: extraction.nationality || 'ESPAÑOLA',
-    issuingCountry: extraction.issuingCountry || extraction.nationality || 'ESPAÑA',
+    nationality: extraction.nationality || '',
+    issuingCountry: extraction.issuingCountry || '',
     birthDate: extraction.birthDate || '',
     expiryDate: extraction.expiryDate || '',
-    sex: extraction.sex || 'M',
+    issueDate: extraction.issueDate || '',
+    personalNumber: extraction.personalNumber || '',
+    placeOfBirth: extraction.placeOfBirth || '',
+    sex: extraction.sex || '',
     sexAgeCategory: extraction.sexAgeCategory || initialCategory,
-    email: '',
-    phone: '',
-    address: '',
-    city: 'Madrid',
+    email: selectedClient?.email || '',
+    phone: selectedClient?.phone || '',
+    address: selectedClient?.address || '',
+    city: selectedClient?.city || '',
     notes: extraction.notes || 'Datos verificados mediante lectura óptica OCR de documento.',
     passportImageBase64: extraction.imagePreview,
   });
 
-  const [associateMode, setAssociateMode] = useState<'new' | 'existing'>('new');
-  const [selectedExistingId, setSelectedExistingId] = useState<string>('');
+  const [associateMode, setAssociateMode] = useState<'new' | 'existing'>(selectedClient ? 'existing' : 'new');
+  const [selectedExistingId, setSelectedExistingId] = useState<string>(selectedClient?.id || '');
   const [copiedJson, setCopiedJson] = useState(false);
   const [jsonEditText, setJsonEditText] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
@@ -105,6 +112,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
   const handleChange = (field: keyof Client, value: any) => {
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
+      if (field === 'birthDate' || field === 'sex') updated.sexAgeCategory = determineSexAgeCategory(updated.birthDate, updated.sex).category;
       if (field === 'firstName' || field === 'lastName') {
         const fn = field === 'firstName' ? value : prev.firstName || '';
         const ln = field === 'lastName' ? value : prev.lastName || '';
@@ -131,9 +139,9 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
   };
 
   // Copy JSON to clipboard
-  const handleCopyJson = () => {
+  const handleCopyJson = async () => {
     const textToCopy = jsonEditText || JSON.stringify(currentStructuredJson, null, 2);
-    navigator.clipboard.writeText(textToCopy);
+    try { await navigator.clipboard.writeText(textToCopy); } catch { setJsonError('No se pudo copiar. Usa Descargar JSON.'); return; }
     setCopiedJson(true);
     setTimeout(() => setCopiedJson(false), 2500);
   };
@@ -162,11 +170,11 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
       const ln = (parsed.apellidos || '').toUpperCase().trim();
       const fullName = (parsed.nombre_completo || `${fn} ${ln}`).toUpperCase().trim();
       const docNum = (parsed.numero_identidad || '').toUpperCase().trim();
-      const nat = (parsed.nacionalidad || 'ESPAÑOLA').toUpperCase().trim();
+      const nat = (parsed.nacionalidad || '').toUpperCase().trim();
       const issuing = (parsed.pais_emisor || nat).toUpperCase().trim();
       const birth = parsed.fecha_nacimiento || '';
       const exp = parsed.fecha_vencimiento || '';
-      const sexVal = (parsed.sexo || 'M').toUpperCase().trim();
+      const sexVal = (parsed.sexo || '').toUpperCase().trim();
       const condJuridica = (parsed.condicion_juridica || '').toUpperCase().trim();
       const docTypeLower = (parsed.tipo_documento || '').toLowerCase();
       const isCedula = docTypeLower.includes('cedula') || docTypeLower.includes('cédula') || docTypeLower.includes('dni') || docTypeLower.includes('carnet');
@@ -194,11 +202,15 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
   };
 
   const handleContinue = (nextAction: 'generate' | 'save_only') => {
+    setReviewError(null);
+    if (!formData.fullName?.trim() || !formData.passportNumber?.trim()) { setReviewError('Completa el nombre y el número de identidad con los datos reales.'); return; }
+    if (associateMode === 'existing' && !selectedExistingId) { setReviewError('Selecciona el cliente que deseas actualizar.'); return; }
     const ageCalculated = calculateAgeFromBirthDate(formData.birthDate);
     const categoryInfo = determineSexAgeCategory(formData.birthDate, formData.sex, formData.sexAgeCategory);
 
     const finalClient: Client = {
-      id: associateMode === 'existing' && selectedExistingId ? selectedExistingId : formData.id || `cli-${Date.now()}`,
+      ...existingClients.find(c => associateMode === 'existing' && c.id === selectedExistingId),
+      id: associateMode === 'existing' ? selectedExistingId : newClientId,
       firstName: (formData.firstName || '').toUpperCase(),
       lastName: (formData.lastName || '').toUpperCase(),
       fullName: (formData.fullName || `${formData.firstName || ''} ${formData.lastName || ''}`).trim().toUpperCase(),
@@ -208,25 +220,29 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
       issuingCountry: (formData.issuingCountry || '').toUpperCase(),
       birthDate: formData.birthDate || '',
       expiryDate: formData.expiryDate || '',
-      sex: formData.sex || 'M',
+      sex: formData.sex || '',
       sexAgeCategory: categoryInfo.category,
       age: ageCalculated ?? undefined,
       email: formData.email || '',
       phone: formData.phone || '',
       address: formData.address || '',
-      city: formData.city || 'Madrid',
+      city: formData.city || '',
       notes: formData.notes || '',
       passportImageBase64: formData.passportImageBase64,
-      createdAt: new Date().toISOString(),
+      issueDate: formData.issueDate,
+      personalNumber: formData.personalNumber,
+      placeOfBirth: formData.placeOfBirth,
+      createdAt: existingClients.find(c => associateMode === 'existing' && c.id === selectedExistingId)?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      documentCount: 0,
+      documentCount: existingClients.find(c => associateMode === 'existing' && c.id === selectedExistingId)?.documentCount || 0,
     };
 
-    onConfirmClient(finalClient, nextAction);
+    try { onConfirmClient(finalClient, nextAction); } catch (error: any) { setReviewError(error.message || 'No se pudo guardar el cliente.'); }
   };
 
   return (
     <div className="space-y-6">
+      {reviewError && <p role="alert" className="p-3 text-red-700 bg-red-50 rounded-xl">{reviewError}</p>}
       {/* Top Banner */}
       <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -236,7 +252,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h4 className="font-serif font-bold text-slate-900 text-base">
-                ¡Datos del Documento Extraídos por OCR!
+                Revisa los datos del documento
               </h4>
               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                 JSON Listo
@@ -251,7 +267,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-lg border border-emerald-200 text-xs font-semibold text-emerald-800">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Precisión OCR: {extraction.confidenceScore || 95}%</span>
+            <span>Confianza del motor: {extraction.confidenceScore ?? 0}%</span>
           </div>
           <button
             type="button"
@@ -550,10 +566,12 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     Sexo Registrado (M / F) *
                   </label>
                   <select
-                    value={formData.sex || 'M'}
+                    value={formData.sex || ''}
                     onChange={(e) => handleChange('sex', e.target.value)}
                     className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
                   >
+                    <option value="">Sin leer / verificar</option>
+                    <option value="X">Otro (X)</option>
                     <option value="M">Masculino (M)</option>
                     <option value="F">Femenino (F)</option>
                   </select>

@@ -57,13 +57,16 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     targetIdoneo: string; // 'all' or specific Idoneo ID
     fileName: string;
     fileBase64: string;
+    previewText: string;
     placeholders: string[];
     placeholderDefs: PlaceholderDef[];
   } | null>(null);
 
   const handleDocxUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+    if (file.size > 3 * 1024 * 1024) { setUploadError('La plantilla debe pesar menos de 3 MB para el almacenamiento local.'); return; }
 
     if (!file.name.toLowerCase().endsWith('.docx')) {
       setUploadError('Por favor selecciona un archivo con extensión .docx de Microsoft Word.');
@@ -90,6 +93,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
         targetIdoneo: activeIdoneo.id,
         fileName: file.name,
         fileBase64: parsed.fileBase64,
+        previewText: parsed.previewText,
         placeholders: parsed.placeholders,
         placeholderDefs: parsed.placeholderDefs,
       });
@@ -117,6 +121,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
       idoneo: assignedIdoneoObj,
       fileName: newTemplateData.fileName,
       fileData: newTemplateData.fileBase64,
+      samplePreviewText: newTemplateData.previewText,
       placeholders: newTemplateData.placeholders,
       placeholderDefs: newTemplateData.placeholderDefs,
       isDefault: false,
@@ -125,7 +130,8 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
       usageCount: 0,
     };
 
-    saveTemplate(templateToSave);
+    if (!templateToSave.name.trim()) { setUploadError('Escribe un nombre para la plantilla.'); return; }
+    try { saveTemplate(templateToSave); } catch (error: any) { setUploadError(error.message || 'No se pudo guardar la plantilla.'); return; }
     onTemplatesChange();
     setNewTemplateData(null);
     setUploadSuccessMessage(`¡Plantilla "${templateToSave.name}" guardada con éxito en la base de datos!`);
@@ -134,7 +140,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
 
   const handleDelete = (id: string, name: string) => {
     if (confirm(`¿Estás seguro de eliminar la plantilla "${name}"?`)) {
-      deleteTemplate(id);
+      try { deleteTemplate(id); } catch (error: any) { setUploadError(error.message || 'No se pudo eliminar la plantilla.'); return; }
       onTemplatesChange();
       if (viewingTemplate?.id === id) setViewingTemplate(null);
     }
@@ -412,7 +418,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                         className="font-mono text-[11px] bg-white text-slate-800 px-2 py-1 rounded border border-slate-300 font-semibold flex items-center gap-1 shadow-xs"
                       >
                         <Tag className="w-3 h-3 text-amber-600" />
-                        {tag.startsWith('(') ? tag : `{{${tag}}}`}
+                        {tag.startsWith('(') ? tag : tag}
                       </span>
                     ))}
                   </div>
@@ -536,7 +542,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                             key={tag}
                             className="font-mono text-[10px] bg-slate-50 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200"
                           >
-                            {tag.startsWith('(') ? tag : `{{${tag}}}`}
+                            {tag.startsWith('(') ? tag : tag}
                           </span>
                         ))}
                         {template.placeholders.length > 4 && (

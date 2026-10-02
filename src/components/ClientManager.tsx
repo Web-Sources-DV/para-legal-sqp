@@ -66,28 +66,29 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
     }
 
     const clientToSave: Client = {
+      ...editingClient,
       id: editingClient.id || `cli-${Date.now()}`,
       firstName: editingClient.firstName || editingClient.fullName.split(' ')[0] || '',
       lastName: editingClient.lastName || editingClient.fullName.split(' ').slice(1).join(' ') || '',
       fullName: editingClient.fullName.toUpperCase(),
       passportNumber: (editingClient.passportNumber || '').toUpperCase(),
       docType: editingClient.docType || 'pasaporte',
-      nationality: (editingClient.nationality || 'ESPAÑOLA').toUpperCase(),
-      issuingCountry: (editingClient.issuingCountry || editingClient.nationality || 'ESPAÑA').toUpperCase(),
+      nationality: (editingClient.nationality || '').toUpperCase(),
+      issuingCountry: (editingClient.issuingCountry || '').toUpperCase(),
       birthDate: editingClient.birthDate || '',
       expiryDate: editingClient.expiryDate || '',
-      sex: editingClient.sex || 'M',
+      sex: editingClient.sex || '',
       phone: editingClient.phone || '',
       email: editingClient.email || '',
       address: editingClient.address || '',
-      city: editingClient.city || 'Madrid',
+      city: editingClient.city || '',
       notes: editingClient.notes || '',
       createdAt: editingClient.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       documentCount: editingClient.documentCount || 0,
     };
 
-    saveClient(clientToSave);
+    try { saveClient(clientToSave); } catch (error: any) { alert(error.message || 'No se pudo guardar el cliente.'); return; }
     onClientsChange();
     setEditingClient(null);
     setIsNewClientModalOpen(false);
@@ -95,7 +96,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
 
   const handleDelete = (id: string, name: string) => {
     if (confirm(`¿Estás seguro de eliminar el cliente "${name}" de la base de datos local?`)) {
-      deleteClient(id);
+      try { deleteClient(id); } catch (error: any) { alert(error.message || 'No se pudo eliminar el cliente.'); return; }
       onClientsChange();
       if (viewingClient?.id === id) setViewingClient(null);
     }
@@ -136,10 +137,10 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                 id: `cli-${Date.now()}`,
                 fullName: '',
                 passportNumber: '',
-                nationality: 'ESPAÑOLA',
+                nationality: '',
                 docType: 'pasaporte',
-                sex: 'M',
-                city: 'Madrid',
+                sex: '',
+                city: '',
               });
               setIsNewClientModalOpen(true);
             }}
@@ -227,7 +228,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                             {client.fullName}
                           </div>
                           <div className="text-[11px] text-slate-400">
-                            Nac: {client.birthDate || 'No registrada'} · Sexo: {client.sex || 'M'}
+                            Nac: {client.birthDate || 'No registrada'} · Sexo: {client.sex || ''}
                           </div>
                         </div>
                       </div>
@@ -404,10 +405,11 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                     Sexo / Género
                   </label>
                   <select
-                    value={editingClient.sex || 'M'}
+                    value={editingClient.sex || ''}
                     onChange={(e) => setEditingClient({ ...editingClient, sex: e.target.value as any })}
                     className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 bg-white"
                   >
+                    <option value="">Sin leer / verificar</option>
                     <option value="M">M - Masculino</option>
                     <option value="F">F - Femenino</option>
                     <option value="X">X - Otro</option>

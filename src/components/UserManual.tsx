@@ -40,8 +40,8 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleCopy = (tag: string) => {
-    navigator.clipboard.writeText(tag);
+  const handleCopy = async (tag: string) => {
+    try { await navigator.clipboard.writeText(tag); } catch { alert('No se pudo copiar. Selecciona el marcador y cópialo manualmente.'); return; }
     setCopiedTag(tag);
     setTimeout(() => setCopiedTag(null), 2000);
   };
@@ -223,7 +223,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                     Subir o Escanear Pasaporte
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                    Arrastra una foto, selecciónala desde tu equipo o tómala con la cámara web. La IA de Google Gemini o el motor Tesseract extraen automáticamente los datos y la zona MRZ.
+                    Arrastra una foto, selecciónala desde tu equipo o tómala con la cámara web. Tesseract lee el texto y la zona MRZ en tu navegador. Revisa y corrige los campos detectados antes de generar el documento.
                   </p>
                 </div>
                 <button
@@ -300,7 +300,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
                     <strong className="text-slate-900 block font-semibold">Doble Motor OCR</strong>
-                    <span>IA Gemini de alta precisión + Tesseract local de respaldo sin conexión.</span>
+                    <span>OCR local Tesseract sin IA generativa. La primera carga del motor y los idiomas requiere internet.</span>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">

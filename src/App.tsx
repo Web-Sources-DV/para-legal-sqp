@@ -33,6 +33,7 @@ import { Client, Template, GeneratedDocument, DatabaseStats, ActiveTab } from '.
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('wizard');
+  const [wizardSession, setWizardSession] = useState(0);
   const [clients, setClients] = useState<Client[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [documents, setDocuments] = useState<GeneratedDocument[]>([]);
@@ -41,7 +42,7 @@ export function App() {
     totalTemplates: 0,
     totalGeneratedDocs: 0,
     storageUsageEstimateKb: 0,
-    lastBackupDate: null,
+    lastBackupDate: undefined,
   });
   const [syncState, setSyncState] = useState<CloudSyncState>({
     isConnected: true,
@@ -51,6 +52,7 @@ export function App() {
     cloudClientsCount: 0,
     cloudDocumentsCount: 0,
     error: null,
+    provider: 'local',
   });
 
   const [selectedClientForGenerator, setSelectedClientForGenerator] = useState<Client | null>(null);
@@ -96,6 +98,8 @@ export function App() {
 
   // Handler to jump to wizard for new passport scanning
   const handleScanForNewClient = () => {
+    setWizardSession(session => session + 1);
+    setSelectedClientForGenerator(null);
     setActiveTab('wizard');
   };
 
@@ -115,6 +119,8 @@ export function App() {
         syncState={syncState}
         onStartNewDocument={() => {
           setSelectedClientForGenerator(null);
+          setSelectedTemplateForGenerator(null);
+          setWizardSession(session => session + 1);
           setActiveTab('wizard');
         }}
       />
@@ -124,6 +130,7 @@ export function App() {
         {/* Tab 1: Guided Wizard */}
         {activeTab === 'wizard' && (
           <GenerationWizard
+            key={wizardSession}
             clients={clients}
             templates={templates}
             onClientsChange={refreshData}
@@ -148,7 +155,7 @@ export function App() {
                 </p>
               </div>
               <button
-                onClick={() => setActiveTab('wizard')}
+                onClick={handleScanForNewClient}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-sm transition-all"
               >
                 <Upload className="w-4 h-4 text-amber-400" />
@@ -197,6 +204,7 @@ export function App() {
             onDocumentsChange={refreshData}
             onSelectClientAndTemplate={(client, template) => {
               setSelectedClientForGenerator(client);
+              setSelectedTemplateForGenerator(template);
               setActiveTab('generator');
             }}
           />
@@ -235,7 +243,7 @@ export function App() {
               <span>📖 Manual de Uso & Guía Paso a Paso</span>
             </button>
             <span className="text-[11px] text-slate-400">
-              Sincronización en la nube con <strong className="text-slate-700">Google Firestore</strong> (Multi-dispositivo)
+              Datos guardados en <strong className="text-slate-700">este navegador</strong> · Exporta respaldos periódicamente
             </span>
             <span className="text-[11px] text-slate-400">
               Compatibilidad nativa con <strong className="text-slate-700">Microsoft Word (.docx)</strong>

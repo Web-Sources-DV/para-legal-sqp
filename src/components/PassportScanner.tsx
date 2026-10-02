@@ -17,7 +17,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { ExtractionResult } from '../types';
-import { extractWithLiteralOCR, extractWithTesseract } from '../services/ocrService';
+import { extractWithTesseract } from '../services/ocrService';
 import { preprocessDocumentForOCR, PreprocessedImages } from '../services/imagePreprocessing';
 
 interface PassportScannerProps {
@@ -30,7 +30,6 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   onCancel,
 }) => {
   const [activeTab, setActiveTab] = useState<'upload' | 'camera'>('upload');
-  const [engine, setEngine] = useState<'tesseract' | 'ocr'>('tesseract');
   const [opticalFilter, setOpticalFilter] = useState<'enhanced' | 'binarized' | 'original'>('enhanced');
   const [preprocessedPreview, setPreprocessedPreview] = useState<PreprocessedImages | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -47,23 +46,26 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraStarting, setIsCameraStarting] = useState(false);
 
+  const streamRef = useRef<MediaStream | null>(null);
+  const cameraRequest = useRef(0);
+  const processingRef = useRef(false);
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
   // Stop camera helper
   const stopCameraStream = useCallback(() => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((track) => track.stop());
-      setCameraStream(null);
-    }
-  }, [cameraStream]);
+    cameraRequest.current++;
+    streamRef.current?.getTracks().forEach(track => track.stop());
+    streamRef.current = null;
+    setCameraStream(null);
+  }, []);
 
   // Start camera stream
-  const startCamera = useCallback(async (facing: 'environment' | 'user' = cameraFacingMode) => {
+  const startCamera = useCallback(async (facing: 'environment' | 'user' = 'environment') => {
     setIsCameraStarting(true);
     setCameraError(null);
 
-    // Stop current stream if running
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((t) => t.stop());
-    }
+    stopCameraStream();
+    const request = cameraRequest.current;
 
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -79,12 +81,15 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
         audio: false,
       });
 
+      if (!mountedRef.current || request !== cameraRequest.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      streamRef.current = stream;
       setCameraStream(stream);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.play().catch(() => {});
       }
     } catch (err: any) {
+      if (!mountedRef.current || request !== cameraRequest.current) return;
       console.warn('Primary camera error, attempting fallback:', err);
       try {
         // Fallback without strict facing constraints
@@ -92,6 +97,8 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
           video: true,
           audio: false,
         });
+        if (!mountedRef.current || request !== cameraRequest.current) { streamFallback.getTracks().forEach(t => t.stop()); return; }
+        streamRef.current = streamFallback;
         setCameraStream(streamFallback);
         if (videoRef.current) {
           videoRef.current.srcObject = streamFallback;
@@ -105,7 +112,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
     } finally {
       setIsCameraStarting(false);
     }
-  }, [cameraFacingMode, cameraStream]);
+  }, [stopCameraStream]);
 
   // Trigger camera start when camera tab is active
   useEffect(() => {
@@ -120,16 +127,20 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
     };
   }, [activeTab, cameraFacingMode, startCamera, stopCameraStream]);
 
+  useEffect(() => {
+    if (cameraStream && videoRef.current) { videoRef.current.srcObject = cameraStream; videoRef.current.play().catch(() => {}); }
+  }, [cameraStream]);
+
   // Switch between front and back cameras
   const handleToggleCameraFacing = () => {
     const nextFacing = cameraFacingMode === 'environment' ? 'user' : 'environment';
     setCameraFacingMode(nextFacing);
-    startCamera(nextFacing);
+
   };
 
   // Capture snapshot from video stream
   const capturePhoto = () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || !videoRef.current.videoWidth || !videoRef.current.videoHeight) { setCameraError('Espera a que la cámara muestre la imagen antes de capturar.'); return; }
 
     const video = videoRef.current;
     const canvas = document.createElement('canvas');
@@ -147,7 +158,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
     processImage(photoBase64, 'image/jpeg');
   };
 
-  // Resize / optimize image before sending to AI/OCR to guarantee first-try reading
+  // Resize / optimize image before sending to OCR local to guarantee first-try reading
   const optimizeImageIfNeeded = (dataUrl: string): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -187,6 +198,8 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
 
   // Perform extraction on an image base64
   const processImage = async (imageBase64: string, mimeType: string = 'image/jpeg') => {
+    if (processingRef.current) return;
+    processingRef.current = true;
     setIsProcessing(true);
     setErrorMessage(null);
     setProgressPercent(15);
@@ -210,54 +223,31 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
           ? preprocessed.original
           : preprocessed.enhanced;
 
-      if (engine === 'tesseract') {
-        setProcessingStatus('Iniciando motor OCR óptico local (Tesseract spa+eng)...');
-        const result = await extractWithTesseract(imageToScan, (prog, status) => {
-          setProgressPercent(Math.max(30, prog));
-          setProcessingStatus(status);
-        });
-        result.imagePreview = preprocessed.enhanced || optimizedBase64;
+      setProcessingStatus('Iniciando OCR local (Tesseract spa+eng)...');
+      const result = await extractWithTesseract(imageToScan, (prog, status) => {
+        if (!mountedRef.current) return;
+        setProgressPercent(Math.max(30, prog));
+        setProcessingStatus(status);
+      }, { ...preprocessed, enhanced: imageToScan });
+      result.imagePreview = preprocessed.enhanced || optimizedBase64;
+      if (mountedRef.current) {
         setProgressPercent(100);
-        setProcessingStatus('¡Lectura OCR completada y JSON estructurado con éxito!');
-        setTimeout(() => {
-          onExtractionComplete(result);
-        }, 350);
-      } else {
-        setProcessingStatus('Escaneando caracteres literales con OCR de alta resolución...');
-        setProgressPercent(50);
-        const result = await extractWithLiteralOCR(imageToScan, mimeType);
-        result.imagePreview = preprocessed.enhanced || optimizedBase64;
-        setProgressPercent(100);
-        setProcessingStatus('¡Lectura OCR literal completada y estructurada en JSON!');
-        setTimeout(() => {
-          onExtractionComplete(result);
-        }, 350);
+        setProcessingStatus('Lectura OCR completada. Revisa los datos detectados.');
+        onExtractionComplete(result);
       }
     } catch (err: any) {
-      console.error('Extraction error:', err);
-      // Resilient fallback to Tesseract
-      if (engine === 'ocr') {
-        setProcessingStatus('Conectando con motor local OCR Tesseract...');
-        try {
-          const fallback = await extractWithTesseract(imageBase64);
-          fallback.imagePreview = imageBase64;
-          fallback.notes = 'Lectura completada con motor local OCR Tesseract.';
-          onExtractionComplete(fallback);
-          return;
-        } catch (tessErr: any) {
-          setErrorMessage(`Error en lectura OCR: ${err.message || 'No se pudo leer el documento.'}`);
-        }
-      } else {
-        setErrorMessage(`Error en el reconocimiento OCR: ${err.message}`);
-      }
+      if (mountedRef.current) setErrorMessage(`Error en OCR local: ${err.message || 'No se pudo leer el documento. Intenta otra fotografía.'}`);
     } finally {
-      setIsProcessing(false);
+      processingRef.current = false;
+      if (mountedRef.current) setIsProcessing(false);
     }
   };
 
   // Handle file input
   const handleFileUpload = (file: File) => {
-    if (!file) return;
+    if (!file || processingRef.current) return;
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/bmp'].includes(file.type)) { setErrorMessage('Sube una imagen JPG, PNG, WEBP o BMP. Convierte PDF o HEIC a imagen primero.'); return; }
+    if (file.size > 15 * 1024 * 1024) { setErrorMessage('La imagen debe pesar menos de 15 MB.'); return; }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -266,6 +256,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
         processImage(base64, file.type || 'image/jpeg');
       }
     };
+    reader.onerror = () => setErrorMessage('No se pudo leer el archivo.');
     reader.readAsDataURL(file);
   };
 
@@ -306,39 +297,14 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Lectura óptica de caracteres (OCR) sin inventar texto: extrae datos exactos a formato JSON para plasmar en tu documento Word
+              Lectura óptica de caracteres (OCR) sin inventar texto: detecta datos para revisar y guardar en formato JSON para plasmar en tu documento Word
             </p>
           </div>
         </div>
 
-        {/* Engine selector */}
-        <div className="flex items-center bg-slate-800/90 p-1 rounded-lg border border-slate-700">
-          <button
-            id="btn-engine-tesseract"
-            type="button"
-            onClick={() => setEngine('tesseract')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              engine === 'tesseract'
-                ? 'bg-amber-500 text-slate-950 shadow-sm font-semibold'
-                : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            <Cpu className="w-3.5 h-3.5" />
-            <span>Motor OCR Óptico Local</span>
-          </button>
-          <button
-            id="btn-engine-ocr"
-            type="button"
-            onClick={() => setEngine('ocr')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              engine === 'ocr'
-                ? 'bg-amber-500 text-slate-950 shadow-sm font-semibold'
-                : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>OCR Alta Fidelidad</span>
-          </button>
+        <div className="flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs text-amber-300">
+          <Cpu className="w-4 h-4" />
+          <span>OCR local · Tesseract · Sin IA generativa</span>
         </div>
 
         {onCancel && (
@@ -457,7 +423,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                   Arrastra o haz clic para subir la foto del pasaporte o cédula
                 </h4>
                 <p className="text-xs text-slate-500 max-w-md mb-4">
-                  El sistema detectará automáticamente el <span className="font-semibold text-slate-700">nombre completo</span>, <span className="font-semibold text-slate-700">número de documento</span>, <span className="font-semibold text-slate-700">nacionalidad</span>, <span className="font-semibold text-slate-700">fecha de nacimiento</span> y <span className="font-semibold text-slate-700">condición (sexo/edad)</span> a la primera.
+                  El sistema detectará automáticamente el <span className="font-semibold text-slate-700">nombre completo</span>, <span className="font-semibold text-slate-700">número de documento</span>, <span className="font-semibold text-slate-700">nacionalidad</span>, <span className="font-semibold text-slate-700">fecha de nacimiento</span> y <span className="font-semibold text-slate-700">condición (sexo/edad)</span> para que los revises antes de guardar.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-md hover:bg-slate-800 transition-colors">
@@ -537,7 +503,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
-                  <h5 className="text-xs font-bold text-slate-800">Lectura a la primera</h5>
+                  <h5 className="text-xs font-bold text-slate-800">Mejora de legibilidad</h5>
                   <p className="text-[11px] text-slate-500">Optimización de imagen y contraste automático previo al escaneo.</p>
                 </div>
               </div>
