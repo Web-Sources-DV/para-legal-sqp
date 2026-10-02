@@ -1,0 +1,6 @@
+{
+  "name": "SQP PARA LEGAL",
+  "description": "Sistema profesional de gestión documental legal con extracción OCR/IA de pasaportes y generación automatizada de archivos Word (.docx).",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

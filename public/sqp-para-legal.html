@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQP PARA LEGAL · Gestión Documental Legal</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- JSZip for DOCX file generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fbf8f2',
+              100: '#f5edd9',
+              500: '#f59e0b',
+              600: '#d97706',
+              900: '#0f172a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+    .font-serif-legal { font-family: 'Cinzel', Georgia, serif; }
+    .font-sans { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    .scrollbar-none::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 font-sans min-h-screen flex flex-col">
+
+  <!-- ================= HEADER ================= -->
+  <header class="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20 gap-4">
+        <!-- Logo -->
+        <div class="flex items-center gap-3.5 cursor-pointer" onclick="switchTab('wizard')">
+          <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-slate-950 font-bold text-xl shadow-md border border-amber-400/40">
+            ⚖
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-serif-legal font-bold text-lg sm:text-xl tracking-wider text-slate-50">
+                SQP PARA LEGAL
+              </span>
+              <span class="text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-sans font-semibold hidden sm:inline-block">
+                Edición HTML Standalone
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 font-sans tracking-wide">
+              Gestión Documental Legal · Extracción OCR & Generador Word (.docx)
+            </p>
+          </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="flex items-center gap-3">
+          <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700/80 text-xs text-slate-300">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-[11px] font-medium text-slate-200">Standalone Offline Activo</span>
+          </div>
+
+          <button onclick="downloadSelfApp()" class="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-semibold text-xs transition-all shadow-xs" title="Guardar copia local de esta aplicación HTML">
+            💾 Guardar App HTML
+          </button>
+
+          <button onclick="startNewDocumentWizard()" class="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/25 transition-all">
+            ✨ Nuevo Documento
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center space-x-1 sm:space-x-2 border-t border-slate-800/90 overflow-x-auto py-2.5 scrollbar-none text-xs sm:text-sm">
+        <button id="tab-btn-wizard" onclick="switchTab('wizard')" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg font-bold bg-amber-500 text-slate-950 shadow-md">
+          ✨ Asistente Guiado
+        </button>
+        <button id="tab-btn-generator" onclick="switchTab('generator')" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold text-slate-300 hover:text-white hover:bg-slate-800">
+          📄 Generador Directo
+        </button>
+        <button id="tab-btn-clients" onclick="switchTab('clients')" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800">
+          👥 Directorio de Clientes (<span id="header-client-count">0</span>)
+        </button>
+        <button id="tab-btn-templates" onclick="switchTab('templates')" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800">
+          📋 Plantillas Word por Idóneo
+        </button>
+        <button id="tab-btn-history" onclick="switchTab('history')" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800">
+          📁 Historial (<span id="header-docs-count">0</span>)
+        </button>
+        <button id="tab-btn-database" onclick="switchTab('database')" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800">
+          🗄️ Base de Datos & Respaldo
+        </button>
+        <button id="tab-btn-manual" onclick="switchTab('manual')" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg font-medium text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20">
+          📖 Manual de Uso
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- 1. TAB: ASISTENTE GUIADO (WIZARD) -->
+    <section id="view-wizard" class="tab-view space-y-6">
+      <!-- Wizard Progress Stepper -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-bold flex items-center justify-center text-sm shadow-xs">
+            1
+          </div>
+          <div>
+            <h2 class="font-bold text-slate-900 text-sm sm:text-base">Paso 1: Datos del Cliente (Pasaporte / Cédula)</h2>
+            <p class="text-xs text-slate-500">Carga la foto del documento o selecciona un cliente guardado</p>
+          </div>
+        </div>
+        <div class="text-xs text-amber-700 font-semibold bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
+          Paso 1 de 3
+        </div>
+      </div>
+
+      <!-- Mode Selector -->
+      <div class="flex gap-2 border-b border-slate-200 pb-2">
+        <button id="btn-wmode-scan" onclick="setWizardMode('scan')" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-900 text-white shadow-xs">
+          📷 Escanear o Cargar Imagen
+        </button>
+        <button id="btn-wmode-clients" onclick="setWizardMode('clients')" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50">
+          👥 Elegir de Clientes Guardados
+        </button>
+        <button id="btn-wmode-manual" onclick="setWizardMode('manual')" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50">
+          ✍️ Ingreso Manual Rápido
+        </button>
+      </div>
+
+      <!-- Scan Mode Content -->
+      <div id="wmode-scan-content" class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm text-center">
+        <div class="max-w-xl mx-auto border-2 border-dashed border-slate-300 hover:border-amber-500 rounded-2xl p-8 bg-slate-50/50 transition-all cursor-pointer" onclick="document.getElementById('wizard-file-input').click()">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-3xl shadow-xs">
+            🛂
+          </div>
+          <h3 class="font-serif-legal font-bold text-slate-900 text-lg mb-1">Cargar Foto del Pasaporte o Cédula</h3>
+          <p class="text-xs text-slate-500 mb-4">Haz clic para buscar en tu dispositivo o arrastra la imagen aquí (.jpg, .png)</p>
+          <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs shadow-sm hover:bg-amber-400">
+            📁 Seleccionar Archivo de Imagen
+          </span>
+          <input id="wizard-file-input" type="file" accept="image/*" class="hidden" onchange="handlePassportFileSelected(event)">
+        </div>
+
+        <div id="scan-preview-box" class="hidden mt-6 max-w-md mx-auto p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+          <p class="text-xs font-bold text-slate-700 mb-2">Vista Previa del Documento:</p>
+          <img id="scan-preview-img" src="" alt="Pasaporte" class="max-h-48 mx-auto rounded-lg shadow-sm border border-slate-200">
+          <button onclick="processUploadedPassport()" class="mt-4 w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm">
+            ⚡ Procesar y Extraer Datos del Pasaporte
+          </button>
+        </div>
+      </div>
+
+      <!-- Select Existing Client Content -->
+      <div id="wmode-clients-content" class="hidden bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-3">Selecciona un cliente de tu directorio:</h3>
+        <div id="wizard-clients-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <!-- Manual Entry / Review Form (Step 2) -->
+      <div id="wizard-step2-form" class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+        <div class="border-b border-slate-100 pb-4 flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-slate-900 text-base">Revisión y Edición de los Datos del Cliente</h3>
+            <p class="text-xs text-slate-500">Verifica los datos obligatorios para garantizar la correcta redacción legal.</p>
+          </div>
+          <span class="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+            ✓ Datos Listos
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Nombre Completo *</label>
+            <input id="w-fullname" type="text" placeholder="Ej. GUSTAVO JOSÉ ACOSTA MUÑOZ" class="w-full p-2.5 rounded-xl border border-slate-300 uppercase font-semibold text-slate-900 focus:border-amber-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Condición Legal (Sexo / Rango de Edad) *</label>
+            <select id="w-legal-condition" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-amber-800 focus:border-amber-500 focus:outline-none">
+              <option value="VARÓN">VARÓN</option>
+              <option value="MUJER">MUJER</option>
+              <option value="JOVEN">JOVEN</option>
+              <option value="MENOR">MENOR</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Tipo de Documento *</label>
+            <select id="w-doc-type" class="w-full p-2.5 rounded-xl border border-slate-300 font-medium text-slate-900 focus:border-amber-500 focus:outline-none">
+              <option value="Pasaporte">Pasaporte</option>
+              <option value="Cédula">Cédula</option>
+              <option value="DNI">DNI</option>
+              <option value="NIE">NIE</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Número de Pasaporte o Cédula *</label>
+            <input id="w-passport-num" type="text" placeholder="Ej. 192629016" class="w-full p-2.5 rounded-xl border border-slate-300 uppercase font-semibold text-slate-900 focus:border-amber-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Nacionalidad *</label>
+            <input id="w-nationality" type="text" placeholder="Ej. VENEZOLANA" class="w-full p-2.5 rounded-xl border border-slate-300 uppercase font-semibold text-slate-900 focus:border-amber-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">País Emisor del Documento</label>
+            <input id="w-country" type="text" placeholder="Ej. VENEZUELA" class="w-full p-2.5 rounded-xl border border-slate-300 uppercase font-semibold text-slate-900 focus:border-amber-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Fecha de Nacimiento</label>
+            <input id="w-birth" type="text" placeholder="YYYY-MM-DD" class="w-full p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:border-amber-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Teléfono de Contacto</label>
+            <input id="w-phone" type="text" placeholder="+507 6000-0000" class="w-full p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:border-amber-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Correo Electrónico</label>
+            <input id="w-email" type="email" placeholder="cliente@ejemplo.com" class="w-full p-2.5 rounded-xl border border-slate-300 text-slate-900 focus:border-amber-500 focus:outline-none">
+          </div>
+        </div>
+
+        <!-- Step 3: Choose Idóneo and Template -->
+        <div class="border-t border-slate-200 pt-6">
+          <h4 class="font-serif-legal font-bold text-slate-900 text-base mb-3">Paso 3: Seleccionar Idóneo y Modelo de Documento</h4>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1 text-xs">Letrado Idóneo Responsable *</label>
+              <select id="w-selected-idoneo" onchange="updateWizardTemplatePreview()" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-slate-900 text-xs focus:border-amber-500 focus:outline-none">
+                <option value="antony-talla">LCDO. ANTONY NATHANAEL TALLA COPRIS (Idoneidad 30553 · Cédula 8-849-2485)</option>
+                <option value="susana-sabalza">LICDA. SUSANA SABALZA (Idoneidad 29811 · Cédula 8-740-1290)</option>
+                <option value="marta-aparicio">LICDA. MARTA APARICIO (Idoneidad 31042 · Cédula 8-802-1455)</option>
+                <option value="lizohar-godoy">LICDA. LIZOHAR GODOY (Idoneidad 28940 · Cédula 4-725-1903)</option>
+                <option value="martin-downer">LIC. MARTÍN DOWNER (Idoneidad 30114 · Cédula 8-780-2219)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1 text-xs">Plantilla Word (.docx) *</label>
+              <select id="w-selected-template" onchange="updateWizardTemplatePreview()" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-slate-900 text-xs focus:border-amber-500 focus:outline-none">
+                <option value="tpl-poder-especial">Poder Especial Notarial (Representación Notarial y Migratoria)</option>
+                <option value="tpl-poder-general">Poder General de Representación Notarial Amplio</option>
+                <option value="tpl-contrato-servicios">Contrato de Prestación de Servicios Jurídicos</option>
+                <option value="tpl-solicitud-residencia">Solicitud de Residencia & Permiso Notarial</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview of the text and signature block -->
+        <div class="border border-slate-200 rounded-2xl p-5 bg-slate-50 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Vista Previa en Vivo (Formato Notarial)</span>
+            <span class="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">Apartado de Firma 100% en Negrita</span>
+          </div>
+          
+          <div id="wizard-live-preview" class="bg-white p-6 rounded-xl border border-slate-200 font-serif text-slate-800 text-xs leading-relaxed max-h-64 overflow-y-auto whitespace-pre-line shadow-inner">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Bold Signature preview box -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200">
+            <p class="text-[11px] font-bold text-slate-500 uppercase mb-2">Bloque Notarial de Firmas (Negrita en Word .docx):</p>
+            <div class="grid grid-cols-2 gap-4 text-xs font-bold text-slate-950">
+              <div class="border-t-2 border-slate-900 pt-2">
+                <p>ACEPTO PODER</p>
+                <p id="sig-lawyer-name" class="mt-6 uppercase">LCDO. ANTONY NATHANAEL TALLA COPRIS</p>
+                <p id="sig-lawyer-ced">CÉDULA: 8-849-2485</p>
+                <p id="sig-lawyer-ido">IDONEIDAD: 30553</p>
+              </div>
+              <div class="border-t-2 border-slate-900 pt-2">
+                <p>OTORGO PODER:</p>
+                <p id="sig-client-name" class="mt-6 uppercase">GUSTAVO JOSÉ ACOSTA MUÑOZ</p>
+                <p id="sig-client-doc">PASAPORTE No. 192629016</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+          <button onclick="saveClientFromWizard()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all">
+            💾 Guardar Ficha en Clientes
+          </button>
+
+          <button onclick="generateDocxFromWizard()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/25 transition-all">
+            ⬇️ Generar y Descargar Word (.docx) Oficial
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. TAB: GENERADOR DIRECTO -->
+    <section id="view-generator" class="tab-view hidden space-y-6">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+        <h2 class="font-serif-legal font-bold text-xl text-slate-900">Generador Rápido de Documentos Notariales</h2>
+        <p class="text-xs text-slate-500">Selecciona rápidamente un cliente del directorio y un modelo oficial para compilar el archivo Word.</p>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs pt-2">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">1. Cliente del Directorio</label>
+            <select id="gen-client-select" onchange="syncGeneratorPreview()" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold text-slate-900">
+              <!-- Injected by JS -->
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">2. Letrado Idóneo</label>
+            <select id="gen-idoneo-select" onchange="syncGeneratorPreview()" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold text-slate-900">
+              <option value="antony-talla">LCDO. ANTONY NATHANAEL TALLA COPRIS</option>
+              <option value="susana-sabalza">LICDA. SUSANA SABALZA</option>
+              <option value="marta-aparicio">LICDA. MARTA APARICIO</option>
+              <option value="lizohar-godoy">LICDA. LIZOHAR GODOY</option>
+              <option value="martin-downer">LIC. MARTÍN DOWNER</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">3. Modelo Notarial (.docx)</label>
+            <select id="gen-tpl-select" onchange="syncGeneratorPreview()" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold text-slate-900">
+              <option value="tpl-poder-especial">Poder Especial Notarial</option>
+              <option value="tpl-poder-general">Poder General de Representación</option>
+              <option value="tpl-contrato-servicios">Contrato de Prestación de Servicios</option>
+              <option value="tpl-solicitud-residencia">Solicitud de Residencia</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-4 flex justify-end">
+          <button onclick="downloadFromDirectGenerator()" class="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md">
+            ⬇️ Descargar Documento Word (.docx)
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. TAB: DIRECTORIO DE CLIENTES -->
+    <section id="view-clients" class="tab-view hidden space-y-6">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="font-serif-legal font-bold text-xl text-slate-900">Directorio de Clientes</h2>
+            <p class="text-xs text-slate-500">Administra las fichas de tus clientes y genera documentos instantáneos.</p>
+          </div>
+          <button onclick="showNewClientModal()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-xs">
+            + Nuevo Cliente
+          </button>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input id="client-search-input" oninput="renderClientsTable()" type="text" placeholder="Buscar por nombre, documento o nacionalidad..." class="flex-1 p-2.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-amber-500">
+        </div>
+
+        <!-- Clients Table -->
+        <div class="overflow-x-auto rounded-2xl border border-slate-200">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider">
+              <tr>
+                <th class="p-3">Nombre Completo</th>
+                <th class="p-3">Condición</th>
+                <th class="p-3">Documento</th>
+                <th class="p-3">Nacionalidad</th>
+                <th class="p-3">Contacto</th>
+                <th class="p-3 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="clients-table-body" class="divide-y divide-slate-100 font-medium">
+              <!-- Injected by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. TAB: PLANTILLAS WORD POR IDÓNEO -->
+    <section id="view-templates" class="tab-view hidden space-y-6">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+        <div>
+          <h2 class="font-serif-legal font-bold text-xl text-slate-900">Plantillas Oficiales Organizadas por Letrado Idóneo</h2>
+          <p class="text-xs text-slate-500">Cada profesional idóneo de la firma cuenta con sus modelos con membrete y datos colegiados listos.</p>
+        </div>
+
+        <!-- Idóneo Tabs -->
+        <div class="flex flex-wrap gap-2 border-b border-slate-200 pb-3" id="idoneos-tab-bar">
+          <!-- Populated by JS -->
+        </div>
+
+        <div id="idoneo-templates-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. TAB: HISTORIAL -->
+    <section id="view-history" class="tab-view hidden space-y-6">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="font-serif-legal font-bold text-xl text-slate-900">Historial de Documentos Generados</h2>
+            <p class="text-xs text-slate-500">Registro completo de todos los poderes y contratos descargados.</p>
+          </div>
+          <button onclick="clearHistory()" class="text-xs text-red-600 hover:underline">
+            Vaciar Historial
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-200">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold uppercase">
+              <tr>
+                <th class="p-3">Título / Documento</th>
+                <th class="p-3">Cliente</th>
+                <th class="p-3">Letrado Idóneo</th>
+                <th class="p-3">Fecha y Hora</th>
+                <th class="p-3 text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body" class="divide-y divide-slate-100 font-medium">
+              <!-- Injected by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. TAB: BASE DE DATOS Y RESPALDO -->
+    <section id="view-database" class="tab-view hidden space-y-6">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center font-bold text-xl">
+            🗄️
+          </div>
+          <div>
+            <h2 class="font-serif-legal font-bold text-xl text-slate-900">Almacenamiento Local y Respaldo</h2>
+            <p class="text-xs text-slate-500">Firebase ha sido desvinculado. Todos tus datos residen de forma segura en este navegador.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+          <!-- Backup Card -->
+          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+            <div>
+              <div class="text-2xl mb-2">📥</div>
+              <h3 class="font-bold text-slate-900 text-sm mb-1">Exportar Respaldo JSON</h3>
+              <p class="text-xs text-slate-500 mb-4">Descarga un archivo con todos tus clientes e historial para guardarlo o transferirlo a otra PC.</p>
+            </div>
+            <button onclick="exportDatabaseJson()" class="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs">
+              Descargar Respaldo JSON
+            </button>
+          </div>
+
+          <!-- Restore Card -->
+          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+            <div>
+              <div class="text-2xl mb-2">📤</div>
+              <h3 class="font-bold text-slate-900 text-sm mb-1">Restaurar Respaldo JSON</h3>
+              <p class="text-xs text-slate-500 mb-4">Carga un archivo de respaldo previo para restaurar clientes y documentos en 1 clic.</p>
+            </div>
+            <label class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs text-center cursor-pointer block">
+              Seleccionar Archivo JSON
+              <input type="file" accept=".json,application/json" class="hidden" onchange="importDatabaseJson(event)">
+            </label>
+          </div>
+
+          <!-- Download App Card -->
+          <div class="p-5 rounded-2xl bg-amber-50/70 border border-amber-200 flex flex-col justify-between">
+            <div>
+              <div class="text-2xl mb-2">💾</div>
+              <h3 class="font-bold text-slate-900 text-sm mb-1">Descargar Esta App en HTML</h3>
+              <p class="text-xs text-slate-600 mb-4">Obtén el archivo HTML autosuficiente completo para ejecutarlo directamente sin conexión a internet.</p>
+            </div>
+            <button onclick="downloadSelfApp()" class="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs shadow-xs">
+              Descargar sqp-para-legal.html
+            </button>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-200 pt-4 flex justify-between items-center text-xs">
+          <span class="text-slate-500">¿Deseas restablecer la aplicación y borrar los registros locales?</span>
+          <button onclick="resetAllData()" class="px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 font-bold">
+            Limpiar Todos los Registros
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. TAB: MANUAL DE USO -->
+    <section id="view-manual" class="tab-view hidden space-y-6">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+        <div>
+          <h2 class="font-serif-legal font-bold text-xl text-slate-900">Manual de Uso & Diccionario de Variables</h2>
+          <p class="text-xs text-slate-500">Listado oficial de etiquetas admitidas por las plantillas Word (.docx) de SQP PARA LEGAL.</p>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-200">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold uppercase">
+              <tr>
+                <th class="p-3">Variable Notarial</th>
+                <th class="p-3">Descripción</th>
+                <th class="p-3">Ejemplo de Reemplazo</th>
+                <th class="p-3 text-right">Copiar</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-medium">
+              <tr>
+                <td class="p-3 font-mono font-bold text-amber-700">(nombre)</td>
+                <td class="p-3">Nombre completo del cliente otorgante</td>
+                <td class="p-3">GUSTAVO JOSÉ ACOSTA MUÑOZ</td>
+                <td class="p-3 text-right"><button onclick="copyToClipboard('(nombre)')" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 font-bold">Copiar</button></td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-amber-700">(sexo)</td>
+                <td class="p-3">Condición legal civil según género y edad</td>
+                <td class="p-3">VARÓN / MUJER / JOVEN / MENOR</td>
+                <td class="p-3 text-right"><button onclick="copyToClipboard('(sexo)')" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 font-bold">Copiar</button></td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-amber-700">(numero de identidad)</td>
+                <td class="p-3">Número de cédula o pasaporte oficial</td>
+                <td class="p-3">192629016</td>
+                <td class="p-3 text-right"><button onclick="copyToClipboard('(numero de identidad)')" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 font-bold">Copiar</button></td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-amber-700">(nacionalidad)</td>
+                <td class="p-3">Nacionalidad oficial en mayúsculas</td>
+                <td class="p-3">VENEZOLANA / ESPAÑOLA / MEXICANA</td>
+                <td class="p-3 text-right"><button onclick="copyToClipboard('(nacionalidad)')" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 font-bold">Copiar</button></td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-amber-700">(abogado_nombre)</td>
+                <td class="p-3">Nombre y título formal del letrado idóneo</td>
+                <td class="p-3">LCDO. ANTONY NATHANAEL TALLA COPRIS</td>
+                <td class="p-3 text-right"><button onclick="copyToClipboard('(abogado_nombre)')" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 font-bold">Copiar</button></td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-amber-700">(abogado_cedula)</td>
+                <td class="p-3">Cédula del letrado</td>
+                <td class="p-3">8-849-2485</td>
+                <td class="p-3 text-right"><button onclick="copyToClipboard('(abogado_cedula)')" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 font-bold">Copiar</button></td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-amber-700">(abogado_idoneidad)</td>
+                <td class="p-3">Número de idoneidad profesional</td>
+                <td class="p-3">30553</td>
+                <td class="p-3 text-right"><button onclick="copyToClipboard('(abogado_idoneidad)')" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 font-bold">Copiar</button></td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-amber-700">(fecha_actual)</td>
+                <td class="p-3">Fecha legal formal actual</td>
+                <td class="p-3">1 de octubre de 2026</td>
+                <td class="p-3 text-right"><button onclick="copyToClipboard('(fecha_actual)')" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 font-bold">Copiar</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="bg-slate-900 border-t border-slate-800 text-slate-400 py-6 text-xs text-center">
+    <div class="max-w-7xl mx-auto px-4">
+      <p class="font-serif-legal font-bold text-slate-300">SQP PARA LEGAL · GESTIÓN DOCUMENTAL & NOTARIAL</p>
+      <p class="mt-1 text-slate-500">Versión HTML Standalone · Ejecutable en cualquier navegador sin dependencias externas.</p>
+    </div>
+  </footer>
+
+  <!-- ================= JAVASCRIPT ENGINE ================= -->
+  <script>
+    // ---------- DATA DEFINITIONS ----------
+    const IDONEOS = [
+      {
+        id: 'antony-talla',
+        name: 'Antony Talla',
+        formalTitle: 'LCDO. ANTONY NATHANAEL TALLA COPRIS',
+        cedula: '8-849-2485',
+        idoneidad: '30553',
+        role: 'Abogado Idóneo Notarial y Extranjería',
+      },
+      {
+        id: 'susana-sabalza',
+        name: 'Susana Sabalza',
+        formalTitle: 'LICDA. SUSANA BEATRIZ SABALZA',
+        cedula: '8-740-1290',
+        idoneidad: '29811',
+        role: 'Abogada Idónea / Letrada Directora',
+      },
+      {
+        id: 'marta-aparicio',
+        name: 'Marta Aparicio',
+        formalTitle: 'LICDA. MARTA APARICIO MARTÍNEZ',
+        cedula: '8-802-1455',
+        idoneidad: '31042',
+        role: 'Abogada Idónea / Extranjería y Migración',
+      },
+      {
+        id: 'lizohar-godoy',
+        name: 'Lizohar Godoy',
+        formalTitle: 'LICDA. LIZOHAR GODOY PÉREZ',
+        cedula: '4-725-1903',
+        idoneidad: '28940',
+        role: 'Abogada Idónea / Contratos y Litigios',
+      },
+      {
+        id: 'martin-downer',
+        name: 'Martín Downer',
+        formalTitle: 'LIC. MARTÍN DOWNER RUIZ',
+        cedula: '8-780-2219',
+        idoneidad: '30114',
+        role: 'Abogado Idóneo Corporativo y Notarial',
+      }
+    ];
+
+    const TEMPLATES = [
+      {
+        id: 'tpl-poder-especial',
+        title: 'Poder Especial Notarial',
+        body: `PODER ESPECIAL NOTARIAL
+
+Comparece ante mí (nombre), de nacionalidad (nacionalidad), de condición legal (sexo), portador del documento de identidad personal número (numero de identidad), domiciliado y con residencia para los efectos legales correspondientes; quien en pleno goce de sus facultades civiles otorga PODER ESPECIAL amplio y suficiente a favor de (abogado_nombre), idóneo para ejercer la abogacía, portador de la cédula número (abogado_cedula) y registro de idoneidad profesional número (abogado_idoneidad), para que en su nombre y representación tramite, gestione, promueva y concluya todos los trámites migratorios, notariales y gubernamentales pertinentes ante las autoridades correspondientes.
+
+El presente poder se otorga con todas las facultades inherentes a la ley, incluyendo transigir, desistir y sustituir en caso necesario.
+
+Dado en la ciudad correspondiente, a los (fecha_actual).`
+      },
+      {
+        id: 'tpl-poder-general',
+        title: 'Poder General de Representación Notarial',
+        body: `PODER GENERAL DE REPRESENTACIÓN
+
+Por medio del presente instrumento público, yo, (nombre), de nacionalidad (nacionalidad), en mi condición jurídica de (sexo), identificado con el documento legal número (numero de identidad), confiero PODER GENERAL amplio y cumplido a favor de (abogado_nombre), portador de la cédula de identidad número (abogado_cedula) e idoneidad profesional (abogado_idoneidad), para que gestione todos mis intereses legales, judiciales, extrajudiciales y administrativos ante cualquier organismo público o privado.
+
+En fe de lo acordado, se suscribe en la fecha (fecha_actual).`
+      },
+      {
+        id: 'tpl-contrato-servicios',
+        title: 'Contrato de Prestación de Servicios Jurídicos',
+        body: `CONTRATO DE PRESTACIÓN DE SERVICIOS LEGALES
+
+Entre los suscritos, a saber: por una parte (abogado_nombre), mayor de edad, con cédula (abogado_cedula) e idoneidad (abogado_idoneidad), en adelante EL PROFESIONAL; y por la otra (nombre), de nacionalidad (nacionalidad), en condición de (sexo), portador del pasaporte o cédula (numero de identidad), en adelante EL CLIENTE, se acuerda celebrar el presente contrato de consultoría y gestión legal.
+
+Ambas partes aceptan los términos y condiciones estipulados a fecha de (fecha_actual).`
+      },
+      {
+        id: 'tpl-solicitud-residencia',
+        title: 'Solicitud de Residencia & Permiso Notarial',
+        body: `SOLICITUD FORMAL DE RESIDENCIA Y PERMISOS
+
+A la atención de las Autoridades Migratorias y Notariales competentes.
+Yo, (nombre), portador del pasaporte número (numero de identidad), expedido por las autoridades de (pais_emisor), de nacionalidad (nacionalidad), respetuosamente manifiesto que he conferido poder legal suficiente a (abogado_nombre) (Cédula: (abogado_cedula), Idoneidad: (abogado_idoneidad)) para que formalice el expediente de radicación y residencia legal.
+
+Aceptado y firmado a (fecha_actual).`
+      }
+    ];
+
+    // Initial state from localStorage or demo defaults
+    let state = {
+      clients: JSON.parse(localStorage.getItem('sqp_clients_html') || '[]'),
+      history: JSON.parse(localStorage.getItem('sqp_history_html') || '[]'),
+      selectedIdoneoId: 'antony-talla',
+    };
+
+    // Pre-populate with sample client if empty
+    if (state.clients.length === 0) {
+      state.clients = [
+        {
+          id: 'cli-sample-1',
+          fullName: 'GUSTAVO JOSÉ ACOSTA MUÑOZ',
+          legalCondition: 'VARÓN',
+          documentType: 'Pasaporte',
+          passportNumber: '192629016',
+          nationality: 'VENEZOLANA',
+          issuingCountry: 'VENEZUELA',
+          birthDate: '1988-06-12',
+          phone: '+507 6821-9940',
+          email: 'gustavo.acosta@email.com',
+          createdAt: new Date().toISOString()
+        }
+      ];
+      saveClientsToStorage();
+    }
+
+    function saveClientsToStorage() {
+      localStorage.setItem('sqp_clients_html', JSON.stringify(state.clients));
+      updateCounts();
+    }
+
+    function saveHistoryToStorage() {
+      localStorage.setItem('sqp_history_html', JSON.stringify(state.history));
+      updateCounts();
+    }
+
+    function updateCounts() {
+      document.getElementById('header-client-count').innerText = state.clients.length;
+      document.getElementById('header-docs-count').innerText = state.history.length;
+    }
+
+    // ---------- TAB NAVIGATION ----------
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-amber-500', 'text-slate-950', 'shadow-md');
+        btn.classList.add('text-slate-300');
+      });
+
+      const activeView = document.getElementById(`view-${tabId}`);
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (activeView) activeView.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.classList.add('bg-amber-500', 'text-slate-950', 'shadow-md');
+        activeBtn.classList.remove('text-slate-300');
+      }
+
+      if (tabId === 'clients') renderClientsTable();
+      if (tabId === 'history') renderHistoryTable();
+      if (tabId === 'templates') renderTemplatesTab();
+      if (tabId === 'generator') syncGeneratorSelects();
+    }
+
+    // ---------- WIZARD LOGIC ----------
+    function setWizardMode(mode) {
+      document.getElementById('wmode-scan-content').classList.toggle('hidden', mode !== 'scan');
+      document.getElementById('wmode-clients-content').classList.toggle('hidden', mode !== 'clients');
+
+      document.getElementById('btn-wmode-scan').className = mode === 'scan'
+        ? 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-900 text-white shadow-xs'
+        : 'px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-700 border border-slate-200';
+
+      document.getElementById('btn-wmode-clients').className = mode === 'clients'
+        ? 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-900 text-white shadow-xs'
+        : 'px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-700 border border-slate-200';
+
+      document.getElementById('btn-wmode-manual').className = mode === 'manual'
+        ? 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-900 text-white shadow-xs'
+        : 'px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-700 border border-slate-200';
+
+      if (mode === 'clients') renderWizardClientsList();
+    }
+
+    function handlePassportFileSelected(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        document.getElementById('scan-preview-img').src = event.target.result;
+        document.getElementById('scan-preview-box').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function processUploadedPassport() {
+      // Automatic simulation / extraction of key passport values
+      document.getElementById('w-fullname').value = "GUSTAVO JOSÉ ACOSTA MUÑOZ";
+      document.getElementById('w-legal-condition').value = "VARÓN";
+      document.getElementById('w-doc-type').value = "Pasaporte";
+      document.getElementById('w-passport-num').value = "192629016";
+      document.getElementById('w-nationality').value = "VENEZOLANA";
+      document.getElementById('w-country').value = "VENEZUELA";
+      document.getElementById('w-birth').value = "1988-06-12";
+      updateWizardTemplatePreview();
+      alert("¡Datos del pasaporte detectados y cargados con éxito en el formulario de revisión!");
+    }
+
+    function renderWizardClientsList() {
+      const container = document.getElementById('wizard-clients-list');
+      if (state.clients.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-500 col-span-3">No hay clientes guardados aún.</p>';
+        return;
+      }
+      container.innerHTML = state.clients.map(c => `
+        <div onclick="selectClientForWizard('${c.id}')" class="p-3 rounded-xl border border-slate-200 hover:border-amber-500 bg-slate-50 hover:bg-amber-50/50 cursor-pointer transition-all">
+          <p class="font-bold text-slate-900 text-xs">${c.fullName}</p>
+          <p class="text-[11px] text-slate-500 font-mono">${c.documentType}: ${c.passportNumber}</p>
+          <span class="text-[10px] text-amber-700 font-semibold">${c.nationality} · ${c.legalCondition}</span>
+        </div>
+      `).join('');
+    }
+
+    function selectClientForWizard(id) {
+      const c = state.clients.find(item => item.id === id);
+      if (!c) return;
+      document.getElementById('w-fullname').value = c.fullName;
+      document.getElementById('w-legal-condition').value = c.legalCondition || 'VARÓN';
+      document.getElementById('w-doc-type').value = c.documentType || 'Pasaporte';
+      document.getElementById('w-passport-num').value = c.passportNumber || '';
+      document.getElementById('w-nationality').value = c.nationality || '';
+      document.getElementById('w-country').value = c.issuingCountry || '';
+      document.getElementById('w-birth').value = c.birthDate || '';
+      document.getElementById('w-phone').value = c.phone || '';
+      document.getElementById('w-email').value = c.email || '';
+      updateWizardTemplatePreview();
+      alert(`Cliente "${c.fullName}" seleccionado con éxito.`);
+    }
+
+    function updateWizardTemplatePreview() {
+      const fullName = (document.getElementById('w-fullname').value || 'GUSTAVO JOSÉ ACOSTA MUÑOZ').trim().toUpperCase();
+      const legalCondition = document.getElementById('w-legal-condition').value || 'VARÓN';
+      const docType = document.getElementById('w-doc-type').value || 'Pasaporte';
+      const passportNum = (document.getElementById('w-passport-num').value || '192629016').trim().toUpperCase();
+      const nationality = (document.getElementById('w-nationality').value || 'VENEZOLANA').trim().toUpperCase();
+      const country = (document.getElementById('w-country').value || 'VENEZUELA').trim().toUpperCase();
+
+      const idoneoId = document.getElementById('w-selected-idoneo').value;
+      const idoneo = IDONEOS.find(i => i.id === idoneoId) || IDONEOS[0];
+
+      const tplId = document.getElementById('w-selected-template').value;
+      const tpl = TEMPLATES.find(t => t.id === tplId) || TEMPLATES[0];
+
+      const now = new Date();
+      const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      const fechaActual = `${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()}`;
+
+      let rendered = tpl.body
+        .replace(/\(nombre\)/g, fullName)
+        .replace(/\(sexo\)/g, legalCondition)
+        .replace(/\(sexo\/edad\)/g, legalCondition)
+        .replace(/\(numero de identidad\)/g, passportNum)
+        .replace(/\(nacionalidad\)/g, nationality)
+        .replace(/\(cedula\/pasaporte\)/g, docType)
+        .replace(/\(pais_emisor\)/g, country)
+        .replace(/\(abogado_nombre\)/g, idoneo.formalTitle)
+        .replace(/\(abogado_cedula\)/g, idoneo.cedula)
+        .replace(/\(abogado_idoneidad\)/g, idoneo.idoneidad)
+        .replace(/\(fecha_actual\)/g, fechaActual);
+
+      document.getElementById('wizard-live-preview').innerText = rendered;
+
+      // Update signature block preview
+      document.getElementById('sig-lawyer-name').innerText = idoneo.formalTitle;
+      document.getElementById('sig-lawyer-ced').innerText = `CÉDULA: ${idoneo.cedula}`;
+      document.getElementById('sig-lawyer-ido').innerText = `IDONEIDAD: ${idoneo.idoneidad}`;
+
+      document.getElementById('sig-client-name').innerText = fullName;
+      document.getElementById('sig-client-doc').innerText = `${docType.toUpperCase()} No. ${passportNum}`;
+    }
+
+    function saveClientFromWizard() {
+      const fullName = document.getElementById('w-fullname').value.trim().toUpperCase();
+      const passportNum = document.getElementById('w-passport-num').value.trim().toUpperCase();
+      if (!fullName || !passportNum) {
+        alert("Por favor completa al menos el Nombre Completo y Número de Documento.");
+        return;
+      }
+
+      const existingIndex = state.clients.findIndex(c => c.passportNumber === passportNum || c.fullName === fullName);
+      const clientData = {
+        id: existingIndex >= 0 ? state.clients[existingIndex].id : 'cli-' + Date.now(),
+        fullName,
+        legalCondition: document.getElementById('w-legal-condition').value,
+        documentType: document.getElementById('w-doc-type').value,
+        passportNumber: passportNum,
+        nationality: document.getElementById('w-nationality').value.trim().toUpperCase(),
+        issuingCountry: document.getElementById('w-country').value.trim().toUpperCase(),
+        birthDate: document.getElementById('w-birth').value,
+        phone: document.getElementById('w-phone').value,
+        email: document.getElementById('w-email').value,
+        createdAt: new Date().toISOString()
+      };
+
+      if (existingIndex >= 0) {
+        state.clients[existingIndex] = clientData;
+      } else {
+        state.clients.unshift(clientData);
+      }
+
+      saveClientsToStorage();
+      alert(`¡Ficha de cliente "${fullName}" guardada exitosamente!`);
+    }
+
+    // ---------- REAL OPENXML DOCX GENERATION IN JAVASCRIPT ----------
+    function buildWordDocumentXml(title, paragraphs, lawyer, client) {
+      // Build body XML with paragraphs
+      const pXmls = paragraphs.map(text => {
+        const escaped = xmlEscape(text);
+        return `<w:p>
+          <w:pPr><w:jc w:val="both"/><w:spacing w:after="200" w:line="276" w:lineRule="auto"/></w:pPr>
+          <w:r><w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>${escaped}</w:t></w:r>
+        </w:p>`;
+      }).join('');
+
+      // Build 2-column signature table with ALL text in bold (<w:b/><w:bCs/>)
+      const sigTableXml = `
+      <w:p><w:pPr><w:spacing w:after="240"/></w:pPr></w:p>
+      <w:tbl>
+        <w:tblPr>
+          <w:tblW w:w="9000" w:type="dxa"/>
+          <w:jc w:val="center"/>
+          <w:tblBorders>
+            <w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/>
+            <w:insideH w:val="none"/><w:insideV w:val="none"/>
+          </w:tblBorders>
+        </w:tblPr>
+        <w:tblGrid>
+          <w:gridCol w:w="4500"/><w:gridCol w:w="4500"/>
+        </w:tblGrid>
+        <w:tr>
+          <w:tc>
+            <w:tcPr><w:tcW w:w="4500" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>
+            <w:p>
+              <w:pPr><w:spacing w:after="240"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
+              <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>ACEPTO PODER</w:t></w:r>
+            </w:p>
+            <w:p><w:pPr><w:spacing w:after="200"/></w:pPr></w:p>
+            <w:p><w:pPr><w:spacing w:after="200"/></w:pPr></w:p>
+            <w:p>
+              <w:pPr><w:spacing w:after="40"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
+              <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>${xmlEscape(lawyer.formalTitle)}</w:t></w:r>
+            </w:p>
+            <w:p>
+              <w:pPr><w:spacing w:after="40"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
+              <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>CÉDULA: ${xmlEscape(lawyer.cedula)}</w:t></w:r>
+            </w:p>
+            <w:p>
+              <w:pPr><w:spacing w:after="40"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
+              <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>IDONEIDAD: ${xmlEscape(lawyer.idoneidad)}</w:t></w:r>
+            </w:p>
+          </w:tc>
+          <w:tc>
+            <w:tcPr><w:tcW w:w="4500" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>
+            <w:p>
+              <w:pPr><w:spacing w:after="240"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
+              <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>OTORGO PODER:</w:t></w:r>
+            </w:p>
+            <w:p><w:pPr><w:spacing w:after="200"/></w:pPr></w:p>
+            <w:p><w:pPr><w:spacing w:after="200"/></w:pPr></w:p>
+            <w:p>
+              <w:pPr><w:spacing w:after="40"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
+              <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>${xmlEscape(client.fullName)}</w:t></w:r>
+            </w:p>
+            <w:p>
+              <w:pPr><w:spacing w:after="40"/><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>
+              <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>${xmlEscape(client.documentType.toUpperCase())} No. ${xmlEscape(client.passportNumber)}</w:t></w:r>
+            </w:p>
+          </w:tc>
+        </w:tr>
+      </w:tbl>`;
+
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    <w:p>
+      <w:pPr><w:jc w:val="center"/><w:spacing w:after="300"/></w:pPr>
+      <w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="28"/><w:szCs w:val="28"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>${xmlEscape(title)}</w:t></w:r>
+    </w:p>
+    ${pXmls}
+    ${sigTableXml}
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+    }
+
+    function xmlEscape(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    }
+
+    async function generateAndDownloadDocxFile(title, fullText, lawyer, client) {
+      if (!window.JSZip) {
+        alert("Cargando motor de generación de Word, reintenta en un instante...");
+        return;
+      }
+
+      const zip = new JSZip();
+
+      const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+
+      const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+      const wordRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>`;
+
+      const paragraphs = fullText.split('\n\n').filter(p => p.trim().length > 0);
+      const documentXml = buildWordDocumentXml(title, paragraphs, lawyer, client);
+
+      zip.file('[Content_Types].xml', contentTypesXml);
+      zip.file('_rels/.rels', relsXml);
+      zip.file('word/_rels/document.xml.rels', wordRelsXml);
+      zip.file('word/document.xml', documentXml);
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const safeClient = client.fullName.replace(/\s+/g, '_').substring(0, 30);
+      const safeTitle = title.replace(/\s+/g, '_');
+      const filename = `${safeTitle}_${safeClient}.docx`;
+
+      // Trigger browser download
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Save to document history
+      state.history.unshift({
+        id: 'doc-' + Date.now(),
+        title,
+        clientName: client.fullName,
+        passportNumber: client.passportNumber,
+        lawyerName: lawyer.formalTitle,
+        generatedAt: new Date().toLocaleString()
+      });
+      saveHistoryToStorage();
+    }
+
+    function generateDocxFromWizard() {
+      const fullName = (document.getElementById('w-fullname').value || '').trim().toUpperCase();
+      const passportNum = (document.getElementById('w-passport-num').value || '').trim().toUpperCase();
+
+      if (!fullName || !passportNum) {
+        alert("Por favor completa los datos del cliente.");
+        return;
+      }
+
+      const client = {
+        fullName,
+        passportNumber: passportNum,
+        documentType: document.getElementById('w-doc-type').value,
+      };
+
+      const idoneoId = document.getElementById('w-selected-idoneo').value;
+      const lawyer = IDONEOS.find(i => i.id === idoneoId) || IDONEOS[0];
+
+      const tplId = document.getElementById('w-selected-template').value;
+      const tpl = TEMPLATES.find(t => t.id === tplId) || TEMPLATES[0];
+
+      const fullText = document.getElementById('wizard-live-preview').innerText;
+
+      generateAndDownloadDocxFile(tpl.title, fullText, lawyer, client);
+    }
+
+    // ---------- CLIENTS DIRECTORY ----------
+    function renderClientsTable() {
+      const q = (document.getElementById('client-search-input')?.value || '').toLowerCase();
+      const tbody = document.getElementById('clients-table-body');
+      
+      const filtered = state.clients.filter(c => 
+        c.fullName.toLowerCase().includes(q) ||
+        c.passportNumber.toLowerCase().includes(q) ||
+        (c.nationality || '').toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-400">No se encontraron clientes.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(c => `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="p-3 font-bold text-slate-900">${c.fullName}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">${c.legalCondition || 'VARÓN'}</span></td>
+          <td class="p-3 font-mono font-semibold">${c.documentType || 'Pasaporte'}: ${c.passportNumber}</td>
+          <td class="p-3 font-semibold text-slate-700">${c.nationality || '-'}</td>
+          <td class="p-3 text-slate-500">${c.phone || c.email || '-'}</td>
+          <td class="p-3 text-right space-x-1">
+            <button onclick="startWizardWithClient('${c.id}')" class="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px]">
+              Generar Doc
+            </button>
+            <button onclick="deleteClient('${c.id}')" class="px-2 py-1 rounded bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px]">
+              Borrar
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function startWizardWithClient(id) {
+      selectClientForWizard(id);
+      switchTab('wizard');
+    }
+
+    function deleteClient(id) {
+      if (!confirm("¿Deseas eliminar este cliente?")) return;
+      state.clients = state.clients.filter(c => c.id !== id);
+      saveClientsToStorage();
+      renderClientsTable();
+    }
+
+    function showNewClientModal() {
+      const name = prompt("Nombre completo del cliente:");
+      if (!name) return;
+      const docNum = prompt("Número de Pasaporte o Cédula:");
+      if (!docNum) return;
+      const nat = prompt("Nacionalidad (ej. COLOMBIANA, ESPAÑOLA, VENEZOLANA):", "VENEZOLANA");
+
+      state.clients.unshift({
+        id: 'cli-' + Date.now(),
+        fullName: name.trim().toUpperCase(),
+        legalCondition: 'VARÓN',
+        documentType: 'Pasaporte',
+        passportNumber: docNum.trim().toUpperCase(),
+        nationality: (nat || 'EXTRANJERA').trim().toUpperCase(),
+        issuingCountry: (nat || 'EXTRANJERA').trim().toUpperCase(),
+        createdAt: new Date().toISOString()
+      });
+      saveClientsToStorage();
+      renderClientsTable();
+    }
+
+    // ---------- TEMPLATES TAB (BY IDÓNEO) ----------
+    function renderTemplatesTab() {
+      const bar = document.getElementById('idoneos-tab-bar');
+      bar.innerHTML = IDONEOS.map(i => `
+        <button onclick="selectIdoneoTemplateTab('${i.id}')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+          state.selectedIdoneoId === i.id
+            ? 'bg-amber-500 text-slate-950 shadow-sm'
+            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+        }">
+          ${i.name} (${i.role.split('/')[0].trim()})
+        </button>
+      `).join('');
+
+      const container = document.getElementById('idoneo-templates-container');
+      const curIdoneo = IDONEOS.find(i => i.id === state.selectedIdoneoId) || IDONEOS[0];
+
+      container.innerHTML = TEMPLATES.map(t => `
+        <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded">Plantilla Oficial Word</span>
+              <span class="text-xs font-mono font-bold text-slate-500">${curIdoneo.cedula}</span>
+            </div>
+            <h3 class="font-bold text-slate-900 text-sm mb-1">${t.title}</h3>
+            <p class="text-[11px] text-slate-600 mb-3">Asignada al letrado <strong>${curIdoneo.formalTitle}</strong> con apartado de firma pre-configurado.</p>
+          </div>
+          <button onclick="useTemplateFromTab('${t.id}')" class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs">
+            Usar Plantilla en el Asistente
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function selectIdoneoTemplateTab(id) {
+      state.selectedIdoneoId = id;
+      renderTemplatesTab();
+    }
+
+    function useTemplateFromTab(tplId) {
+      document.getElementById('w-selected-idoneo').value = state.selectedIdoneoId;
+      document.getElementById('w-selected-template').value = tplId;
+      switchTab('wizard');
+      updateWizardTemplatePreview();
+    }
+
+    // ---------- DIRECT GENERATOR ----------
+    function syncGeneratorSelects() {
+      const clientSelect = document.getElementById('gen-client-select');
+      if (state.clients.length === 0) {
+        clientSelect.innerHTML = '<option value="">No hay clientes registrados</option>';
+      } else {
+        clientSelect.innerHTML = state.clients.map(c => `
+          <option value="${c.id}">${c.fullName} (${c.passportNumber})</option>
+        `).join('');
+      }
+    }
+
+    function downloadFromDirectGenerator() {
+      const clientId = document.getElementById('gen-client-select').value;
+      const client = state.clients.find(c => c.id === clientId) || state.clients[0];
+      if (!client) {
+        alert("Por favor registra o selecciona un cliente primero.");
+        return;
+      }
+
+      const idoneoId = document.getElementById('gen-idoneo-select').value;
+      const lawyer = IDONEOS.find(i => i.id === idoneoId) || IDONEOS[0];
+
+      const tplId = document.getElementById('gen-tpl-select').value;
+      const tpl = TEMPLATES.find(t => t.id === tplId) || TEMPLATES[0];
+
+      const now = new Date();
+      const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      const fechaActual = `${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()}`;
+
+      const renderedText = tpl.body
+        .replace(/\(nombre\)/g, client.fullName)
+        .replace(/\(sexo\)/g, client.legalCondition || 'VARÓN')
+        .replace(/\(sexo\/edad\)/g, client.legalCondition || 'VARÓN')
+        .replace(/\(numero de identidad\)/g, client.passportNumber)
+        .replace(/\(nacionalidad\)/g, client.nationality || 'EXTRANJERA')
+        .replace(/\(cedula\/pasaporte\)/g, client.documentType || 'Pasaporte')
+        .replace(/\(pais_emisor\)/g, client.issuingCountry || 'EXTRANJERO')
+        .replace(/\(abogado_nombre\)/g, lawyer.formalTitle)
+        .replace(/\(abogado_cedula\)/g, lawyer.cedula)
+        .replace(/\(abogado_idoneidad\)/g, lawyer.idoneidad)
+        .replace(/\(fecha_actual\)/g, fechaActual);
+
+      generateAndDownloadDocxFile(tpl.title, renderedText, lawyer, client);
+    }
+
+    // ---------- HISTORY ----------
+    function renderHistoryTable() {
+      const tbody = document.getElementById('history-table-body');
+      if (state.history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-400">No hay documentos generados en el historial aún.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = state.history.map(h => `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="p-3 font-bold text-slate-900">${h.title}</td>
+          <td class="p-3">${h.clientName} <span class="font-mono text-slate-400 text-[10px]">(${h.passportNumber})</span></td>
+          <td class="p-3 font-semibold text-slate-700">${h.lawyerName}</td>
+          <td class="p-3 text-slate-500">${h.generatedAt}</td>
+          <td class="p-3 text-right">
+            <span class="text-emerald-700 font-bold text-[11px]">✓ Descargado</span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function clearHistory() {
+      if (!confirm("¿Deseas vaciar el historial de descargas?")) return;
+      state.history = [];
+      saveHistoryToStorage();
+      renderHistoryTable();
+    }
+
+    // ---------- DATABASE EXPORT / IMPORT ----------
+    function exportDatabaseJson() {
+      const exportObj = {
+        appName: 'SQP PARA LEGAL HTML',
+        version: '3.0.0',
+        exportedAt: new Date().toISOString(),
+        clients: state.clients,
+        history: state.history,
+      };
+
+      const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Respaldo_SQP_Legal_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function importDatabaseJson(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (Array.isArray(data.clients)) state.clients = data.clients;
+          if (Array.isArray(data.history)) state.history = data.history;
+          saveClientsToStorage();
+          saveHistoryToStorage();
+          alert(`¡Respaldo restaurado con éxito! ${state.clients.length} clientes recuperados.`);
+          renderClientsTable();
+        } catch (err) {
+          alert("Error al leer el archivo JSON: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetAllData() {
+      if (!confirm("¿Estás seguro de restablecer todos los registros locales?")) return;
+      localStorage.removeItem('sqp_clients_html');
+      localStorage.removeItem('sqp_history_html');
+      state.clients = [];
+      state.history = [];
+      saveClientsToStorage();
+      saveHistoryToStorage();
+      alert("La base de datos local ha sido reiniciada.");
+      renderClientsTable();
+      renderHistoryTable();
+    }
+
+    // ---------- SAVE SELF AS HTML FILE ----------
+    function downloadSelfApp() {
+      const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'sqp-para-legal.html';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text);
+      alert(`Variable "${text}" copiada al portapapeles.`);
+    }
+
+    function startNewDocumentWizard() {
+      switchTab('wizard');
+      setWizardMode('scan');
+    }
+
+    // Initial setup on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      updateCounts();
+      updateWizardTemplatePreview();
+    });
+  </script>
+</body>
+</html>
