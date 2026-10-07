@@ -67,44 +67,44 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Intuitive Navigation Tabs */}
-        <div className="flex items-center space-x-1 sm:space-x-2 border-t border-slate-800/90 overflow-x-auto py-2.5 scrollbar-none">
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-800/90 py-2.5">
           <button
             id="nav-tab-wizard"
             onClick={() => setActiveTab("wizard")}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
               activeTab === "wizard"
                 ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/80"
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            <span>Asistente Guiado (Paso a Paso)</span>
+            <span>Asistente</span>
           </button>
 
           <button
             id="nav-tab-generator"
             onClick={() => setActiveTab("generator")}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
               activeTab === "generator"
                 ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/80"
             }`}
           >
             <FileCode2 className="w-4 h-4" />
-            <span>Generador Directo</span>
+            <span>Generador</span>
           </button>
 
           <button
             id="nav-tab-clients"
             onClick={() => setActiveTab("clients")}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === "clients"
                 ? "bg-amber-500 text-slate-950 shadow-md font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/80"
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Directorio de Clientes</span>
+            <span>Clientes</span>
             <span
               className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
                 activeTab === "clients"
@@ -119,14 +119,14 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="nav-tab-templates"
             onClick={() => setActiveTab("templates")}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === "templates"
                 ? "bg-amber-500 text-slate-950 shadow-md font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/80"
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Plantillas Word (.docx)</span>
+            <span>Plantillas</span>
             <span
               className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
                 activeTab === "templates"
@@ -142,14 +142,14 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="nav-tab-history"
               onClick={() => setActiveTab("history")}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === "history"
                   ? "bg-amber-500 text-slate-950 shadow-md font-bold"
                   : "text-slate-300 hover:text-white hover:bg-slate-800/80"
               }`}
             >
               <FolderOpen className="w-4 h-4" />
-              <span>Historial Documentos</span>
+              <span>Historial</span>
               <span
                 className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
                   activeTab === "history"
@@ -165,14 +165,14 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="nav-tab-manual"
             onClick={() => setActiveTab("manual")}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap border ${
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap border ${
               activeTab === "manual"
                 ? "bg-amber-500 text-slate-950 border-amber-400 shadow-md font-bold"
                 : "text-amber-300 bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 hover:text-amber-200"
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>Manual de Uso</span>
+            <span>Manual</span>
           </button>
         </div>
       </div>
