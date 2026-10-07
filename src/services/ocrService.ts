@@ -1,5 +1,7 @@
-import { countryName, validateMrz, mrzDate } from './mrz';
-import { ocrWorkerSession } from './ocrWorker';
+import { parseInternationalDocumentText } from "./documentTextParser";
+import { evaluateIdentityDocument } from "./identityStatus";
+import { countryName, validateMrz, mrzDate, normalizeMrzText } from './mrz';
+import { getOcrSession, type OcrLanguage } from './ocrWorker';
 import { documentTypeLabel } from './fieldMapping';
 import { determineSexAgeCategory } from './docxService';
 import { ExtractionResult } from '../types';
@@ -25,6 +27,9 @@ export interface SamplePassportPreset {
  * Standardized mapping of 3-letter ICAO country codes to Spanish demonyms and countries
  */
 export function mapCountryCode(code: string): string {
+  code=code.toUpperCase().replace(/</g,'').replace(/0/g,'O');
+  if(!/^(?:[A-Z]{3}|D)$/.test(code)) return '';
+  if(code==='D') code='DEU';
   const map: Record<string, string> = {
     ESP: 'ESPAÑOLA',
     PAN: 'PANAMEÑA',
@@ -65,9 +70,9 @@ export function mapCountryCode(code: string): string {
  * - TD2: 2 lines of 36 characters (ID Cards / Visas)
  */
 export function parseMRZ(rawText: string): Partial<ExtractionResult> {
-  const rawLines = rawText
+  const rawLines = normalizeMrzText(rawText)
     .split('\n')
-    .map((l) => l.trim().replace(/\s+/g, ''))
+    .map((l) => l.toUpperCase().trim().replace(/[«‹〈]/g, '<').replace(/\s+/g, ''))
     .filter((l) => l.length >= 25 && /^[A-Z0-9<]+$/.test(l) && l.includes('<'));
 
   const result: Partial<ExtractionResult> = {};
@@ -99,7 +104,7 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
         const expRaw = l2.substring(8, 14);
         const natCode = l2.substring(15, 18).replace(/</g, '');
 
-        result.sex = sex === 'F' ? 'F' : sex === 'M' ? 'M' : 'Otro';
+        result.sex = sex === 'F' ? 'F' : sex === 'M' ? 'M' : sex === 'X' || sex === '<' ? 'X' : '';
         result.nationality = mapCountryCode(natCode || issuingCountryCode);
 
 
@@ -161,7 +166,7 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
         result.passportNumber = passportNum;
         result.nationality = mapCountryCode(nationalityCode);
         result.issuingCountry = countryName(l1.substring(2, 5));
-        result.sex = sex === 'F' ? 'F' : sex === 'M' ? 'M' : 'Otro';
+        result.sex = sex === 'F' ? 'F' : sex === 'M' ? 'M' : sex === 'X' || sex === '<' ? 'X' : '';
 
 
 
@@ -206,7 +211,7 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
       const dobRaw = l2.substring(13, 19);
       const sex = l2.substring(20, 21);
       const expRaw = l2.substring(21, 27);
-      result.sex = sex === 'F' ? 'F' : sex === 'M' ? 'M' : 'Otro';
+      result.sex = sex === 'F' ? 'F' : sex === 'M' ? 'M' : sex === 'X' || sex === '<' ? 'X' : '';
 
 
 
@@ -238,125 +243,8 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
  * Extracts fields when MRZ is absent, blurry or photographed at an angle.
  */
 export function parseVisualDocumentText(rawText: string): Partial<ExtractionResult> {
-  const result: Partial<ExtractionResult> = {};
-  const upper = rawText.toUpperCase();
-
-  // 1. Detect Document Type
-  if (upper.includes('CÉDULA') || upper.includes('CEDULA') || upper.includes('CARNET DE IDENTIDAD')) {
-    result.docType = 'cedula';
-    result.documentType = 'Cédula de Identidad';
-  } else if (upper.includes('DNI') || upper.includes('DOCUMENTO NACIONAL')) {
-    result.docType = 'dni';
-    result.documentType = 'DNI';
-  } else if (upper.includes('NIE') || upper.includes('EXTRANJERO') || upper.includes('EXTRANJERÍA')) {
-    result.docType = 'nie';
-    result.documentType = 'Carnet de Extranjería / NIE';
-  } else if (upper.includes('PASAPORTE') || upper.includes('PASSPORT')) {
-    result.docType = 'pasaporte';
-    result.documentType = 'Pasaporte';
-  }
-
-  // 2. Document Number Regex Patterns
-  // Panama Cédula: 8-765-4321, 4-123-4567, PE-8-1234, E-8-1234, 1AV-123-456
-  const panamaCedulaMatch = rawText.match(/\b([0-9]{1,2}|PE|E|[0-9]{1,2}AV)-([0-9]{3,4})-([0-9]{4,6})\b/i);
-  // Colombia C.C.: 1.020.345.678 or 52.345.678
-  const colombiaCedulaMatch = rawText.match(/(?:C\.?C\.?|CÉDULA|CEDULA)\s*[:.]?\s*(\b[0-9]{1,2}\.?[0-9]{3}\.?[0-9]{3}\b)/i);
-  // Spain DNI / NIE: 12345678A or X-1234567-Y
-  const spainDniNieMatch = rawText.match(/\b([XYZ]?[0-9]{7,8}[A-Z])\b/i);
-  // Venezuela: V-12345678 or E-12345678
-  const venezuelaMatch = rawText.match(/\b([VE]-[0-9]{7,9})\b/i);
-  // Generic Passport: PA1234567, A12345678, etc.
-  const passRegex = /(?:PASAPORTE|PASSPORT|DOCUMENTO)(?:[ \t]+(?:N[º°O.]|NUM(?:ERO)?|NUMBER))?[ \t]*[:.]?[ \t]*(?=[A-Z0-9]*\d)([A-Z0-9]{5,15})\b/i;
-  const passMatch = rawText.match(passRegex);
-
-  if (panamaCedulaMatch) {
-    result.passportNumber = panamaCedulaMatch[0];
-    result.docType = 'cedula';
-    result.documentType = 'Cédula de Identidad (Panamá)';
-
-    result.issuingCountry = result.issuingCountry || 'PANAMÁ';
-  } else if (spainDniNieMatch) {
-    result.passportNumber = spainDniNieMatch[1];
-    result.docType = spainDniNieMatch[1].startsWith('X') || spainDniNieMatch[1].startsWith('Y') || spainDniNieMatch[1].startsWith('Z') ? 'nie' : 'dni';
-    result.documentType = result.docType === 'nie' ? 'NIE' : 'DNI';
-    result.nationality = result.nationality || '';
-  } else if (venezuelaMatch) {
-    result.passportNumber = venezuelaMatch[1];
-    result.docType = 'cedula';
-    result.documentType = 'Cédula de Identidad (Venezuela)';
-
-  } else if (colombiaCedulaMatch && colombiaCedulaMatch[1].replace(/\./g, '').length >= 6) {
-    result.passportNumber = colombiaCedulaMatch[1].replace(/\./g, '');
-    result.docType = 'cedula';
-    result.documentType = 'Cédula de Ciudadanía';
-  } else if (passMatch && passMatch[1].length >= 7) {
-    result.passportNumber = passMatch[1];
-  }
-
-  // 3. Names Extraction
-  const surnameMatch = rawText.match(/(?:APELLIDOS|SURNAME|PRIMER APELLIDO)[\s/:]+([A-ZÁÉÍÓÚÑ\s]+)/i);
-  const givenMatch = rawText.match(/(?:NOMBRES|GIVEN NAMES|NOMBRE)[\s/:]+([A-ZÁÉÍÓÚÑ\s]+)/i);
-  const fullMatch = rawText.match(/(?:NOMBRE COMPLETO|TITULAR|APELLIDOS Y NOMBRES)[\s/:]+([A-ZÁÉÍÓÚÑ\s]+)/i);
-
-  if (surnameMatch) {
-    result.lastName = surnameMatch[1].split('\n')[0].replace(/[0-9<]/g, '').trim();
-  }
-  if (givenMatch) {
-    result.firstName = givenMatch[1].split('\n')[0].replace(/[0-9<]/g, '').trim();
-  }
-  if (result.firstName || result.lastName) {
-    result.fullName = `${result.firstName || ''} ${result.lastName || ''}`.trim();
-  } else if (fullMatch) {
-    const fn = fullMatch[1].split('\n')[0].replace(/[0-9<]/g, '').trim();
-    result.fullName = fn;
-    const parts = fn.split(' ');
-    result.firstName = parts.slice(0, Math.ceil(parts.length / 2)).join(' ');
-    result.lastName = parts.slice(Math.ceil(parts.length / 2)).join(' ');
-  }
-
-  // Read labeled dates only: emission must not become birth or expiry.
-  const readDate = (labels: string): string => {
-    const match = rawText.match(new RegExp(`(?:${labels})[\\s:.]*((?:19|20)\\d{2}[-/.]\\d{1,2}[-/.]\\d{1,2}|\\d{1,2}[-/.]\\d{1,2}[-/.](?:19|20)\\d{2})`, 'i'));
-    if (!match) return '';
-    const parts = match[1].split(/[-/.]/).map(Number);
-    const [year, month, day] = parts[0] > 1900 ? parts : [parts[2], parts[1], parts[0]];
-    const date = new Date(year, month - 1, day);
-    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return '';
-    return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-  };
-  result.birthDate = readDate('FECHA (?:DE )?NACIMIENTO|NACIMIENTO|DATE OF BIRTH|BIRTH DATE');
-  result.expiryDate = readDate('FECHA (?:DE )?(?:VENCIMIENTO|CADUCIDAD)|VENCIMIENTO|CADUCIDAD|DATE OF EXPIRY|EXPIRY DATE');
-  result.issueDate = readDate('FECHA (?:DE )?EMISI[ÓO]N|DATE OF ISSUE|ISSUE DATE');
-
-  // 5. Sex Extraction
-  if (/\b(SEXO|SEX)\b[\s/:]*(M|V|VARÓN|VARON|MASCULINO|HOMBRE)\b/i.test(rawText)) {
-    result.sex = 'M';
-  } else if (/\b(SEXO|SEX)\b[\s/:]*(F|MUJER|FEMENINO)\b/i.test(rawText)) {
-    result.sex = 'F';
-  }
-
-  // 6. Nationality Extraction
-  const nationalities = [
-    { key: 'PANAMEÑA', words: ['PANAMA', 'PANAMÁ', 'PANAMEÑA'] },
-    { key: 'ESPAÑOLA', words: ['ESPAÑA', 'ESPAÑOLA', 'ESPANOLA'] },
-    { key: 'COLOMBIANA', words: ['COLOMBIA', 'COLOMBIANA'] },
-    { key: 'MEXICANA', words: ['MEXICO', 'MÉXICO', 'MEXICANA'] },
-    { key: 'VENEZOLANA', words: ['VENEZUELA', 'VENEZOLANA'] },
-    { key: 'PERUANA', words: ['PERU', 'PERÚ', 'PERUANA'] },
-    { key: 'ARGENTINA', words: ['ARGENTINA'] },
-    { key: 'CHILENA', words: ['CHILE', 'CHILENA'] },
-    { key: 'ESTADOUNIDENSE', words: ['USA', 'ESTADOS UNIDOS', 'UNITED STATES', 'AMERICAN'] },
-  ];
-
-  const nationalityText = upper.match(/(?:NACIONALIDAD|NATIONALITY)[ \t:/]+([^\n]+)/)?.[1] || '';
-  for (const n of nationalities) {
-    if (n.words.some((w) => nationalityText.includes(w))) {
-      result.nationality = n.key;
-
-      break;
-    }
-  }
-
+  const result = parseInternationalDocumentText(rawText);
+  if(result.nationality && /^[A-Z]{3}$/.test(result.nationality)) result.nationality=mapCountryCode(result.nationality);
   return result;
 }
 
@@ -391,6 +279,9 @@ export function buildStructuredDocumentJson(
     codigo_mrz_linea3: data.mrzLine3 || '',
     confianza_lectura_porcentaje: data.confidenceScore ?? 0,
     metodo_extraccion: data.method === 'manual' ? 'Revisión manual' : 'OCR Óptico Local (Tesseract.js)',
+    edad: evaluateIdentityDocument(data.birthDate,data.expiryDate,data.sex).age,
+    es_menor: evaluateIdentityDocument(data.birthDate,data.expiryDate,data.sex).isMinor,
+    estado_documento: evaluateIdentityDocument(data.birthDate,data.expiryDate,data.sex).expiryStatus,
     timestamp_extraccion: new Date().toISOString(),
   };
 }
@@ -403,7 +294,8 @@ export async function extractWithTesseract(
   imageSource: string | File | Blob,
   onProgress?: (progress: number, status: string) => void,
   preparedImages?: PreprocessedImages,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  language: OcrLanguage = "spa+eng"
 ): Promise<ExtractionResult> {
   // Convert string image to preprocessed versions
   let dataUri = '';
@@ -433,34 +325,52 @@ export async function extractWithTesseract(
   let rawText = '';
   let confidence = 0;
   let mrzResult: Partial<ExtractionResult> = {};
-  await ocrWorkerSession.run(async worker => {
-  const ret = await worker.recognize(preprocessed.enhanced);
-  rawText = ret.data.text;
-  confidence = Math.round(ret.data.confidence) || 0;
-
-  // Check if MRZ was found; if not, test the binarized image specifically for MRZ
-  mrzResult = parseMRZ(rawText);
-  if (!mrzResult.passportNumber && !mrzResult.fullName) {
-    if (onProgress) {
-      onProgress(75, 'Ejecutando pase secundario de alta fidelidad binarizado...');
+  const candidates: Partial<ExtractionResult>[] = [];
+  const visualCandidates: Partial<ExtractionResult>[] = [];
+  await getOcrSession(language).run(async worker => {
+    const read=async (image:string, mrzOnly=false) => {
+      await worker.setParameters?.({tessedit_pageseg_mode:mrzOnly?6:11,tessedit_char_whitelist:mrzOnly?'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<':''});
+      const ret=await worker.recognize(image);
+      rawText += '\n'+ret.data.text;
+      confidence=Math.max(confidence,Math.round(ret.data.confidence)||0);
+      candidates.push(parseMRZ(ret.data.text));
+      if(!mrzOnly) visualCandidates.push(parseVisualDocumentText(ret.data.text));
+    };
+    await read(preprocessed.enhanced);
+    const validMrz=()=>candidates.some(value=>value.passportNumber && value.fullName && !value.warnings?.length);
+    if(preprocessed.mrz && !validMrz()) {
+      onProgress?.(62,'Leyendo la zona MRZ con su alfabeto y controles...');
+      await read(preprocessed.mrz,true);
     }
-    const retBin = await worker.recognize(preprocessed.binarized);
-    rawText += '\n' + retBin.data.text;
-    const mrzBin = parseMRZ(retBin.data.text);
-    if (mrzBin.passportNumber || mrzBin.fullName) {
-      mrzResult = mrzBin;
-      confidence = Math.max(confidence, Math.round(retBin.data.confidence));
+    const visual=visualCandidates[0];
+    if(!validMrz() || !visual?.fullName || !visual?.birthDate || !visual?.passportNumber) {
+      onProgress?.(73,'Comparando una segunda lectura de alto contraste...');
+      await read(preprocessed.binarized);
     }
-  }
-
+    if(!validMrz() && confidence<70) {
+      onProgress?.(82,'Revisando la imagen original para recuperar detalles...');
+      await read(preprocessed.original);
+    }
+    await worker.setParameters?.({tessedit_pageseg_mode:11,tessedit_char_whitelist:''});
   }, signal);
+  const score=(value:Partial<ExtractionResult>)=>['fullName','passportNumber','birthDate','expiryDate','sex'].filter(key=>value[key as keyof ExtractionResult]).length*10-(value.warnings?.length || 0)*15;
+  mrzResult=candidates.filter(value=>value.mrzLine1).sort((a,b)=>score(b)-score(a))[0] || {};
+  const visualResult=visualCandidates.sort((a,b)=>score(b)-score(a))[0] || {};
+  for(const item of visualCandidates) for(const key of Object.keys(item) as (keyof ExtractionResult)[]) if(!visualResult[key] && item[key]) Object.assign(visualResult,{[key]:item[key]});
+  const conflicting=['passportNumber','firstName','lastName','birthDate','expiryDate','sex'].filter(key=>mrzResult[key as keyof ExtractionResult] && visualResult[key as keyof ExtractionResult] && mrzResult[key as keyof ExtractionResult]!==visualResult[key as keyof ExtractionResult]);
+  const fieldLabels: Record<string,string>={passportNumber:'número de identidad',firstName:'nombres',lastName:'apellidos',birthDate:'fecha de nacimiento',expiryDate:'vencimiento',sex:'sexo'};
+  const warnings=[...(mrzResult.warnings || []),...conflicting.map(key=>`Las lecturas MRZ y visual difieren en ${fieldLabels[key] || key}. Compara con el documento original.`)];
+  if(mrzResult.warnings?.length) {
+    // Invalid MRZ must not override labeled visual fields that were read successfully.
+    for(const key of ['firstName','lastName','fullName','passportNumber','birthDate','expiryDate','sex','nationality'] as const) if(visualResult[key]) mrzResult[key]=visualResult[key];
+  }
 
   if (onProgress) {
     onProgress(90, 'Extrayendo y estructurando JSON de identidad...');
   }
 
   // Parse visual layout fields
-  const visualResult = parseVisualDocumentText(rawText);
+  // Visual passes were parsed independently to prevent mixing labels between images.
 
   // Merge MRZ (highest accuracy) with Visual layout (for cards without MRZ)
   const firstName = mrzResult.firstName || visualResult.firstName || '';
@@ -472,8 +382,8 @@ export async function extractWithTesseract(
   const birthDate = mrzResult.birthDate || visualResult.birthDate || '';
   const expiryDate = mrzResult.expiryDate || visualResult.expiryDate || '';
   const sex = mrzResult.sex || visualResult.sex || '';
-  const docType = mrzResult.docType || visualResult.docType || 'pasaporte';
-  const documentType = mrzResult.documentType || visualResult.documentType || (docType === 'cedula' ? 'Cédula de Identidad' : 'Pasaporte');
+  const docType = mrzResult.docType || visualResult.docType || 'otro';
+  const documentType = mrzResult.documentType || visualResult.documentType || documentTypeLabel(docType);
 
   const baseResult: ExtractionResult = {
     firstName,
@@ -489,7 +399,7 @@ export async function extractWithTesseract(
     sex,
     docType,
     documentType,
-    warnings: mrzResult.warnings || [],
+    warnings,
     confidenceScore: confidence,
     mrzLine1: mrzResult.mrzLine1 || '',
     mrzLine2: mrzResult.mrzLine2 || '',
@@ -500,11 +410,17 @@ export async function extractWithTesseract(
     imagePreview: preprocessed.enhanced,
   };
 
+  const status=evaluateIdentityDocument(birthDate,expiryDate,sex);
+  baseResult.age=status.age ?? undefined;
+  baseResult.sexAgeCategory=determineSexAgeCategory(birthDate,sex).category;
+  if(status.expiryStatus==='vencido') baseResult.warnings!.push('DOCUMENTO VENCIDO: revisa la fecha de vencimiento antes de registrarlo o utilizarlo.');
+  if(status.expiryStatus==='desconocido') baseResult.warnings!.push('Vencimiento no detectado: comprueba si el documento tiene fecha de caducidad.');
+  if(!fullName || !passportNumber || !birthDate || !sex) baseResult.warnings!.push('Lectura incompleta: completa los campos de identidad que faltan antes de guardar.');
   // Generate standardized JSON
   baseResult.extractedJson = buildStructuredDocumentJson(baseResult);
 
   if (onProgress) {
-    onProgress(100, 'OCR completado con éxito.');
+    onProgress(100, 'Lectura terminada. Revisa los campos y avisos.');
   }
 
   return baseResult;

@@ -165,7 +165,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {currentStep === 1 &&
-                "Elige escanear un pasaporte con IA, seleccionar un cliente registrado o ingresar los datos manualmente."}
+                "Elige leer un pasaporte o cédula con OCR local, seleccionar un cliente registrado o ingresar los datos manualmente."}
               {currentStep === 2 &&
                 "Confirma que los nombres, número de pasaporte y nacionalidad sean correctos antes de compilar."}
               {currentStep === 3 &&

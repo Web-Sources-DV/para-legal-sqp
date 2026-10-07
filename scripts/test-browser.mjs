@@ -36,7 +36,7 @@ try {
   if (!ready) throw new Error(`Server failed readiness: ${output}`);
   const tests = spawn(
     process.execPath,
-    ["--import", "tsx", "--test", "tests/browser/workflow.test.ts"],
+    ["--import", "tsx", "--test", process.env.PL_OCR_VALIDATION === "1" ? "tests/ocr/identity-flow.test.ts" : "tests/browser/workflow.test.ts"],
     {
       env: { ...process.env, PL_BROWSER_URL: `http://127.0.0.1:${port}` },
       stdio: "inherit",

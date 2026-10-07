@@ -5,6 +5,7 @@
  */
 
 export interface PreprocessedImages {
+  mrz?: string; // Bottom strip, processed separately with MRZ character restrictions.
   original: string;
   enhanced: string; // Grayscale + Contrast stretched + Sharpened
   binarized: string; // High contrast black & white (ideal for MRZ and card numbers)
@@ -31,7 +32,7 @@ export async function preprocessDocumentForOCR(imageDataUri: string): Promise<Pr
     const img = await loadImage(imageDataUri);
 
     // Limit maximum dimension for speed while preserving high resolution (1800px is sweet spot for OCR)
-    const maxDim = 1920;
+    const maxDim = 2800;
     let width = img.naturalWidth || img.width;
     let height = img.naturalHeight || img.height;
 
@@ -59,6 +60,10 @@ export async function preprocessDocumentForOCR(imageDataUri: string): Promise<Pr
     }
 
     ctx.drawImage(img, 0, 0, width, height);
+    const strip=document.createElement('canvas');
+    strip.width=width; strip.height=Math.round(height*0.45);
+    strip.getContext('2d')?.drawImage(canvas,0,height-strip.height,width,strip.height,0,0,width,strip.height);
+    const mrz=strip.toDataURL('image/png');
     const originalResized = canvas.toDataURL('image/jpeg', 0.95);
 
     // Get Pixel Data
@@ -130,6 +135,7 @@ export async function preprocessDocumentForOCR(imageDataUri: string): Promise<Pr
     const binarizedDataUri = canvas.toDataURL('image/png');
 
     return {
+      mrz,
       original: originalResized,
       enhanced: enhancedDataUri,
       binarized: binarizedDataUri,

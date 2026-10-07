@@ -3,6 +3,7 @@ interface Worker {
   recognize(
     image: string,
   ): Promise<{ data: { text: string; confidence: number } }>;
+  setParameters?(parameters: Record<string, string | number>): Promise<unknown>;
   terminate(): Promise<unknown>;
 }
 export class OcrWorkerSession {
@@ -62,6 +63,40 @@ export class OcrWorkerSession {
     await promise?.then((worker) => worker.terminate());
   }
 }
-export const ocrWorkerSession = new OcrWorkerSession(() =>
-  createWorker("spa+eng"),
-);
+export const OCR_LANGUAGES = {
+  "spa+eng": "Español / inglés (MRZ internacional)",
+  "por+eng": "Portugués / inglés",
+  "fra+eng": "Francés / inglés",
+  "deu+eng": "Alemán / inglés",
+  "ita+eng": "Italiano / inglés",
+  "rus+eng": "Ruso / inglés",
+  "ara+eng": "Árabe / inglés",
+  "chi_sim+eng": "Chino simplificado / inglés",
+  "jpn+eng": "Japonés / inglés",
+} as const;
+export type OcrLanguage = keyof typeof OCR_LANGUAGES;
+function makeSession(language: OcrLanguage) {
+  return new OcrWorkerSession(async () => {
+    const worker = await createWorker(language);
+    return {
+      recognize: (image: string) =>
+        worker.recognize(image, { rotateAuto: true }),
+      setParameters: (parameters: Record<string, string | number>) =>
+        worker.setParameters(
+          parameters as Parameters<typeof worker.setParameters>[0],
+        ),
+      terminate: () => worker.terminate(),
+    };
+  });
+}
+export const ocrWorkerSession = makeSession("spa+eng");
+let alternate: { language: OcrLanguage; session: OcrWorkerSession } | null =
+  null;
+export function getOcrSession(language: OcrLanguage) {
+  if (language === "spa+eng") return ocrWorkerSession;
+  if (alternate?.language !== language) {
+    void alternate?.session.dispose();
+    alternate = { language, session: makeSession(language) };
+  }
+  return alternate.session;
+}

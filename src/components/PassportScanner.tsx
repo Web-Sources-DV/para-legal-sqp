@@ -1,3 +1,5 @@
+import { mergeIdentityReadings } from "../services/identityReadings";
+import { OCR_LANGUAGES, type OcrLanguage } from "../services/ocrWorker";
 import { rotateImage } from "../services/imagePreprocessing";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -33,6 +35,8 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   onExtractionComplete,
   onCancel,
 }) => {
+  const [ocrLanguage, setOcrLanguage] = useState<OcrLanguage>("spa+eng");
+  const [reversePreview, setReversePreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"upload" | "camera">("upload");
   const [opticalFilter, setOpticalFilter] = useState<
     "enhanced" | "binarized" | "original"
@@ -205,7 +209,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const maxDim = 2000;
+        const maxDim = 2800;
         let width = img.width;
         let height = img.height;
 
@@ -273,7 +277,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
             : preprocessed.enhanced;
 
       setProcessingStatus("Iniciando OCR local (Tesseract spa+eng)...");
-      const result = await extractWithTesseract(
+      let result = await extractWithTesseract(
         imageToScan,
         (prog, status) => {
           if (!mountedRef.current) return;
@@ -282,7 +286,19 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
         },
         { ...preprocessed, enhanced: imageToScan },
         controller.signal,
+        ocrLanguage,
       );
+      if (reversePreview) {
+        setProcessingStatus("Leyendo el reverso del mismo documento...");
+        const reverse = await extractWithTesseract(
+          reversePreview,
+          (_progress, status) => setProcessingStatus(status),
+          undefined,
+          controller.signal,
+          ocrLanguage,
+        );
+        result = mergeIdentityReadings(result, reverse);
+      }
       result.imagePreview = preprocessed.enhanced || optimizedBase64;
       if (mountedRef.current && !controller.signal.aborted) {
         setProgressPercent(100);
@@ -325,6 +341,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
       const base64 = event.target?.result as string;
       if (base64) {
         setSelectedFilePreview(base64);
+        setReversePreview(null);
       }
     };
     reader.onerror = () => setErrorMessage("No se pudo leer el archivo.");
@@ -593,6 +610,64 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                 </button>
               </div>
             )}
+            <div className="bg-white border rounded-xl p-4 space-y-3">
+              <label className="block text-sm font-semibold">
+                Idioma del documento
+                <select
+                  className="block border rounded-lg p-2 mt-1 w-full"
+                  value={ocrLanguage}
+                  onChange={(event) =>
+                    setOcrLanguage(event.target.value as OcrLanguage)
+                  }
+                >
+                  {Object.entries(OCR_LANGUAGES).map(([code, label]) => (
+                    <option key={code} value={code}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm font-semibold">
+                Reverso de la misma cédula (opcional)
+                <input
+                  className="block mt-2"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/bmp"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 15 * 1024 * 1024) {
+                      setErrorMessage("El reverso debe pesar menos de 15 MB.");
+                      return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = () =>
+                      setReversePreview(String(reader.result));
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
+              {reversePreview && (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={reversePreview}
+                    alt="Reverso del documento"
+                    className="max-h-28"
+                  />
+                  <button
+                    onClick={() => setReversePreview(null)}
+                    className="underline text-sm"
+                  >
+                    Quitar reverso
+                  </button>
+                </div>
+              )}
+              <p className="text-xs text-slate-600">
+                Fotografía de frente, sin reflejos, con todos los bordes y
+                letras nítidas. En un pasaporte incluye completa la zona de
+                letras y signos &lt; de la parte inferior.
+              </p>
+            </div>
             {/* Optical Preprocessing Filter Selector */}
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">

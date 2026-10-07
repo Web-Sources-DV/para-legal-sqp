@@ -52,3 +52,7 @@ Las pruebas del servicio local anterior se conservan como pruebas de compatibili
 ## Identidad visual
 
 El SVG oficial está en `public/favicon.svg` y sus mismas formas se muestran en `AppLogo`. Usarlo en la interfaz y el favicon. **Los documentos de Para Legal no llevan logo**; no agregar membretes ni imágenes a los archivos Word generados.
+
+## Lector internacional de identidad
+
+Consulta [las funciones y límites del lector](docs/IDENTITY_READER.md). Incluye idiomas opcionales, MRZ, reverso de cédula, alertas de vencimiento y edad; `pnpm test:ocr` verifica una imagen ficticia con el motor real y el registro simulado.
