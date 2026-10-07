@@ -1,5 +1,8 @@
-import saveAs from 'file-saver';
-import React, { useState } from 'react';
+import { loadMoreDocuments, searchDocuments } from "../services/storageService";
+import { useDialog } from "../hooks/useDialog";
+import { entityFile } from "../services/fileStorage";
+import saveAs from "file-saver";
+import React, { useState, useEffect } from "react";
 import {
   FolderOpen,
   Search,
@@ -13,10 +16,13 @@ import {
   FileCheck,
   RotateCw,
   Sparkles,
-} from 'lucide-react';
-import { GeneratedDocument, Template, Client } from '../types';
-import { deleteDocumentLog, updateDocumentLog } from '../services/storageService';
-import { generateAndDownloadDocx } from '../services/docxService';
+} from "lucide-react";
+import { GeneratedDocument, Template, Client } from "../types";
+import {
+  deleteDocumentLog,
+  updateDocumentLog,
+} from "../services/storageService";
+import { generateAndDownloadDocx } from "../services/docxService";
 
 interface DocumentHistoryProps {
   canEdit?: boolean;
@@ -35,9 +41,34 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
   onDocumentsChange,
   onSelectClientAndTemplate,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [more, setMore] = useState(true);
+  const [searchError, setSearchError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [viewingDoc, setViewingDoc] = useState<GeneratedDocument | null>(null);
 
+  useDialog(!!viewingDoc, () => setViewingDoc(null));
+
+  useEffect(() => {
+    let active = true;
+    const timer = setTimeout(() => {
+      setLoading(true);
+      void searchDocuments(searchTerm)
+        .then((result) => {
+          if (active) setMore(result.length === 50);
+        })
+        .catch((error) => {
+          if (active) setSearchError(error.message);
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }, 300);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [searchTerm]);
   const filteredDocs = documents.filter((doc) => {
     return (
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,29 +80,75 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
 
   const handleDelete = async (id: string, title: string) => {
     if (!canEdit) return;
-    if (confirm(`¿Eliminar el registro del documento "${title}" del historial?`)) {
-      try { await deleteDocumentLog(id); } catch (error: any) { alert(error.message || 'No se pudo eliminar el registro.'); return; }
+    if (
+      confirm(`¿Eliminar el registro del documento "${title}" del historial?`)
+    ) {
+      try {
+        await deleteDocumentLog(id);
+      } catch (error: any) {
+        alert(error.message || "No se pudo eliminar el registro.");
+        return;
+      }
       onDocumentsChange();
       if (viewingDoc?.id === id) setViewingDoc(null);
     }
   };
 
   const handleRegenerateFromSnapshot = async (doc: GeneratedDocument) => {
-    if (doc.fileBase64) {
+    if (doc.filePath) {
       try {
-        const bytes = Uint8Array.from(atob(doc.fileBase64), c => c.charCodeAt(0));
-        saveAs(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), doc.fileName);
-      } catch { alert('El archivo guardado no se pudo leer. Restaura un respaldo válido.'); }
+        saveAs(await entityFile("documents", doc.id), doc.fileName);
+      } catch (error: any) {
+        alert(error.message || "No se pudo descargar el archivo.");
+      }
       return;
     }
-    const tpl = templates.find((t) => t.id === doc.templateId) || templates.find(t => doc.templateId.startsWith(t.id + '-'));
+    if (doc.fileBase64) {
+      try {
+        const bytes = Uint8Array.from(atob(doc.fileBase64), (c) =>
+          c.charCodeAt(0),
+        );
+        saveAs(
+          new Blob([bytes], {
+            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          }),
+          doc.fileName,
+        );
+      } catch {
+        alert(
+          "El archivo guardado no se pudo leer. Restaura un respaldo válido.",
+        );
+      }
+      return;
+    }
+    try {
+      saveAs(await entityFile("documents", doc.id), doc.fileName);
+      return;
+    } catch {
+      /* Legacy backups may lack an archived file. */
+    }
+    if (
+      !confirm(
+        "No hay archivo archivado disponible. Regenerar con la plantilla actual puede cambiar el contenido. ¿Continuar?",
+      )
+    )
+      return;
+    const tpl =
+      templates.find((t) => t.id === doc.templateId) ||
+      templates.find((t) => doc.templateId.startsWith(t.id + "-"));
     if (!tpl) {
-      alert('La plantilla original ya no existe en el sistema.');
+      alert("La plantilla original ya no existe en el sistema.");
       return;
     }
 
     try {
-      await generateAndDownloadDocx(tpl, doc.dataSnapshot, doc.fileName, clients.find(c => c.id === doc.clientId), doc.signatureOptions);
+      await generateAndDownloadDocx(
+        tpl,
+        doc.dataSnapshot,
+        doc.fileName,
+        clients.find((c) => c.id === doc.clientId),
+        doc.signatureOptions,
+      );
     } catch (err: any) {
       alert(`Error al regenerar documento: ${err.message}`);
     }
@@ -91,7 +168,8 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Registro auditable de todos los documentos Word (.docx) descargados con metadatos y valores reemplazados.
+            Registro auditable de todos los documentos Word (.docx) descargados
+            con metadatos y valores reemplazados.
           </p>
         </div>
 
@@ -108,14 +186,38 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
         </div>
       </div>
 
+      {searchError && <p role="alert">{searchError}</p>}
+      <button
+        disabled={loading || !more}
+        className="border rounded p-2"
+        onClick={async () => {
+          setLoading(true);
+          try {
+            setMore(await loadMoreDocuments(searchTerm));
+          } catch (error: any) {
+            setSearchError(error.message);
+          } finally {
+            setLoading(false);
+          }
+        }}
+      >
+        {loading
+          ? "Cargando…"
+          : more
+            ? "Cargar más documentos"
+            : "No hay más documentos"}
+      </button>
       {/* History Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {filteredDocs.length === 0 ? (
           <div className="p-12 text-center">
             <FolderOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h4 className="font-semibold text-slate-700 text-sm">No hay documentos generados registrados</h4>
+            <h4 className="font-semibold text-slate-700 text-sm">
+              No hay documentos generados registrados
+            </h4>
             <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-              Cuando uses el Asistente o el Generador de Documentos, los archivos Word creados aparecerán listados aquí.
+              Cuando uses el Asistente o el Generador de Documentos, los
+              archivos Word creados aparecerán listados aquí.
             </p>
           </div>
         ) : (
@@ -133,7 +235,10 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {filteredDocs.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-amber-50/20 transition-colors">
+                  <tr
+                    key={doc.id}
+                    className="hover:bg-amber-50/20 transition-colors"
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-blue-50 text-blue-700 shrink-0 border border-blue-200">
@@ -156,7 +261,9 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                       {doc.templateName}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-900">{doc.clientName}</div>
+                      <div className="font-semibold text-slate-900">
+                        {doc.clientName}
+                      </div>
                       {doc.passportNumber && (
                         <div className="text-[10px] text-slate-400 font-mono">
                           Doc: {doc.passportNumber}
@@ -164,12 +271,12 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                       )}
                     </td>
                     <td className="px-6 py-4 text-slate-500 font-mono text-[11px]">
-                      {new Date(doc.generatedAt).toLocaleString('es-ES', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
+                      {new Date(doc.generatedAt).toLocaleString("es-ES", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </td>
                     <td className="px-6 py-4 font-mono text-[11px] text-slate-500">
@@ -191,18 +298,39 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                         >
                           <Download className="w-4 h-4" />
                         </button>
-                        {canEdit && <button title="Editar título del registro" className="p-1.5 text-slate-700 border rounded-lg" onClick={async () => {
-                          const title=prompt('Título del registro:',doc.title);
-                          if(!title?.trim()) return;
-                          try { await updateDocumentLog({...doc,title:title.trim()}); onDocumentsChange(); } catch(e: any) { alert(e.message); }
-                        }}>Editar</button>}
-                        {canEdit && (<button
-                          title="Eliminar del Registro"
-                          onClick={() => handleDelete(doc.id, doc.fileName)}
-                          className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors border border-red-200"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>)}
+                        {canEdit && (
+                          <button
+                            title="Editar título del registro"
+                            className="p-1.5 text-slate-700 border rounded-lg"
+                            onClick={async () => {
+                              const title = prompt(
+                                "Título del registro:",
+                                doc.title,
+                              );
+                              if (!title?.trim()) return;
+                              try {
+                                await updateDocumentLog({
+                                  ...doc,
+                                  title: title.trim(),
+                                });
+                                onDocumentsChange();
+                              } catch (e: any) {
+                                alert(e.message);
+                              }
+                            }}
+                          >
+                            Editar
+                          </button>
+                        )}
+                        {canEdit && (
+                          <button
+                            title="Eliminar del Registro"
+                            onClick={() => handleDelete(doc.id, doc.fileName)}
+                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors border border-red-200"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -215,7 +343,13 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
 
       {/* Modal: View Snapshot Details */}
       {viewingDoc && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Documento archivado"
+          tabIndex={-1}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -223,8 +357,12 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                   <FileCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-serif font-bold text-base text-white">{viewingDoc.title}</h4>
-                  <p className="text-xs text-slate-400">{viewingDoc.fileName}</p>
+                  <h4 className="font-serif font-bold text-base text-white">
+                    {viewingDoc.title}
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    {viewingDoc.fileName}
+                  </p>
                 </div>
               </div>
               <button
@@ -238,16 +376,30 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
             <div className="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <div>
-                  <span className="text-slate-400 block font-semibold uppercase text-[10px]">Cliente</span>
-                  <span className="font-bold text-slate-900">{viewingDoc.clientName}</span>
+                  <span className="text-slate-400 block font-semibold uppercase text-[10px]">
+                    Cliente
+                  </span>
+                  <span className="font-bold text-slate-900">
+                    {viewingDoc.clientName}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block font-semibold uppercase text-[10px]">Pasaporte</span>
-                  <span className="font-mono font-bold text-red-700">{viewingDoc.passportNumber || 'N/A'}</span>
+                  <span className="text-slate-400 block font-semibold uppercase text-[10px]">
+                    Pasaporte
+                  </span>
+                  <span className="font-mono font-bold text-red-700">
+                    {viewingDoc.passportNumber || "N/A"}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block font-semibold uppercase text-[10px]">Fecha Generación</span>
-                  <span className="font-bold text-slate-900">{new Date(viewingDoc.generatedAt).toLocaleDateString('es-ES')}</span>
+                  <span className="text-slate-400 block font-semibold uppercase text-[10px]">
+                    Fecha Generación
+                  </span>
+                  <span className="font-bold text-slate-900">
+                    {new Date(viewingDoc.generatedAt).toLocaleDateString(
+                      "es-ES",
+                    )}
+                  </span>
                 </div>
               </div>
 
@@ -257,9 +409,16 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                 </h5>
                 <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
                   {Object.entries(viewingDoc.dataSnapshot).map(([k, v]) => (
-                    <div key={k} className="p-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 bg-white hover:bg-slate-50">
-                      <span className="font-mono text-amber-800 font-semibold">{k}</span>
-                      <span className="font-medium text-slate-800 max-w-sm break-words">{v || '(Vacío)'}</span>
+                    <div
+                      key={k}
+                      className="p-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 bg-white hover:bg-slate-50"
+                    >
+                      <span className="font-mono text-amber-800 font-semibold">
+                        {k}
+                      </span>
+                      <span className="font-medium text-slate-800 max-w-sm break-words">
+                        {v || "(Vacío)"}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -289,4 +448,3 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
     </div>
   );
 };
-

@@ -35,7 +35,7 @@ interface UserManualProps {
 
 export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
   const [activeSection, setActiveSection] = useState<
-    'workflow' | 'upload' | 'save' | 'generate' | 'templates' | 'database' | 'faq'
+    'workflow' | 'upload' | 'save' | 'generate' | 'templates' | 'faq'
   >('workflow');
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,7 +51,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
     { tag: '(sexo)', desc: 'Condición legal según sexo y edad (VARÓN, MUJER, JOVEN, MENOR)', example: 'VARÓN / MUJER / JOVEN / MENOR', cat: 'Pasaporte' },
     { tag: '(sexo/edad)', desc: 'Condición jurídica y rango de edad', example: 'VARÓN / MUJER / JOVEN / MENOR', cat: 'Pasaporte' },
     { tag: '(numero de identidad)', desc: 'Número de identidad (Cédula o Pasaporte)', example: '8-765-4321 / PA84729104', cat: 'Pasaporte' },
-    { tag: '(nacionalidad)', desc: 'Nacionalidad oficial en mayúsculas', example: 'ESPAÑOLA / MEXICANA / COLOMBIANA', cat: 'Pasaporte' },
+    { tag: '(nacionalidad)', desc: 'Nacionalidad en minúsculas en el Word', example: 'ESPAÑOLA / MEXICANA / COLOMBIANA', cat: 'Pasaporte' },
     { tag: '(cedula/pasaporte)', desc: 'Tipo de documento legal', example: 'Pasaporte / Cédula / DNI / NIE', cat: 'Pasaporte' },
     { tag: '(fecha_nacimiento)', desc: 'Fecha de nacimiento', example: '1985-06-14 o 14/06/1985', cat: 'Pasaporte' },
     { tag: '(pais_emisor)', desc: 'País emisor del documento', example: 'ESPAÑA / ESTADOS UNIDOS / COLOMBIA', cat: 'Pasaporte' },
@@ -88,7 +88,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
               Manual Completo de Uso del Sistema
             </h1>
             <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
-              Guía exhaustiva para la extracción OCR/IA de pasaportes, administración de clientes,
+              Guía exhaustiva para la extracción OCR local de pasaportes, administración de clientes,
               creación de plantillas Word y generación automatizada de documentos notariales y legales.
             </p>
           </div>
@@ -168,17 +168,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
           <span className="truncate">4. Plantillas y Variables</span>
         </button>
 
-        <button
-          onClick={() => setActiveSection('database')}
-          className={`flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-xs font-bold transition-all border ${
-            activeSection === 'database'
-              ? 'bg-slate-900 text-amber-400 border-slate-900 shadow-md ring-2 ring-amber-500/30'
-              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
-          }`}
-        >
-          <Database className="w-4 h-4 shrink-0" />
-          <span className="truncate">5. Base de Datos</span>
-        </button>
+
 
         <button
           onClick={() => setActiveSection('faq')}
@@ -277,7 +267,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                     Generar y Descargar Word (.docx)
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                    Elige la plantilla deseada (Poder Notarial, Contrato de Servicios o Solicitud de Residencia). El motor inyecta todas las variables y descarga un archivo Word nativo 100% editable.
+                    Elige la plantilla deseada (Poder Notarial, Contrato de Servicios o Solicitud de Residencia). El motor inyecta todas las variables y descarga un archivo Word nativo editable.
                   </p>
                 </div>
                 <button
@@ -314,7 +304,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
                     <strong className="text-slate-900 block font-semibold">Privacidad & Persistencia</strong>
-                    <span>Tus datos se almacenan de forma local en tu navegador con copias de seguridad en JSON.</span>
+                    <span>Los datos revisados se guardan en Supabase y se comparten con cualquier persona que abra el enlace. No necesitas una cuenta.</span>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
@@ -399,7 +389,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0" />
                 <h4 className="font-bold text-slate-900 text-sm">
-                  Consejos para Obtener 100% de Precisión en la Lectura
+                  Consejos para Mejorar la Lectura y Revisar los Datos
                 </h4>
               </div>
               <ul className="text-xs text-slate-700 space-y-2 list-disc list-inside">
@@ -413,7 +403,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                   <strong>Plano Frontal Recto:</strong> Procura que la foto esté tomada de frente y no en ángulo diagonal excesivo.
                 </li>
                 <li>
-                  <strong>Resolución Mínima:</strong> Se recomienda una imagen de al menos 800x600 píxeles para garantizar lectura correcta de fechas y números de identificación.
+                  <strong>Resolución Mínima:</strong> Se recomienda una imagen de al menos 800x600 píxeles para facilitar la lectura; confirma siempre fechas y números contra el original.
                 </li>
               </ul>
             </div>
@@ -478,7 +468,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                   Al presionar <strong>"Guardar y Continuar a Generación"</strong>, ocurren las siguientes acciones automáticas:
                 </p>
                 <ol className="text-xs text-slate-700 space-y-2 list-decimal list-inside">
-                  <li>El cliente se registra en la base de datos local con identificador único.</li>
+                  <li>El cliente se registra en la base de datos compartida con identificador único.</li>
                   <li>Se almacena una miniatura optimizada de la fotografía del pasaporte.</li>
                   <li>Se actualiza el contador de clientes en la barra superior.</li>
                   <li>El cliente queda disponible inmediatamente para generar cualquier otro documento en el futuro con un solo clic.</li>
@@ -550,7 +540,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                     Garantía de Compatibilidad Total (.docx)
                   </h4>
                   <p className="text-xs text-emerald-800 mt-0.5">
-                    Los archivos generados son 100% compatibles con Microsoft Word 2013-2024, Office 365, Google Docs, Apple Pages y LibreOffice Writer.
+                    Los archivos usan el formato OpenXML .docx. Comprueba diseño, paginación y firmas en el editor que utilizarás, especialmente al cambiar de Word a LibreOffice u otro programa.
                   </p>
                 </div>
               </div>
@@ -734,97 +724,6 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
       )}
 
       {/* SECTION 6: BASE DE DATOS Y RESPALDOS */}
-      {activeSection === 'database' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
-              <div>
-                <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 uppercase tracking-wider">
-                  Módulo 5: Base de Datos y Backups
-                </span>
-                <h2 className="font-serif font-bold text-xl sm:text-2xl text-slate-900 mt-2">
-                  Gestión de Almacenamiento, Copias de Seguridad y Migración
-                </h2>
-                <p className="text-sm text-slate-600 mt-1">
-                  Cómo respaldar todos tus clientes, plantillas e historial o transferirlos a otro equipo.
-                </p>
-              </div>
-              <button
-                onClick={() => onNavigateTab('database')}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shrink-0"
-              >
-                <Database className="w-3.5 h-3.5 text-amber-400" />
-                <span>Panel de Base de Datos</span>
-              </button>
-            </div>
-
-            {/* 3 cards of backup actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 flex flex-col justify-between">
-                <div>
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 font-bold mb-3">
-                    <FileDown className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-bold text-slate-900 text-sm mb-1">
-                    Exportar Copia de Seguridad JSON
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                    Descarga en 1 clic un archivo comprimido <code className="font-mono">Legal_Backup_Completo_YYYY-MM-DD.json</code> que contiene todos tus clientes registrados, plantillas personalizadas e historial.
-                  </p>
-                </div>
-                <button
-                  onClick={() => onNavigateTab('database')}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors"
-                >
-                  Exportar Respaldo
-                </button>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-3 flex flex-col justify-between">
-                <div>
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center border border-amber-300 font-bold mb-3">
-                    <Database className="w-5 h-5 text-amber-700" />
-                  </div>
-                  <h3 className="font-bold text-slate-900 text-sm mb-1">
-                    Almacenamiento Local & Migración de BD
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                    Los datos se comparten mediante Supabase con cuentas y permisos. Los administradores consultan el historial y la base de datos; solo Daryl Villa puede administrarlos, gestionar usuarios y consultar estadísticas. Los datos del navegador anterior se migran desde Base de Datos con la cuenta principal.
-                  </p>
-                </div>
-                <button
-                  onClick={() => onNavigateTab('database')}
-                  className="w-full py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs transition-colors shadow-xs"
-                >
-                  Ver Panel de Base de Datos
-                </button>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 flex flex-col justify-between">
-                <div>
-                  <div className="w-10 h-10 rounded-xl bg-red-50 text-red-700 flex items-center justify-center border border-red-200 font-bold mb-3">
-                    <HardDrive className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-bold text-slate-900 text-sm mb-1">
-                    Preparación para Producción
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                    Si necesitas reiniciar los datos de prueba, puedes utilizar la función de limpieza total para dejar la base de datos limpia en 0 clientes y 0 documentos generados.
-                  </p>
-                </div>
-                <button
-                  onClick={() => onNavigateTab('database')}
-                  className="w-full py-2 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs transition-colors"
-                >
-                  Ir a Limpieza
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 7: FAQ & TROUBLESHOOTING */}
       {activeSection === 'faq' && (
         <div className="space-y-6">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
@@ -841,10 +740,10 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                 <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                   <HelpCircle className="w-4 h-4 text-amber-600" />
-                  <span>¿Qué sucede si una foto de pasaporte es de baja calidad o la IA está ocupada?</span>
+                  <span>¿Qué sucede si la foto es de baja calidad o falla la conexión?</span>
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  El sistema cuenta con un <strong>motor inteligente de reintentos y respaldo</strong>: si la IA experimenta alta demanda, reintenta automáticamente con modelos alternativos y finalmente recurre al motor local <strong>Tesseract OCR</strong>. Además, en el Paso 2 de revisión siempre puedes corregir o escribir manualmente cualquier campo en segundos.
+                  El reconocimiento usa <strong>Tesseract OCR local</strong>. Si la foto no se lee bien, repítela o usa la entrada manual. La descarga inicial del motor requiere internet y los guardados necesitan conexión a Supabase. Además, en el Paso 2 de revisión siempre puedes corregir o escribir manualmente cualquier campo en segundos.
                 </p>
               </div>
 
@@ -864,7 +763,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                   <span>¿Puedo abrir los documentos generados en Microsoft Word de escritorio?</span>
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Sí, 100%. Todos los archivos descargados son archivos nativos <code className="font-mono font-bold">.docx</code> con formato OpenXML, totalmente editables, imprimibles y firmables digitalmente.
+                  Los archivos descargados son archivos nativos <code className="font-mono font-bold">.docx</code> con formato OpenXML, totalmente editables, imprimibles y pueden usarse en un proceso de firma compatible. La aplicación no aplica una firma digital.
                 </p>
               </div>
 
@@ -874,7 +773,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                   <span>¿Dónde se guardan los datos de mis clientes y pasaportes?</span>
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  El OCR procesa la imagen en tu navegador. Al guardar un cliente o generar un documento, sus datos y archivos se almacenan en Supabase y se comparten con los usuarios habilitados según sus permisos. Daryl Villa puede descargar respaldos desde <strong>Base de Datos</strong>.
+                  El OCR procesa la imagen en tu navegador. Los clientes, plantillas y documentos guardados se comparten con todos los visitantes del enlace. Los respaldos se administran directamente en Supabase.
                 </p>
               </div>
             </div>

@@ -1,4 +1,5 @@
-import { createWorker } from 'tesseract.js';
+import { countryName, validateMrz, mrzDate } from './mrz';
+import { ocrWorkerSession } from './ocrWorker';
 import { documentTypeLabel } from './fieldMapping';
 import { determineSexAgeCategory } from './docxService';
 import { ExtractionResult } from '../types';
@@ -89,7 +90,7 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
       const issuingCountryCode = l1.substring(2, 5);
       const docNum = l1.substring(5, 14).replace(/</g, '').trim();
       result.passportNumber = docNum;
-      result.issuingCountry = mapCountryCode(issuingCountryCode);
+      result.issuingCountry = countryName(issuingCountryCode);
 
       // Line 2: DOB (6), check, Sex (1), Expiry (6), check, Nationality (3)
       if (l2.length >= 20) {
@@ -101,17 +102,9 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
         result.sex = sex === 'F' ? 'F' : sex === 'M' ? 'M' : 'Otro';
         result.nationality = mapCountryCode(natCode || issuingCountryCode);
 
-        if (/^\d{6}$/.test(dobRaw)) {
-          const yy = parseInt(dobRaw.substring(0, 2), 10);
-          const currentYear = new Date().getFullYear() % 100;
-          const fullYear = yy > currentYear ? 1900 + yy : 2000 + yy;
-          result.birthDate = `${fullYear}-${dobRaw.substring(2, 4)}-${dobRaw.substring(4, 6)}`;
-        }
 
-        if (/^\d{6}$/.test(expRaw)) {
-          const yy = parseInt(expRaw.substring(0, 2), 10);
-          result.expiryDate = `${2000 + yy}-${expRaw.substring(2, 4)}-${expRaw.substring(4, 6)}`;
-        }
+
+
       }
 
       // Line 3: Surname << Given Names
@@ -122,7 +115,15 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
         result.fullName = `${result.firstName} ${result.lastName}`.trim();
       }
 
-      return result;
+      if (result.mrzLine1 && result.mrzLine2) {
+      const lines = [result.mrzLine1, result.mrzLine2, ...(result.mrzLine3 ? [result.mrzLine3] : [])];
+      result.warnings = validateMrz(lines);
+      const second = result.mrzLine2;
+      result.birthDate = mrzDate(result.mrzLine3 ? second.slice(0, 6) : second.slice(13, 19), true);
+      result.expiryDate = mrzDate(result.mrzLine3 ? second.slice(8, 14) : second.slice(21, 27), false);
+      if (!result.birthDate || !result.expiryDate) result.warnings.push('MRZ: fecha inválida; revisa nacimiento y vencimiento.');
+    }
+    return result;
     }
   }
 
@@ -159,27 +160,22 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
 
         result.passportNumber = passportNum;
         result.nationality = mapCountryCode(nationalityCode);
-        result.issuingCountry = result.nationality;
+        result.issuingCountry = countryName(l1.substring(2, 5));
         result.sex = sex === 'F' ? 'F' : sex === 'M' ? 'M' : 'Otro';
 
-        if (/^\d{6}$/.test(dobRaw)) {
-          const yy = parseInt(dobRaw.substring(0, 2), 10);
-          const currentYear = new Date().getFullYear() % 100;
-          const fullYear = yy > currentYear ? 1900 + yy : 2000 + yy;
-          const mm = dobRaw.substring(2, 4);
-          const dd = dobRaw.substring(4, 6);
-          result.birthDate = `${fullYear}-${mm}-${dd}`;
-        }
 
-        if (/^\d{6}$/.test(expRaw)) {
-          const yy = parseInt(expRaw.substring(0, 2), 10);
-          const fullYear = 2000 + yy;
-          const mm = expRaw.substring(2, 4);
-          const dd = expRaw.substring(4, 6);
-          result.expiryDate = `${fullYear}-${mm}-${dd}`;
-        }
+
+
       }
-      return result;
+      if (result.mrzLine1 && result.mrzLine2) {
+      const lines = [result.mrzLine1, result.mrzLine2, ...(result.mrzLine3 ? [result.mrzLine3] : [])];
+      result.warnings = validateMrz(lines);
+      const second = result.mrzLine2;
+      result.birthDate = mrzDate(result.mrzLine3 ? second.slice(0, 6) : second.slice(13, 19), true);
+      result.expiryDate = mrzDate(result.mrzLine3 ? second.slice(8, 14) : second.slice(21, 27), false);
+      if (!result.birthDate || !result.expiryDate) result.warnings.push('MRZ: fecha inválida; revisa nacimiento y vencimiento.');
+    }
+    return result;
     }
   }
 
@@ -206,26 +202,35 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
       result.passportNumber = l2.substring(0, 9).replace(/</g, '').trim();
       const natCode = l2.substring(10, 13).replace(/</g, '').trim();
       result.nationality = mapCountryCode(natCode);
-      result.issuingCountry = result.nationality;
+      result.issuingCountry = countryName(l1.substring(2, 5));
       const dobRaw = l2.substring(13, 19);
       const sex = l2.substring(20, 21);
       const expRaw = l2.substring(21, 27);
       result.sex = sex === 'F' ? 'F' : sex === 'M' ? 'M' : 'Otro';
 
-      if (/^\d{6}$/.test(dobRaw)) {
-        const yy = parseInt(dobRaw.substring(0, 2), 10);
-        const currentYear = new Date().getFullYear() % 100;
-        result.birthDate = `${yy > currentYear ? 1900 + yy : 2000 + yy}-${dobRaw.substring(2, 4)}-${dobRaw.substring(4, 6)}`;
-      }
-      if (/^\d{6}$/.test(expRaw)) {
-        const yy = parseInt(expRaw.substring(0, 2), 10);
-        result.expiryDate = `${2000 + yy}-${expRaw.substring(2, 4)}-${expRaw.substring(4, 6)}`;
-      }
+
+
+    }
+    if (result.mrzLine1 && result.mrzLine2) {
+      const lines = [result.mrzLine1, result.mrzLine2, ...(result.mrzLine3 ? [result.mrzLine3] : [])];
+      result.warnings = validateMrz(lines);
+      const second = result.mrzLine2;
+      result.birthDate = mrzDate(result.mrzLine3 ? second.slice(0, 6) : second.slice(13, 19), true);
+      result.expiryDate = mrzDate(result.mrzLine3 ? second.slice(8, 14) : second.slice(21, 27), false);
+      if (!result.birthDate || !result.expiryDate) result.warnings.push('MRZ: fecha inválida; revisa nacimiento y vencimiento.');
     }
     return result;
   }
 
-  return result;
+  if (result.mrzLine1 && result.mrzLine2) {
+      const lines = [result.mrzLine1, result.mrzLine2, ...(result.mrzLine3 ? [result.mrzLine3] : [])];
+      result.warnings = validateMrz(lines);
+      const second = result.mrzLine2;
+      result.birthDate = mrzDate(result.mrzLine3 ? second.slice(0, 6) : second.slice(13, 19), true);
+      result.expiryDate = mrzDate(result.mrzLine3 ? second.slice(8, 14) : second.slice(21, 27), false);
+      if (!result.birthDate || !result.expiryDate) result.warnings.push('MRZ: fecha inválida; revisa nacimiento y vencimiento.');
+    }
+    return result;
 }
 
 /**
@@ -397,7 +402,8 @@ export function buildStructuredDocumentJson(
 export async function extractWithTesseract(
   imageSource: string | File | Blob,
   onProgress?: (progress: number, status: string) => void,
-  preparedImages?: PreprocessedImages
+  preparedImages?: PreprocessedImages,
+  signal?: AbortSignal
 ): Promise<ExtractionResult> {
   // Convert string image to preprocessed versions
   let dataUri = '';
@@ -418,7 +424,6 @@ export async function extractWithTesseract(
     onProgress(30, 'Cargando motor OCR Tesseract (spa+eng)...');
   }
 
-  const worker = await createWorker('spa+eng');
 
   if (onProgress) {
     onProgress(50, 'Escaneando texto óptico y zona de lectura mecánica (MRZ)...');
@@ -428,7 +433,7 @@ export async function extractWithTesseract(
   let rawText = '';
   let confidence = 0;
   let mrzResult: Partial<ExtractionResult> = {};
-  try {
+  await ocrWorkerSession.run(async worker => {
   const ret = await worker.recognize(preprocessed.enhanced);
   rawText = ret.data.text;
   confidence = Math.round(ret.data.confidence) || 0;
@@ -448,9 +453,7 @@ export async function extractWithTesseract(
     }
   }
 
-  } finally {
-    await worker.terminate();
-  }
+  }, signal);
 
   if (onProgress) {
     onProgress(90, 'Extrayendo y estructurando JSON de identidad...');
@@ -465,7 +468,7 @@ export async function extractWithTesseract(
   const fullName = mrzResult.fullName || visualResult.fullName || `${firstName} ${lastName}`.trim() || '';
   const passportNumber = mrzResult.passportNumber || visualResult.passportNumber || '';
   const nationality = mrzResult.nationality || visualResult.nationality || '';
-  const issuingCountry = mrzResult.issuingCountry || visualResult.issuingCountry || nationality;
+  const issuingCountry = mrzResult.issuingCountry || visualResult.issuingCountry || '';
   const birthDate = mrzResult.birthDate || visualResult.birthDate || '';
   const expiryDate = mrzResult.expiryDate || visualResult.expiryDate || '';
   const sex = mrzResult.sex || visualResult.sex || '';
@@ -486,6 +489,7 @@ export async function extractWithTesseract(
     sex,
     docType,
     documentType,
+    warnings: mrzResult.warnings || [],
     confidenceScore: confidence,
     mrzLine1: mrzResult.mrzLine1 || '',
     mrzLine2: mrzResult.mrzLine2 || '',

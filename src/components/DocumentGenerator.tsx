@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { SignatureStudio } from "./SignatureStudio";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import saveAs from "file-saver";
+import React, { useState, useEffect, useRef } from "react";
 import {
   FileText,
   Download,
@@ -26,13 +29,28 @@ import {
   ChevronDown,
   ChevronUp,
   Columns,
-} from 'lucide-react';
-import confetti from 'canvas-confetti';
-import { Client, Template, GeneratedDocument, PlaceholderDef, Idoneo, SignatureLayoutOptions } from '../types';
-import { generateAndDownloadDocx, determineSexAgeCategory, buildComprehensiveReplacementMap } from '../services/docxService';
-import { fieldDefault, documentTypeLabel, canonicalField } from '../services/fieldMapping';
-import { saveDocumentLog } from '../services/storageService';
-import { IDONEOS, DEFAULT_IDONEO, getIdoneoByName } from '../data/idoneos';
+} from "lucide-react";
+import confetti from "canvas-confetti";
+import {
+  Client,
+  Template,
+  GeneratedDocument,
+  PlaceholderDef,
+  Idoneo,
+  SignatureLayoutOptions,
+} from "../types";
+import {
+  generateAndDownloadDocx,
+  determineSexAgeCategory,
+  buildComprehensiveReplacementMap,
+} from "../services/docxService";
+import {
+  fieldDefault,
+  documentTypeLabel,
+  canonicalField,
+} from "../services/fieldMapping";
+import { saveDocumentLog } from "../services/storageService";
+import { IDONEOS, DEFAULT_IDONEO, getIdoneoByName } from "../data/idoneos";
 
 interface DocumentGeneratorProps {
   clients: Client[];
@@ -54,13 +72,21 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   onOpenTemplatesTab,
 }) => {
   const templateBaseId = (template?: Template | null) => {
-    if (!template) return '';
-    return templates.find(item => item.id === template.id || template.id === `${item.id}-${getIdoneoByName(template.idoneo).id}`)?.id || template.id;
+    if (!template) return "";
+    return (
+      templates.find(
+        (item) =>
+          item.id === template.id ||
+          template.id === `${item.id}-${getIdoneoByName(template.idoneo).id}`,
+      )?.id || template.id
+    );
   };
 
-  const [selectedClientId, setSelectedClientId] = useState<string>(initialClient?.id || (clients[0]?.id ?? ''));
+  const [selectedClientId, setSelectedClientId] = useState<string>(
+    initialClient?.id || (clients[0]?.id ?? ""),
+  );
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
-    templateBaseId(initialTemplate) || (templates[0]?.id ?? '')
+    templateBaseId(initialTemplate) || (templates[0]?.id ?? ""),
   );
 
   // Selected Idoneo state
@@ -71,77 +97,122 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
     return DEFAULT_IDONEO.id;
   });
 
+  const [sourceRevision, setSourceRevision] = useState("");
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
-  const [customFileName, setCustomFileName] = useState<string>('');
+  const [customFileName, setCustomFileName] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
-  const [lastGeneratedDoc, setLastGeneratedDoc] = useState<GeneratedDocument | null>(null);
+  const [lastGeneratedDoc, setLastGeneratedDoc] =
+    useState<GeneratedDocument | null>(null);
   const [generationSuccess, setGenerationSuccess] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showJsonInspector, setShowJsonInspector] = useState<boolean>(false);
   const [copiedJson, setCopiedJson] = useState<boolean>(false);
 
-  const activeClient = clients.find((c) => c.id === selectedClientId) || initialClient || null;
-  
+  const activeClient =
+    clients.find((c) => c.id === selectedClientId) || initialClient || null;
+
   // Find active template (checking direct ID or base template ID)
   const activeTemplate =
-    (templateBaseId(initialTemplate) === selectedTemplateId ? initialTemplate : null) ||
+    (templateBaseId(initialTemplate) === selectedTemplateId
+      ? initialTemplate
+      : null) ||
     templates.find((t) => t.id === selectedTemplateId) ||
     templates.find((t) => selectedTemplateId.startsWith(t.id)) ||
     initialTemplate ||
     templates[0] ||
     null;
 
-  const activeIdoneo: Idoneo = IDONEOS.find((i) => i.id === selectedIdoneoId) || DEFAULT_IDONEO;
+  const activeIdoneo: Idoneo =
+    IDONEOS.find((i) => i.id === selectedIdoneoId) || DEFAULT_IDONEO;
+
+  useEffect(() => {
+    if (!selectedClientId && clients.length) setSelectedClientId(clients[0].id);
+    if (!selectedTemplateId && templates.length)
+      setSelectedTemplateId(templates[0].id);
+  }, [clients, templates, selectedClientId, selectedTemplateId]);
 
   // Signature positioning and alignment state (Antes de generar)
-  const [sigAlignment, setSigAlignment] = useState<'column-left' | 'center' | 'column-right'>('column-left');
+  const [sigAlignment, setSigAlignment] = useState<
+    "column-left" | "center" | "column-right"
+  >("column-left");
   const [sigEnabled, setSigEnabled] = useState(false);
   const [sigColumnOffset, setSigColumnOffset] = useState<number>(56); // 56% matching Image 2
   const [sigBlankLines, setSigBlankLines] = useState<number>(2);
   const [sigUseTable, setSigUseTable] = useState<boolean>(true);
-  const [customSigClientName, setCustomSigClientName] = useState<string>('');
-  const [customSigClientDoc, setCustomSigClientDoc] = useState<string>('');
-  const [customSigLawyerTitle, setCustomSigLawyerTitle] = useState<string>('');
-  const [customSigLawyerCedula, setCustomSigLawyerCedula] = useState<string>('');
-  const [customSigLawyerIdoneidad, setCustomSigLawyerIdoneidad] = useState<string>('');
-  const [simulatedNameLength, setSimulatedNameLength] = useState<'actual' | 'short' | 'medium' | 'long' | 'very_long'>('actual');
+  const [customSigClientName, setCustomSigClientName] = useState<string>("");
+  const [customSigClientDoc, setCustomSigClientDoc] = useState<string>("");
+  const [customSigLawyerTitle, setCustomSigLawyerTitle] = useState<string>("");
+  const [customSigLawyerCedula, setCustomSigLawyerCedula] =
+    useState<string>("");
+  const [customSigLawyerIdoneidad, setCustomSigLawyerIdoneidad] =
+    useState<string>("");
+  const [simulatedNameLength, setSimulatedNameLength] = useState<
+    "actual" | "short" | "medium" | "long" | "very_long"
+  >("actual");
   const [showVerticalGuide, setShowVerticalGuide] = useState<boolean>(true);
-  const [showSigAdvancedConfig, setShowSigAdvancedConfig] = useState<boolean>(false);
+  const [showSigAdvancedConfig, setShowSigAdvancedConfig] =
+    useState<boolean>(false);
 
   // Synchronize client signature defaults when activeClient changes
   useEffect(() => {
     if (activeClient) {
       setCustomSigClientName(activeClient.fullName.toUpperCase());
       const docLabel = `${documentTypeLabel(activeClient.docType).toUpperCase()} No. `;
-      const docVal = (activeClient.passportNumber || activeClient.personalNumber || '').toUpperCase();
-      setCustomSigClientDoc(docVal ? `${docLabel}${docVal}` : 'PASAPORTE No. ');
+      const docVal = (
+        activeClient.passportNumber ||
+        activeClient.personalNumber ||
+        ""
+      ).toUpperCase();
+      setCustomSigClientDoc(docVal ? `${docLabel}${docVal}` : "PASAPORTE No. ");
     } else {
-      setCustomSigClientName('');
-      setCustomSigClientDoc('');
+      setCustomSigClientName("");
+      setCustomSigClientDoc("");
     }
-  }, [activeClient]);
+  }, [activeClient?.id]);
 
   // Synchronize lawyer signature defaults when activeIdoneo changes
   useEffect(() => {
     if (activeIdoneo) {
       setCustomSigLawyerTitle(activeIdoneo.formalTitle.toUpperCase());
-      setCustomSigLawyerCedula(activeIdoneo.cedula ? `CÉDULA NO. ${activeIdoneo.cedula.toUpperCase()}` : '');
-      setCustomSigLawyerIdoneidad(activeIdoneo.idoneidad ? `IDONEIDAD ${activeIdoneo.idoneidad.toUpperCase()}` : '');
+      setCustomSigLawyerCedula(
+        activeIdoneo.cedula
+          ? `CÉDULA NO. ${activeIdoneo.cedula.toUpperCase()}`
+          : "",
+      );
+      setCustomSigLawyerIdoneidad(
+        activeIdoneo.idoneidad
+          ? `IDONEIDAD ${activeIdoneo.idoneidad.toUpperCase()}`
+          : "",
+      );
     }
-  }, [activeIdoneo]);
+  }, [activeIdoneo.id]);
 
   // Simulated client name for testing short and long names
   const previewClientName = React.useMemo(() => {
-    if (simulatedNameLength === 'short') return 'ANA LI';
-    if (simulatedNameLength === 'medium') return 'CARLOS RESTREPO';
-    if (simulatedNameLength === 'long') return 'GUSTAVO JOSE ACOSTA MUÑOZ';
-    if (simulatedNameLength === 'very_long') return 'MARIA DE LOS ANGELES RESTREPO FERNANDEZ';
-    return customSigClientName || (activeClient ? activeClient.fullName.toUpperCase() : 'GUSTAVO JOSE ACOSTA MUÑOZ');
+    if (simulatedNameLength === "short") return "ANA LI";
+    if (simulatedNameLength === "medium") return "CARLOS RESTREPO";
+    if (simulatedNameLength === "long") return "GUSTAVO JOSE ACOSTA MUÑOZ";
+    if (simulatedNameLength === "very_long")
+      return "MARIA DE LOS ANGELES RESTREPO FERNANDEZ";
+    return (
+      customSigClientName ||
+      (activeClient
+        ? activeClient.fullName.toUpperCase()
+        : "GUSTAVO JOSE ACOSTA MUÑOZ")
+    );
   }, [simulatedNameLength, customSigClientName, activeClient]);
 
   const previewClientDoc = React.useMemo(() => {
-    if (simulatedNameLength === 'short') return 'PASAPORTE No. P8829104';
-    return customSigClientDoc || (activeClient?.passportNumber ? `PASAPORTE No. ${activeClient.passportNumber}` : '[número pendiente]');
+    if (simulatedNameLength === "short") return "PASAPORTE No. P8829104";
+    return (
+      customSigClientDoc ||
+      (activeClient?.passportNumber
+        ? `PASAPORTE No. ${activeClient.passportNumber}`
+        : "[número pendiente]")
+    );
   }, [simulatedNameLength, customSigClientDoc, activeClient]);
 
   // Sync selected client if prop changes
@@ -168,45 +239,105 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
     const initialValues: Record<string, string> = {};
 
     activeTemplate.placeholders.forEach((placeholderKey) => {
-      const def = activeTemplate.placeholderDefs?.find((d) => d.key === placeholderKey);
-      const category = activeClient ? activeClient.sexAgeCategory || determineSexAgeCategory(activeClient.birthDate, activeClient.sex).category : '';
-      const val = fieldDefault(placeholderKey, activeClient, activeIdoneo, category) || def?.defaultValue || '';
+      const def = activeTemplate.placeholderDefs?.find(
+        (d) => d.key === placeholderKey,
+      );
+      const category = activeClient
+        ? determineSexAgeCategory(activeClient.birthDate, activeClient.sex)
+            .category
+        : "";
+      const val =
+        fieldDefault(placeholderKey, activeClient, activeIdoneo, category) ||
+        def?.defaultValue ||
+        "";
 
       initialValues[placeholderKey] = val;
     });
 
+    setSourceRevision(
+      `${activeClient?.revision || 0}:${activeTemplate.revision || 0}:${activeIdoneo.revision || 0}`,
+    );
+    setDirty(false);
     setFormValues(initialValues);
 
     // Default download filename with Idóneo and Client
     if (activeTemplate && activeClient) {
-      const cleanTplName = activeTemplate.name.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_');
-      const cleanCliName = activeClient.fullName.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_');
-      const cleanIdoneo = activeIdoneo.name.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_');
+      const cleanTplName = activeTemplate.name.replace(
+        /[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g,
+        "_",
+      );
+      const cleanCliName = activeClient.fullName.replace(
+        /[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g,
+        "_",
+      );
+      const cleanIdoneo = activeIdoneo.name.replace(
+        /[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g,
+        "_",
+      );
       setCustomFileName(`${cleanTplName}_${cleanIdoneo}_${cleanCliName}.docx`);
     } else if (activeTemplate) {
-      setCustomFileName(`${activeTemplate.name.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_')}_${activeIdoneo.name.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_')}.docx`);
+      setCustomFileName(
+        `${activeTemplate.name.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, "_")}_${activeIdoneo.name.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, "_")}.docx`,
+      );
     }
-  }, [activeTemplate, activeClient, activeIdoneo]);
+  }, [activeTemplate?.id, activeClient?.id, activeIdoneo.id, refreshVersion]);
+
+  const edited =
+    <T,>(
+      setter: React.Dispatch<React.SetStateAction<T>>,
+    ): React.Dispatch<React.SetStateAction<T>> =>
+    (value) => {
+      setDirty(true);
+      setter(value);
+    };
 
   const handleFieldChange = (key: string, value: string) => {
+    setDirty(true);
     setFormValues((prev) => ({ ...prev, [key]: value }));
   };
 
+  const lastDownloadedBlob = useRef<Blob | null>(null);
+  const pendingDocument = useRef<{ doc: GeneratedDocument; blob: Blob } | null>(
+    null,
+  );
+  const generating = useRef(false);
+
   const handleGenerate = async () => {
     if (!activeTemplate) {
-      setErrorMessage('Por favor selecciona una plantilla válida.');
+      setErrorMessage("Por favor selecciona una plantilla válida.");
       return;
     }
 
-    if (isGenerating) return;
-    if (!activeClient) { setErrorMessage('Selecciona un cliente revisado antes de generar.'); return; }
-    const missing = activeTemplate.placeholders.filter(key => !formValues[key]?.trim());
-    if (missing.length) { setErrorMessage(`Completa los campos: ${missing.join(', ')}`); return; }
+    if (generating.current) return;
+    if (!activeClient) {
+      setErrorMessage("Selecciona un cliente revisado antes de generar.");
+      return;
+    }
+    const missing = activeTemplate.placeholders.filter(
+      (key) => !formValues[key]?.trim(),
+    );
+    if (missing.length) {
+      setErrorMessage(`Completa los campos: ${missing.join(", ")}`);
+      return;
+    }
+    generating.current = true;
     setIsGenerating(true);
     setErrorMessage(null);
     setGenerationSuccess(false);
 
     try {
+      if (pendingDocument.current) {
+        const pending = pendingDocument.current;
+        await saveDocumentLog(pending.doc);
+        saveAs(pending.blob, pending.doc.fileName);
+        lastDownloadedBlob.current = pending.blob;
+        pendingDocument.current = null;
+        setLastGeneratedDoc(pending.doc);
+        setDirty(false);
+        setGenerationSuccess(true);
+        onDocumentGenerated?.(pending.doc);
+        return;
+      }
       const signatureOptions: SignatureLayoutOptions = {
         enabled: sigEnabled,
         alignment: sigAlignment,
@@ -225,53 +356,66 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         formValues,
         customFileName,
         activeClient,
-        signatureOptions
+        signatureOptions,
+        false,
       );
-
-      // Trigger celebration confetti
-      try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#f59e0b', '#d97706', '#10b981', '#3b82f6'],
-        });
-      } catch (cErr) {
-        // Ignore confetti error
-      }
 
       const newDoc: GeneratedDocument = {
         id: `doc-${crypto.randomUUID()}`,
-        title: `${activeTemplate.name} - ${activeIdoneo.name} (${activeClient ? activeClient.fullName : 'Cliente'})`,
+        title: `${activeTemplate.name} - ${activeIdoneo.name} (${activeClient ? activeClient.fullName : "Cliente"})`,
         fileName: result.fileName,
         templateId: templateBaseId(activeTemplate),
+        templateVersion: activeTemplate.version || 1,
         templateName: activeTemplate.name,
-        clientId: activeClient ? activeClient.id : 'sin-cliente',
-        clientName: activeClient ? activeClient.fullName : 'CLIENTE DIRECTO',
-        passportNumber: activeClient ? activeClient.passportNumber : '',
+        clientId: activeClient ? activeClient.id : "sin-cliente",
+        clientName: activeClient ? activeClient.fullName : "CLIENTE DIRECTO",
+        passportNumber: activeClient ? activeClient.passportNumber : "",
         generatedAt: new Date().toISOString(),
         fileSizeFormatted: result.sizeFormatted,
         dataSnapshot: { ...formValues, _idoneo: activeIdoneo.name },
         signatureOptions,
         fileBase64: await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result).split(',')[1]);
-          reader.onerror = () => reject(new Error('No se pudo archivar el documento.'));
+          reader.onload = () => resolve(String(reader.result).split(",")[1]);
+          reader.onerror = () =>
+            reject(new Error("No se pudo archivar el documento."));
           reader.readAsDataURL(result.blob);
         }),
       };
 
+      pendingDocument.current = { doc: newDoc, blob: result.blob };
       await saveDocumentLog(newDoc);
+      saveAs(result.blob, result.fileName);
+      lastDownloadedBlob.current = result.blob;
+      pendingDocument.current = null;
+      // Trigger celebration confetti
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ["#f59e0b", "#d97706", "#10b981", "#3b82f6"],
+        });
+      } catch (cErr) {
+        // Ignore confetti error
+      }
+
       setLastGeneratedDoc(newDoc);
+      setDirty(false);
       setGenerationSuccess(true);
 
       if (onDocumentGenerated) {
         onDocumentGenerated(newDoc);
       }
     } catch (err: any) {
-      console.error('Error generating document:', err);
-      setErrorMessage(`Error al generar el archivo Word: ${err.message || 'Comprueba los marcadores de la plantilla'}`);
+      console.error("Error generating document:", err);
+      setErrorMessage(
+        pendingDocument.current
+          ? `Documento preparado, pendiente de archivar. Reintenta para guardar y descargar el mismo archivo: ${err.message}`
+          : `Error al preparar el Word: ${err.message || "Comprueba los marcadores de la plantilla"}`,
+      );
     } finally {
+      generating.current = false;
       setIsGenerating(false);
     }
   };
@@ -302,25 +446,29 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                   onClick={() => setSelectedIdoneoId(idoneo.id)}
                   className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
                     isSelected
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-sm ring-2 ring-amber-500/50'
-                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                      ? "bg-slate-900 text-white border-slate-900 shadow-sm ring-2 ring-amber-500/50"
+                      : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
                   }`}
                 >
                   <div
                     className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
                       isSelected
-                        ? 'bg-amber-500 text-slate-950'
-                        : 'bg-white text-slate-700 border border-slate-200'
+                        ? "bg-amber-500 text-slate-950"
+                        : "bg-white text-slate-700 border border-slate-200"
                     }`}
                   >
                     {idoneo.initials}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className={`font-serif font-bold text-xs block truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                    <span
+                      className={`font-serif font-bold text-xs block truncate ${isSelected ? "text-white" : "text-slate-900"}`}
+                    >
                       {idoneo.name}
                     </span>
-                    <span className={`text-[10px] block truncate ${isSelected ? 'text-amber-300' : 'text-slate-500'}`}>
-                      {idoneo.colegiado.split('·')[0].trim()}
+                    <span
+                      className={`text-[10px] block truncate ${isSelected ? "text-amber-300" : "text-slate-500"}`}
+                    >
+                      {idoneo.colegiado.split("·")[0].trim()}
                     </span>
                   </div>
                 </button>
@@ -353,11 +501,14 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
               className="w-full text-sm font-semibold p-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-sm"
             >
               {clients.length === 0 ? (
-                <option value="">(No hay clientes registrados - Escanea o agrega uno)</option>
+                <option value="">
+                  (No hay clientes registrados - Escanea o agrega uno)
+                </option>
               ) : (
                 clients.map((cli) => (
                   <option key={cli.id} value={cli.id}>
-                    👤 {cli.fullName} | {cli.nationality} · Pasaporte: {cli.passportNumber || 'N/A'}
+                    👤 {cli.fullName} | {cli.nationality} · Pasaporte:{" "}
+                    {cli.passportNumber || "N/A"}
                   </option>
                 ))
               )}
@@ -366,13 +517,17 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
             {activeClient && (
               <div className="mt-2.5 p-2.5 rounded-lg bg-amber-50/60 border border-amber-200/70 text-xs flex flex-wrap items-center justify-between gap-2 text-slate-700">
                 <span>
-                  <strong className="text-slate-900">Doc:</strong> {activeClient.passportNumber || 'S/N'} ({activeClient.nationality})
+                  <strong className="text-slate-900">Doc:</strong>{" "}
+                  {activeClient.passportNumber || "S/N"} (
+                  {activeClient.nationality})
                 </span>
                 <span>
-                  <strong className="text-slate-900">Nacimiento:</strong> {activeClient.birthDate || 'N/A'}
+                  <strong className="text-slate-900">Nacimiento:</strong>{" "}
+                  {activeClient.birthDate || "N/A"}
                 </span>
                 <span>
-                  <strong className="text-slate-900">Condición:</strong> {activeClient.sexAgeCategory || 'Sin verificar'}
+                  <strong className="text-slate-900">Condición:</strong>{" "}
+                  {activeClient.sexAgeCategory || "Sin verificar"}
                 </span>
               </div>
             )}
@@ -403,7 +558,9 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
               className="w-full text-sm font-semibold p-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-sm"
             >
               {templates.length === 0 ? (
-                <option value="">(No hay plantillas .docx - Sube una en el menú Plantillas)</option>
+                <option value="">
+                  (No hay plantillas .docx - Sube una en el menú Plantillas)
+                </option>
               ) : (
                 templates.map((tpl) => (
                   <option key={tpl.id} value={tpl.id}>
@@ -415,7 +572,9 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
 
             {activeTemplate && (
               <div className="mt-2.5 p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
-                <span className="truncate max-w-xs">{activeTemplate.description}</span>
+                <span className="truncate max-w-xs">
+                  {activeTemplate.description}
+                </span>
                 <span className="font-mono text-[11px] bg-slate-200 text-slate-800 px-2 py-0.5 rounded font-semibold shrink-0">
                   {activeTemplate.placeholders.length} tags
                 </span>
@@ -442,7 +601,9 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 text-[11px] font-bold border border-amber-300 transition-colors"
                 >
                   <Code className="w-3.5 h-3.5 text-amber-600" />
-                  <span>{showJsonInspector ? 'Ocultar JSON' : 'Ver JSON (OCR)'}</span>
+                  <span>
+                    {showJsonInspector ? "Ocultar JSON" : "Ver JSON (OCR)"}
+                  </span>
                 </button>
               </div>
             </div>
@@ -460,22 +621,43 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                     onClick={async () => {
                       const jsonStr = JSON.stringify(
                         {
-                          tipo_documento: activeClient.docType === 'cedula' ? 'Cédula de Identidad' : 'Pasaporte',
-                          numero_identidad: (activeClient.passportNumber || activeClient.personalNumber || '').toUpperCase(),
+                          tipo_documento:
+                            activeClient.docType === "cedula"
+                              ? "Cédula de Identidad"
+                              : "Pasaporte",
+                          numero_identidad: (
+                            activeClient.passportNumber ||
+                            activeClient.personalNumber ||
+                            ""
+                          ).toUpperCase(),
                           nombre_completo: activeClient.fullName.toUpperCase(),
                           nacionalidad: activeClient.nationality.toUpperCase(),
-                          pais_emisor: (activeClient.issuingCountry || activeClient.nationality || '').toUpperCase(),
-                          fecha_nacimiento: activeClient.birthDate || '',
-                          sexo: activeClient.sex || '',
-                          condicion_juridica: (activeClient.sexAgeCategory || determineSexAgeCategory(activeClient.birthDate, activeClient.sex).category).toUpperCase(),
-                          domicilio: (activeClient.address || '').toUpperCase(),
-                          telefono: activeClient.phone || '',
+                          pais_emisor: (
+                            activeClient.issuingCountry ||
+                            activeClient.nationality ||
+                            ""
+                          ).toUpperCase(),
+                          fecha_nacimiento: activeClient.birthDate || "",
+                          sexo: activeClient.sex || "",
+                          condicion_juridica: determineSexAgeCategory(
+                            activeClient.birthDate,
+                            activeClient.sex,
+                          ).category.toUpperCase(),
+                          domicilio: (activeClient.address || "").toUpperCase(),
+                          telefono: activeClient.phone || "",
                           abogado_designado: activeIdoneo.formalTitle,
                         },
                         null,
-                        2
+                        2,
                       );
-                      try { await navigator.clipboard.writeText(jsonStr); } catch { setErrorMessage('No se pudo copiar el JSON. Verifica los permisos del navegador.'); return; }
+                      try {
+                        await navigator.clipboard.writeText(jsonStr);
+                      } catch {
+                        setErrorMessage(
+                          "No se pudo copiar el JSON. Verifica los permisos del navegador.",
+                        );
+                        return;
+                      }
                       setCopiedJson(true);
                       setTimeout(() => setCopiedJson(false), 2000);
                     }}
@@ -497,53 +679,84 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                 <pre className="text-[11px] font-mono text-amber-300 overflow-x-auto max-h-48 p-2 rounded bg-slate-900 border border-slate-800 leading-relaxed">
                   {JSON.stringify(
                     {
-                      tipo_documento: activeClient.docType === 'cedula' ? 'Cédula de Identidad' : 'Pasaporte',
-                      numero_identidad: (activeClient.passportNumber || activeClient.personalNumber || '').toUpperCase(),
+                      tipo_documento:
+                        activeClient.docType === "cedula"
+                          ? "Cédula de Identidad"
+                          : "Pasaporte",
+                      numero_identidad: (
+                        activeClient.passportNumber ||
+                        activeClient.personalNumber ||
+                        ""
+                      ).toUpperCase(),
                       nombre_completo: activeClient.fullName.toUpperCase(),
                       nacionalidad: activeClient.nationality.toUpperCase(),
-                      pais_emisor: (activeClient.issuingCountry || activeClient.nationality || '').toUpperCase(),
-                      fecha_nacimiento: activeClient.birthDate || '',
-                      sexo: activeClient.sex || '',
-                      condicion_juridica: (activeClient.sexAgeCategory || determineSexAgeCategory(activeClient.birthDate, activeClient.sex).category).toUpperCase(),
-                      domicilio: (activeClient.address || '').toUpperCase(),
-                      telefono: activeClient.phone || '',
+                      pais_emisor: (
+                        activeClient.issuingCountry ||
+                        activeClient.nationality ||
+                        ""
+                      ).toUpperCase(),
+                      fecha_nacimiento: activeClient.birthDate || "",
+                      sexo: activeClient.sex || "",
+                      condicion_juridica: determineSexAgeCategory(
+                        activeClient.birthDate,
+                        activeClient.sex,
+                      ).category.toUpperCase(),
+                      domicilio: (activeClient.address || "").toUpperCase(),
+                      telefono: activeClient.phone || "",
                       abogado_designado: activeIdoneo.formalTitle,
                     },
                     null,
-                    2
+                    2,
                   )}
                 </pre>
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 text-xs">
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
-                <span className="text-[10px] text-slate-500 block font-mono">(nombre) [MAYÚSCULAS/NEGRITA]</span>
+                <span className="text-[10px] text-slate-500 block font-mono">
+                  (nombre) [MAYÚSCULAS/NEGRITA]
+                </span>
                 <strong className="text-slate-900 font-bold block truncate">
                   {activeClient.fullName.toUpperCase()}
                 </strong>
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
-                <span className="text-[10px] text-slate-500 block font-mono">(numero de identidad)</span>
+                <span className="text-[10px] text-slate-500 block font-mono">
+                  (numero de identidad)
+                </span>
                 <strong className="text-slate-900 font-bold block truncate">
-                  {(activeClient.passportNumber || activeClient.personalNumber || '').toUpperCase()}
+                  {(
+                    activeClient.passportNumber ||
+                    activeClient.personalNumber ||
+                    ""
+                  ).toUpperCase()}
                 </strong>
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
-                <span className="text-[10px] text-slate-500 block font-mono">(nacionalidad) [minúsculas]</span>
+                <span className="text-[10px] text-slate-500 block font-mono">
+                  (nacionalidad) [minúsculas]
+                </span>
                 <span className="text-slate-700 font-normal block truncate">
                   {activeClient.nationality.toLowerCase()}
                 </span>
               </div>
               <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-300">
-                <span className="text-[10px] text-amber-800 block font-mono font-bold">(abogado_nombre)</span>
+                <span className="text-[10px] text-amber-800 block font-mono font-bold">
+                  (abogado_nombre)
+                </span>
                 <strong className="text-amber-950 font-extrabold block truncate">
                   {activeIdoneo.formalTitle}
                 </strong>
               </div>
               <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-300">
-                <span className="text-[10px] text-amber-800 block font-mono font-bold">(sexo/edad)</span>
+                <span className="text-[10px] text-amber-800 block font-mono font-bold">
+                  (sexo/edad)
+                </span>
                 <strong className="text-amber-950 font-extrabold block truncate">
-                  {(activeClient.sexAgeCategory || determineSexAgeCategory(activeClient.birthDate, activeClient.sex).category).toUpperCase()}
+                  {determineSexAgeCategory(
+                    activeClient.birthDate,
+                    activeClient.sex,
+                  ).category.toUpperCase()}
                 </strong>
               </div>
             </div>
@@ -563,14 +776,24 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                 ¡Documento Word (.docx) generado y descargado exitosamente!
               </h4>
               <p className="text-xs text-emerald-100 mt-0.5">
-                Archivo: <span className="font-mono font-semibold">{lastGeneratedDoc.fileName}</span> ({lastGeneratedDoc.fileSizeFormatted}) · Letrado: <span className="font-bold">{activeIdoneo.name}</span>
+                Archivo:{" "}
+                <span className="font-mono font-semibold">
+                  {lastGeneratedDoc.fileName}
+                </span>{" "}
+                ({lastGeneratedDoc.fileSizeFormatted}) · Letrado:{" "}
+                <span className="font-bold">
+                  {lastGeneratedDoc.dataSnapshot._idoneo}
+                </span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <button
-              onClick={handleGenerate}
+              onClick={() => {
+                if (lastDownloadedBlob.current)
+                  saveAs(lastDownloadedBlob.current, lastGeneratedDoc.fileName);
+              }}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-900 font-bold text-xs shadow-md hover:bg-emerald-50 transition-colors"
             >
               <Download className="w-4 h-4 text-emerald-700" />
@@ -580,6 +803,32 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         </div>
       )}
 
+      {sourceRevision &&
+        sourceRevision !==
+          `${activeClient?.revision || 0}:${activeTemplate?.revision || 0}:${activeIdoneo.revision || 0}` && (
+          <div
+            role="status"
+            className="bg-amber-50 border rounded-xl p-4 text-sm"
+          >
+            Los datos de origen cambiaron. Tus correcciones se conservan. Revisa
+            el cliente y la versión de plantilla antes de generar.{" "}
+            <button
+              disabled={isGenerating || !!pendingDocument.current}
+              className="underline"
+              onClick={() => {
+                if (
+                  !dirty ||
+                  confirm(
+                    "¿Reemplazar las correcciones por los datos actuales?",
+                  )
+                )
+                  setRefreshVersion((value) => value + 1);
+              }}
+            >
+              Cargar datos actuales
+            </button>
+          </div>
+        )}
       {/* Error alert */}
       {errorMessage && (
         <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3 text-red-700 text-xs font-semibold">
@@ -594,10 +843,14 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div>
               <h3 className="font-serif font-bold text-slate-900 text-lg">
-                Campos y Variables del Documento ({activeTemplate.placeholders.length} marcadores)
+                Campos y Variables del Documento (
+                {activeTemplate.placeholders.length} marcadores)
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Valores auto-rellenados con los datos del pasaporte y del letrado idóneo <strong className="text-slate-800">{activeIdoneo.name}</strong>. Puedes editarlos antes de compilar.
+                Valores auto-rellenados con los datos del pasaporte y del
+                letrado idóneo{" "}
+                <strong className="text-slate-800">{activeIdoneo.name}</strong>.
+                Puedes editarlos antes de compilar.
               </p>
             </div>
 
@@ -605,7 +858,10 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
               <input
                 type="text"
                 value={customFileName}
-                onChange={(e) => setCustomFileName(e.target.value)}
+                onChange={(e) => {
+                  setDirty(true);
+                  setCustomFileName(e.target.value);
+                }}
                 placeholder="Nombre_Del_Archivo.docx"
                 className="text-xs p-2.5 rounded-xl border border-slate-300 w-full sm:w-64 font-mono font-semibold"
                 title="Nombre del archivo Word que se descargará"
@@ -615,18 +871,24 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeTemplate.placeholders.map((placeholderKey) => {
-              const def = activeTemplate.placeholderDefs?.find((d) => d.key === placeholderKey);
-              const val = formValues[placeholderKey] || '';
+              const def = activeTemplate.placeholderDefs?.find(
+                (d) => d.key === placeholderKey,
+              );
+              const val = formValues[placeholderKey] || "";
               const cleanKey = placeholderKey.toLowerCase();
-              const isIdoneoField = cleanKey.includes('abogado') || cleanKey.includes('idoneo') || cleanKey.includes('letrado') || cleanKey.includes('colegiado');
+              const isIdoneoField =
+                cleanKey.includes("abogado") ||
+                cleanKey.includes("idoneo") ||
+                cleanKey.includes("letrado") ||
+                cleanKey.includes("colegiado");
 
               return (
                 <div
                   key={placeholderKey}
                   className={`p-3.5 rounded-xl border transition-all ${
                     isIdoneoField
-                      ? 'bg-amber-50/40 border-amber-300/80 ring-1 ring-amber-400/20'
-                      : 'bg-slate-50/70 border-slate-200 focus-within:border-amber-500 focus-within:bg-white'
+                      ? "bg-amber-50/40 border-amber-300/80 ring-1 ring-amber-400/20"
+                      : "bg-slate-50/70 border-slate-200 focus-within:border-amber-500 focus-within:bg-white"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
@@ -638,17 +900,25 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                     </span>
                   </div>
 
-                  {def?.type === 'textarea' ? (
+                  {def?.type === "textarea" ? (
                     <textarea
                       rows={3}
+                      disabled={isGenerating || !!pendingDocument.current}
+                      aria-label={def?.label || placeholderKey}
                       value={val}
-                      onChange={(e) => handleFieldChange(placeholderKey, e.target.value)}
+                      onChange={(e) =>
+                        handleFieldChange(placeholderKey, e.target.value)
+                      }
                       className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
                     />
-                  ) : def?.type === 'select' && def.options ? (
+                  ) : def?.type === "select" && def.options ? (
                     <select
+                      disabled={isGenerating || !!pendingDocument.current}
+                      aria-label={def?.label || placeholderKey}
                       value={val}
-                      onChange={(e) => handleFieldChange(placeholderKey, e.target.value)}
+                      onChange={(e) =>
+                        handleFieldChange(placeholderKey, e.target.value)
+                      }
                       className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-semibold"
                     >
                       <option value="">Selecciona / verifica</option>
@@ -660,9 +930,13 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                     </select>
                   ) : (
                     <input
-                      type={def?.type === 'date' ? 'date' : 'text'}
+                      type={def?.type === "date" ? "date" : "text"}
+                      disabled={isGenerating || !!pendingDocument.current}
+                      aria-label={def?.label || placeholderKey}
                       value={val}
-                      onChange={(e) => handleFieldChange(placeholderKey, e.target.value)}
+                      onChange={(e) =>
+                        handleFieldChange(placeholderKey, e.target.value)
+                      }
                       className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-semibold"
                     />
                   )}
@@ -671,409 +945,42 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
             })}
           </div>
 
-          {/* Signature Studio & Document Sheet Preview (Antes de Generar) */}
-          <div className="pt-6 border-t border-slate-200">
-            <label className="flex items-center gap-2 p-3 mb-3 bg-amber-50 rounded-xl text-sm">
-              <input type="checkbox" checked={sigEnabled} onChange={e => setSigEnabled(e.target.checked)} />
-              Aplicar este bloque de firmas al Word (requiere ACEPTO PODER y OTORGO PODER en una misma línea). Sin activarlo se conserva la plantilla original.
-            </label>
-            <div className="bg-slate-900 text-white rounded-2xl p-5 sm:p-7 border border-slate-800 shadow-xl mb-6">
-              {/* Header */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-800">
-                <div className="flex items-start gap-3.5">
-                  <div className="w-11 h-11 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
-                    <PenTool className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base sm:text-lg font-bold text-white">
-                        Acomodo y Posición de Firma del Cliente
-                      </h3>
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        Simulación de firmas
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-300 mt-1 max-w-2xl">
-                      Revisa y acomoda el nombre del cliente en el área de la firma bajo <strong className="text-amber-400 font-bold">OTORGO PODER:</strong> antes de generar el Word. El sistema ajusta la alineación automáticamente para nombres tanto cortos como largos (idéntico al Ejemplo 2).
-                    </p>
-                  </div>
-                </div>
-
-                {/* Quick Toggle Controls */}
-                <div className="flex items-center gap-2 self-start lg:self-center">
-                  <button
-                    type="button"
-                    onClick={() => setShowVerticalGuide(!showVerticalGuide)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
-                      showVerticalGuide
-                        ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <MoveHorizontal className="w-3.5 h-3.5" />
-                    <span>{showVerticalGuide ? 'Ocultar Guía' : 'Ver Guía de Columna'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowSigAdvancedConfig(!showSigAdvancedConfig)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition-all"
-                  >
-                    <Sliders className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Ajustes Finos</span>
-                    {showSigAdvancedConfig ? (
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Interactive Name Length Simulator */}
-              <div className="mt-4 p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
-                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Simulador de Nombres (Prueba de Acomodo Corto vs Largo):</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setSimulatedNameLength('actual')}
-                      className={`px-2.5 py-1 rounded-lg text-xs transition-all font-semibold ${
-                        simulatedNameLength === 'actual'
-                          ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30 scale-105'
-                          : 'bg-slate-700/80 hover:bg-slate-600 text-slate-300'
-                      }`}
-                      title="Nombre real del cliente seleccionado"
-                    >
-                      Actual ({activeClient ? activeClient.fullName.split(' ')[0] : 'Cliente'})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSimulatedNameLength('short')}
-                      className={`px-2.5 py-1 rounded-lg text-xs transition-all font-semibold ${
-                        simulatedNameLength === 'short'
-                          ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30 scale-105'
-                          : 'bg-slate-700/80 hover:bg-slate-600 text-slate-300'
-                      }`}
-                      title="Probar nombre muy corto (6 caracteres)"
-                    >
-                      Corto: ANA LI
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSimulatedNameLength('medium')}
-                      className={`px-2.5 py-1 rounded-lg text-xs transition-all font-semibold ${
-                        simulatedNameLength === 'medium'
-                          ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30 scale-105'
-                          : 'bg-slate-700/80 hover:bg-slate-600 text-slate-300'
-                      }`}
-                      title="Probar nombre medio (15 caracteres)"
-                    >
-                      Medio: CARLOS RESTREPO
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSimulatedNameLength('long')}
-                      className={`px-2.5 py-1 rounded-lg text-xs transition-all font-semibold ${
-                        simulatedNameLength === 'long'
-                          ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30 scale-105'
-                          : 'bg-slate-700/80 hover:bg-slate-600 text-slate-300'
-                      }`}
-                      title="Probar nombre largo del Ejemplo 2 (25 caracteres)"
-                    >
-                      Largo: GUSTAVO JOSE ACOSTA MUÑOZ
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSimulatedNameLength('very_long')}
-                      className={`px-2.5 py-1 rounded-lg text-xs transition-all font-semibold ${
-                        simulatedNameLength === 'very_long'
-                          ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30 scale-105'
-                          : 'bg-slate-700/80 hover:bg-slate-600 text-slate-300'
-                      }`}
-                      title="Probar nombre muy largo/compuesto (39 caracteres)"
-                    >
-                      Muy Largo: MARIA DE LOS ANGELES...
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Advanced Controls Accordion */}
-              {showSigAdvancedConfig && (
-                <div className="mt-4 p-4 rounded-xl bg-slate-800/90 border border-slate-700 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1.5">
-                      Posición de Columna Derecha (Margen X):
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="range"
-                        min={45}
-                        max={68}
-                        value={sigColumnOffset}
-                        onChange={(e) => setSigColumnOffset(Number(e.target.value))}
-                        className="w-full accent-amber-500 cursor-pointer"
-                      />
-                      <span className="font-mono font-bold text-amber-400 text-xs w-9 text-right">
-                        {sigColumnOffset}%
-                      </span>
-                    </div>
-                    <div className="flex gap-1.5 mt-2">
-                      {[
-                        { label: '50%', val: 50 },
-                        { label: '56% (Ejemplo 2)', val: 56 },
-                        { label: '60%', val: 60 },
-                        { label: '64%', val: 64 },
-                      ].map((p) => (
-                        <button
-                          key={p.val}
-                          type="button"
-                          onClick={() => setSigColumnOffset(p.val)}
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                            sigColumnOffset === p.val
-                              ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                              : 'bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600'
-                          }`}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1.5">
-                      Espacio para Firma Manual:
-                    </label>
-                    <div className="flex gap-1.5">
-                      {[
-                        { label: '1 Línea', val: 1 },
-                        { label: '2 Líneas (Recomendado)', val: 2 },
-                        { label: '3 Líneas', val: 3 },
-                        { label: '4 Líneas', val: 4 },
-                      ].map((s) => (
-                        <button
-                          key={s.val}
-                          type="button"
-                          onClick={() => setSigBlankLines(s.val)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
-                            sigBlankLines === s.val
-                              ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                              : 'bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600'
-                          }`}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1.5">
-                      Espacio en blanco vertical para que el cliente y letrado firmen físicamente con bolígrafo.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1.5">
-                      Estructura en Word (.docx):
-                    </label>
-                    <div className="flex flex-col gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setSigUseTable(true)}
-                        className={`p-2 rounded-lg text-left text-xs font-semibold border transition-all ${
-                          sigUseTable
-                            ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300'
-                            : 'bg-slate-700/60 border-slate-600 text-slate-300'
-                        }`}
-                      >
-                        <div className="font-bold flex items-center gap-1.5">
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          Tabla Invisible de 2 Columnas
-                        </div>
-                        <div className="text-[10px] text-slate-400 font-normal">
-                          100% inmune a saltos de línea y desfases (Recomendado)
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setSigUseTable(false)}
-                        className={`p-2 rounded-lg text-left text-xs font-semibold border transition-all ${
-                          !sigUseTable
-                            ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300'
-                            : 'bg-slate-700/60 border-slate-600 text-slate-300'
-                        }`}
-                      >
-                        <div className="font-bold">Tabulaciones Fijas</div>
-                        <div className="text-[10px] text-slate-400 font-normal">
-                          Párrafos con salto de tabulador normalizado
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Direct Signature Text Override Inputs */}
-                  <div className="sm:col-span-2 lg:col-span-3 pt-2 border-t border-slate-700/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <div>
-                      <span className="block text-[11px] text-slate-400 font-medium mb-1">
-                        Nombre del Cliente en Firma:
-                      </span>
-                      <input
-                        type="text"
-                        value={customSigClientName}
-                        onChange={(e) => setCustomSigClientName(e.target.value.toUpperCase())}
-                        placeholder="Ej. GUSTAVO JOSE ACOSTA MUÑOZ"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-amber-300 font-bold focus:ring-1 focus:ring-amber-500"
-                      />
-                    </div>
-                    <div>
-                      <span className="block text-[11px] text-slate-400 font-medium mb-1">
-                        Documento del Cliente en Firma:
-                      </span>
-                      <input
-                        type="text"
-                        value={customSigClientDoc}
-                        onChange={(e) => setCustomSigClientDoc(e.target.value.toUpperCase())}
-                        placeholder="Ej. PASAPORTE No. TEST-001"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white font-medium focus:ring-1 focus:ring-amber-500"
-                      />
-                    </div>
-                    <div>
-                      <span className="block text-[11px] text-slate-400 font-medium mb-1">
-                        Letrado Responsable en Firma:
-                      </span>
-                      <input
-                        type="text"
-                        value={customSigLawyerTitle}
-                        onChange={(e) => setCustomSigLawyerTitle(e.target.value.toUpperCase())}
-                        placeholder="Ej. LCDO. ANTONY NATHANAEL TALLA COPRIS"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white font-medium focus:ring-1 focus:ring-amber-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Visual Document Sheet Replica (Exact Layout from Image 2) */}
-              <div className="mt-5 bg-slate-950/60 p-3 sm:p-5 rounded-2xl border border-slate-800">
-                <div className="text-center text-xs font-semibold text-slate-400 mb-3 flex items-center justify-center gap-2">
-                  <Eye className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Vista de texto y simulación del bloque de firmas</span>
-                </div>
-
-                <div className="bg-white text-slate-900 rounded-xl p-6 sm:p-10 shadow-2xl border border-slate-300 font-serif relative overflow-hidden max-w-2xl mx-auto">
-                  <div className="text-center font-sans font-bold mb-4">Texto de la plantilla seleccionada · {activeTemplate.name}</div>
-                  <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-800">
-                    {activeTemplate.samplePreviewText ? activeTemplate.samplePreviewText.replace(/\{\{[^{}]+\}\}|\{[^{}]+\}|\([^()]+\)|\[[^\[\]]+\]/g, marker => {
-                      const map = buildComprehensiveReplacementMap(formValues, activeClient);
-                      return map[marker] ?? Object.entries(map).find(([key]) => canonicalField(key) === canonicalField(marker))?.[1] ?? marker;
-                    }) : 'Vista de texto no disponible para esta plantilla anterior. El documento Word conserva el contenido y formato del archivo cargado.'}
-                  </p>
-
-                  {/* THE SIGNATURE AREA - EXACT REPLICA OF IMAGE 2 */}
-                  <div className="relative pt-6 border-t-2 border-dashed border-slate-200 mt-6">
-                    {/* Vertical Alignment Guide Line */}
-                    {showVerticalGuide && (
-                      <div
-                        className="absolute top-0 bottom-0 border-l-2 border-emerald-500/70 z-20 pointer-events-none transition-all duration-300"
-                        style={{ left: `${sigColumnOffset}%` }}
-                      >
-                        <span className="absolute -top-3 -left-3 bg-emerald-600 text-white text-[9px] font-sans font-bold px-1.5 py-0.5 rounded shadow whitespace-nowrap">
-                          Guía Notarial ({sigColumnOffset}%)
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-12 gap-3 sm:gap-4 font-sans text-xs">
-                      {/* Columna Izquierda: Abogado Idóneo (ACEPTO PODER) */}
-                      <div
-                        className="space-y-1"
-                        style={{
-                          gridColumn: `span ${Math.max(4, Math.floor((sigColumnOffset / 100) * 12))}`,
-                        }}
-                      >
-                        <div className="font-bold text-slate-950 uppercase tracking-wide text-xs sm:text-sm">
-                          ACEPTO PODER
-                        </div>
-
-                        {/* Espacio para firma física manual */}
-                        <div
-                          style={{ height: `${sigBlankLines * 22}px` }}
-                          className="flex items-center justify-start text-[10px] text-slate-400 italic"
-                        >
-                          <span className="opacity-40 select-none">{"(Espacio para firma física)"}</span>
-                        </div>
-
-                        <div className="font-bold text-slate-950 uppercase text-[11px] sm:text-xs">
-                          {customSigLawyerTitle}
-                        </div>
-                        <div className="font-bold text-slate-950 uppercase text-[10px] sm:text-[11px]">
-                          {customSigLawyerCedula}
-                        </div>
-                        <div className="font-bold text-slate-950 uppercase text-[10px] sm:text-[11px]">
-                          {customSigLawyerIdoneidad}
-                        </div>
-                      </div>
-
-                      {/* Columna Derecha: Cliente (OTORGO PODER:) */}
-                      <div
-                        className={`space-y-1 ${
-                          sigAlignment === 'center' ? 'text-center' : 'text-left'
-                        }`}
-                        style={{
-                          gridColumn: `${Math.max(5, Math.ceil((sigColumnOffset / 100) * 12) + 1)} / span ${
-                            12 - Math.max(4, Math.floor((sigColumnOffset / 100) * 12))
-                          }`,
-                        }}
-                      >
-                        <div className="font-bold text-slate-950 uppercase tracking-wide text-xs sm:text-sm">
-                          OTORGO PODER:
-                        </div>
-
-                        {/* Espacio para firma física manual */}
-                        <div
-                          style={{ height: `${sigBlankLines * 22}px` }}
-                          className="flex items-center justify-start text-[10px] text-slate-400 italic"
-                        >
-                          <span className="opacity-40 select-none">{"(Espacio para firma física)"}</span>
-                        </div>
-
-                        <div className="font-bold text-slate-950 uppercase text-[11px] sm:text-xs bg-amber-100 px-1 py-0.5 rounded border border-amber-300 inline-block font-sans">
-                          {previewClientName}
-                        </div>
-                        <div className="font-bold text-slate-950 uppercase text-[10px] sm:text-[11px] block">
-                          {previewClientDoc}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400 px-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span>
-                      Modo activo:{' '}
-                      <strong className="text-emerald-300">
-                        {sigUseTable ? 'Tabla Invisible OpenXML (Recomendado)' : 'Tabulaciones'}
-                      </strong>
-                    </span>
-                  </div>
-                  <div className="text-slate-400">
-                    Posición de columna: <strong className="text-amber-400">{sigColumnOffset}%</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <SignatureStudio
+            activeTemplate={activeTemplate}
+            formValues={formValues}
+            sigAlignment={sigAlignment}
+            sigEnabled={sigEnabled}
+            setSigEnabled={edited(setSigEnabled)}
+            sigColumnOffset={sigColumnOffset}
+            setSigColumnOffset={edited(setSigColumnOffset)}
+            sigBlankLines={sigBlankLines}
+            setSigBlankLines={edited(setSigBlankLines)}
+            sigUseTable={sigUseTable}
+            setSigUseTable={edited(setSigUseTable)}
+            customSigClientName={customSigClientName}
+            setCustomSigClientName={edited(setCustomSigClientName)}
+            customSigClientDoc={customSigClientDoc}
+            setCustomSigClientDoc={edited(setCustomSigClientDoc)}
+            customSigLawyerTitle={customSigLawyerTitle}
+            setCustomSigLawyerTitle={edited(setCustomSigLawyerTitle)}
+            customSigLawyerCedula={customSigLawyerCedula}
+            customSigLawyerIdoneidad={customSigLawyerIdoneidad}
+            simulatedNameLength={simulatedNameLength}
+            setSimulatedNameLength={setSimulatedNameLength}
+            showVerticalGuide={showVerticalGuide}
+            setShowVerticalGuide={setShowVerticalGuide}
+            showSigAdvancedConfig={showSigAdvancedConfig}
+            setShowSigAdvancedConfig={setShowSigAdvancedConfig}
+            previewClientName={previewClientName}
+            previewClientDoc={previewClientDoc}
+            activeClient={activeClient}
+          />
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs text-slate-500 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Inyección de variables en tiempo real en archivo OpenXML .docx</span>
+              <span>
+                Inyección de variables en tiempo real en archivo OpenXML .docx
+              </span>
             </div>
 
             <button
@@ -1101,4 +1008,3 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
     </div>
   );
 };
-

@@ -372,10 +372,10 @@ export function importDatabaseJson(jsonString: string): { success: boolean; mess
     for (const [field, key] of Object.entries(fields)) {
       if (!(field in data)) continue;
       const items = data[field];
-      if (!Array.isArray(items) || items.some(item => !item || required[field].some(name => typeof item[name] !== 'string') || !item.id.trim())) throw new Error(`Estructura inválida: ${field}. No se modificó el respaldo actual.`);
+      if (!Array.isArray(items) || items.some(item => !item || required[field as keyof typeof required].some((name: string) => typeof item[name] !== 'string') || !item.id.trim())) throw new Error(`Estructura inválida: ${field}. No se modificó el respaldo actual.`);
       if (new Set(items.map(item => item.id)).size !== items.length) throw new Error(`Identificadores duplicados en ${field}.`);
       if (field === 'clients' && items.some(item => !['pasaporte', 'cedula', 'dni', 'nie', 'otro'].includes(item.docType))) throw new Error('Tipo de documento inválido.');
-      if (field === 'templates' && items.some(item => !Array.isArray(item.placeholders) || item.placeholders.some(tag => typeof tag !== 'string') || !Array.isArray(item.placeholderDefs) || item.placeholderDefs.some(def => !def || typeof def.key !== 'string' || typeof def.label !== 'string'))) throw new Error('Marcadores de plantilla inválidos.');
+      if (field === 'templates' && items.some(item => !Array.isArray(item.placeholders) || item.placeholders.some((tag: string) => typeof tag !== 'string') || !Array.isArray(item.placeholderDefs) || item.placeholderDefs.some((def: any) => !def || typeof def.key !== 'string' || typeof def.label !== 'string'))) throw new Error('Marcadores de plantilla inválidos.');
       if (field === 'documents' && items.some(item => !item.dataSnapshot || typeof item.dataSnapshot !== 'object' || Array.isArray(item.dataSnapshot) || Object.values(item.dataSnapshot).some(value => typeof value !== 'string'))) throw new Error('Datos de historial inválidos.');
       writes[key] = JSON.stringify(items);
     }

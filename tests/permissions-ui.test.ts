@@ -7,18 +7,10 @@ import { DatabaseSettings } from '../src/components/DatabaseSettings';
 import { DocumentHistory } from '../src/components/DocumentHistory';
 import { AppUser, canOpenTab } from '../src/services/accessPolicy';
 
-test('header hides protected tabs and downloads by role, and direct navigation is guarded', () => {
-  for (const role of ['user','admin','owner'] as const) {
-    const user: AppUser = {id:'fixture',displayName:'PRUEBA',role,active:true};
-    const html=renderToStaticMarkup(React.createElement(Header,{user,activeTab:'wizard',setActiveTab:()=>{}}));
-    for(const tab of ['history','database','users','analytics']) {
-      const expected=role==='owner'||role==='admin'&&['history','database'].includes(tab);
-      assert.equal(html.includes('nav-tab-'+tab),expected);
-      assert.equal(canOpenTab(user,tab),expected);
-    }
-    assert.equal(html.includes('Versión HTML anterior'),role!=='user');
-    assert.equal(html.includes('BD compartida'),role!=='user');
-  }
+test('public header exposes document tools and removes account, database and legacy controls', () => {
+  const html = renderToStaticMarkup(React.createElement(Header, {activeTab:'wizard',setActiveTab:()=>{}}));
+  for (const tab of ['wizard','generator','clients','templates','history','manual']) assert.ok(html.includes('nav-tab-'+tab));
+  for (const text of ['nav-tab-users','nav-tab-database','nav-tab-analytics','Versión HTML anterior','Cerrar sesión','Cambiar contraseña','BD compartida']) assert.equal(html.includes(text), false);
 });
 
 test('administrator database view has no backup restoration, reset or HTML replacement controls', () => {

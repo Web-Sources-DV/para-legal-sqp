@@ -1,6 +1,6 @@
 # SQP PARA LEGAL
 
-Escaneo local de identidades con Tesseract, revisión de datos y generación de plantillas Word. La web se publica en GitHub Pages; las cuentas y datos compartidos están en Supabase.
+Escaneo local de identidades con Tesseract, revisión de datos y generación de documentos Word desde plantillas. La web se publica en GitHub Pages; las cuentas y datos compartidos están en Supabase.
 
 ## Usuarios y permisos
 
@@ -51,7 +51,49 @@ Las migraciones de `supabase/migrations` contienen las tablas, RLS, funciones de
 
 `tests/database-permissions.sql` verifica los roles contra Supabase en una transacción que termina en rollback. Requiere la cuenta principal y otra identidad Auth sin perfil de Para Legal. Comprueba lectura restringida, rechazo de restauración, ausencia de escalado de roles, desactivación, registro idempotente, contadores, restauración y conservación de estadísticas.
 
-Las pruebas de Node comprueban interfaz por roles, semanas y porcentajes, asignación de campos, generación Word y compatibilidad de respaldos locales. La compilación verifica frontend y servidor. El inicio de sesión completo debe verificarse con la contraseña privada del propietario; no se simuló una sesión real. La cámara y precisión OCR sobre documentos reales requieren pruebas en el dispositivo.
+Las pruebas de Node comprueban interfaz por roles, semanas y porcentajes, asignación de campos, generación Word, almacenamiento compartido simulado y compatibilidad de respaldos antiguos. La compilación verifica frontend y servidor. El inicio de sesión completo debe verificarse con la contraseña privada del propietario; no se simuló una sesión real. La cámara y precisión OCR sobre documentos reales requieren pruebas en el dispositivo.
 
 El asesor de seguridad no reportó fallos de RLS en las tablas nuevas. El proyecto ya tiene desactivada la protección contra contraseñas filtradas; habilítala desde Authentication si el plan lo permite. Consulta la [guía oficial de seguridad de contraseñas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 
+
+## Actualización de integridad y archivos privados
+
+Consulta [el procedimiento de despliegue](docs/DEPLOYMENT.md) antes de publicar esta versión. El frontend necesita la migración v2 y la función de usuarios actualizada; CI comprueba la versión del esquema remoto antes de publicar.
+
+Esta versión conserva campos editados durante las recargas, valida fechas y controles MRZ y pide confirmar la identidad contra el original. El Word se prepara, se archiva y después se descarga. Si el archivo falla al registrarse, el reintento conserva su identificador y contenido; un fallo de recarga posterior a una escritura confirmada no se presenta como fallo de guardado.
+
+Los archivos nuevos se almacenan en un bucket privado. El navegador sincroniza metadatos y cambios incrementales; descarga archivos cuando se necesitan. El historial usa páginas y búsqueda en el servidor. Las estadísticas consultan agregados por semana. Las imágenes de identidad se conservan únicamente si el usuario lo elige.
+
+Las ediciones de clientes y plantillas comprueban revisiones y rechazan sobrescrituras de datos modificados por otra persona. El propietario archiva clientes y plantillas sin destruir su historial y aprueba las propuestas de plantilla. Las restauraciones generan un respaldo previo en el servidor. Base de Datos muestra los respaldos recuperables y las últimas operaciones de auditoría.
+
+La sección Usuarios permite administrar letrados e idoneidades sin editar código. La cuenta permite configurar un autenticador TOTP. Auth sigue compartido con SQP-Financing; las contraseñas y factores afectan esa identidad en ambas aplicaciones.
+
+## Comprobaciones adicionales
+
+```sh
+pnpm lint
+pnpm test
+pnpm build
+pnpm test:browser
+pnpm check:functions
+```
+
+`PL_BROWSER_PRODUCTION=1 pnpm test:browser` ejecuta la misma prueba contra el servidor compilado después de `pnpm build`.
+
+`test:browser` arranca un servidor temporal y ejecuta Chromium con un backend simulado: valida el inicio de sesión, conservación de correcciones tras sincronización, reintento del archivo y contenido del Word descargado. Usa Chromium del sistema o el instalado con `pnpm exec playwright install chromium`. `check:functions` requiere Deno 2.7.5.
+
+Para pruebas SQL aisladas:
+
+```sh
+docker run -d --name para-legal-tests -p 127.0.0.1:55432:5432 \
+  -e POSTGRES_PASSWORD=local-test-only -e POSTGRES_DB=para_legal_test postgres:17
+pnpm test:database
+```
+
+El script crea/reinicializa únicamente una base de pruebas `*_test`, instala todas las migraciones y comprueba permisos, revisiones, duplicados, aprobación, archivos, sincronización, auditoría y recuperación. Las tablas `auth` y `storage` del ensayo son sustitutos mínimos para comprobar SQL/RLS; no sustituyen probar Supabase Auth, Storage y la Edge Function desplegados. Nunca uses una conexión de producción en `TEST_DATABASE_URL`.
+
+Las pruebas del servicio local anterior se conservan como pruebas de compatibilidad de respaldos; las nuevas pruebas de almacenamiento ejercitan el servicio compartido. TypeScript se ejecuta en modo estricto.
+
+## Acceso actual
+
+La aplicación se usa directamente por enlace, sin iniciar sesión. Clientes, plantillas y documentos se comparten entre todos los visitantes. Se retiraron la gestión de usuarios y los controles de base de datos y versión HTML anterior. Las descripciones de roles anteriores quedan como referencia histórica; la configuración vigente está en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). El despliegue requiere esquema público v3.

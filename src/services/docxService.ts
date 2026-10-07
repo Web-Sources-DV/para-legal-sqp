@@ -1,5 +1,6 @@
+import { entityFile, blobBase64 } from './fileStorage';
+import { parseCalendarDate } from './validation';
 import PizZip from 'pizzip';
-import Docxtemplater from 'docxtemplater';
 import saveAs from 'file-saver';
 import { FIELD_ALIASES, canonicalField, fieldDefault, documentTypeLabel } from './fieldMapping';
 import { Template, PlaceholderDef, Client, SignatureLayoutOptions } from '../types';
@@ -119,6 +120,18 @@ function extractParagraphsFromWordXml(xml: string): string[] {
  * - Square brackets: [nombre], [número de pasaporte]
  * - HTML/XML style: <nombre>, <numero_pasaporte>
  */
+function validateWordArchive(zip: PizZip) {
+  const entries = Object.entries(zip.files);
+  if (entries.length > 1000) throw new Error('La plantilla contiene demasiadas partes.');
+  let total = 0;
+  for (const [name, entry] of entries) {
+    if (/vbaProject\.bin$/i.test(name)) throw new Error('No se admiten plantillas con macros.');
+    const size = Number((entry as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize || 0);
+    total += size;
+    if (size > 32 * 1024 * 1024 || total > 64 * 1024 * 1024) throw new Error('La plantilla supera el límite de contenido descomprimido.');
+  }
+}
+
 export async function parseDocxFile(
   fileBuffer: ArrayBuffer,
   fileName: string
@@ -130,6 +143,7 @@ export async function parseDocxFile(
 }> {
   const uint8 = new Uint8Array(fileBuffer);
   const zip = new PizZip(uint8);
+  validateWordArchive(zip);
 
   // List of all XML parts in docx to scan for placeholders
   const xmlPartPaths = Object.keys(zip.files).filter(
@@ -289,7 +303,7 @@ export function inferPlaceholderDef(rawKey: string): PlaceholderDef {
 
   if (canonicalField(rawKey) === 'docType') return { key: rawKey, label: 'Tipo de documento', category: 'pasaporte', type: 'select', options: ['Pasaporte', 'Cédula', 'DNI', 'Carnet de Extranjería / NIE', 'Documento de identidad'] };
   const field = canonicalField(rawKey);
-  const lawyerLabels = { lawyerName: 'Nombre del letrado', lawyerCedula: 'Cédula del letrado', lawyerIdoneidad: 'Idoneidad del letrado', lawyerColegiado: 'Número de colegiado' };
+  const lawyerLabels: Record<string, string> = { lawyerName: 'Nombre del letrado', lawyerCedula: 'Cédula del letrado', lawyerIdoneidad: 'Idoneidad del letrado', lawyerColegiado: 'Número de colegiado' };
   if (field in lawyerLabels) return { key: rawKey, label: lawyerLabels[field], category: 'legal', type: 'text' };
   // 1. Nombre / Nombre Completo
   if (
@@ -374,7 +388,7 @@ export function inferPlaceholderDef(rawKey: string): PlaceholderDef {
   else if (cleanKey.includes('fecha') || cleanKey.includes('date')) {
     label = label || 'Fecha';
     category = 'fechas';
-    if (field === 'date') defaultValue = new Date().toLocaleDateString('es-PA', { day: 'numeric', month: 'long', year: 'numeric' });
+    if (field === 'date') defaultValue = new Date().toLocaleDateString('es-PA', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Panama' });
     else type = 'date';
   }
   // 11. Ciudad
@@ -430,35 +444,12 @@ export function inferPlaceholderDef(rawKey: string): PlaceholderDef {
  */
 export function calculateAgeFromBirthDate(birthDateStr?: string, refDate: Date = new Date()): number | null {
   if (!birthDateStr || !birthDateStr.trim()) return null;
-  const str = birthDateStr.trim();
-
-  let birth: Date | null = null;
-
-  // Try ISO YYYY-MM-DD or YYYY/MM/DD
-  const isoMatch = str.match(/^(\d{4})[-\/\.](\d{1,2})[-\/\.](\d{1,2})/);
-  if (isoMatch) {
-    birth = new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
-  } else {
-    // Try DD/MM/YYYY or DD-MM-YYYY
-    const dmyMatch = str.match(/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{4})/);
-    if (dmyMatch) {
-      birth = new Date(parseInt(dmyMatch[3], 10), parseInt(dmyMatch[2], 10) - 1, parseInt(dmyMatch[1], 10));
-    } else {
-      // Try generic Date.parse
-      const parsed = Date.parse(str);
-      if (!isNaN(parsed)) {
-        birth = new Date(parsed);
-      }
-    }
-  }
-
-  if (!birth || isNaN(birth.getTime())) return null;
-
-  let age = refDate.getFullYear() - birth.getFullYear();
-  const m = refDate.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && refDate.getDate() < birth.getDate())) {
-    age--;
-  }
+  const birth = parseCalendarDate(birthDateStr);
+  if (!birth) return null;
+  const today = new Date(refDate.getTime() - 5 * 60 * 60 * 1000);
+  let age = today.getUTCFullYear() - birth.getUTCFullYear();
+  const month = today.getUTCMonth() - birth.getUTCMonth();
+  if (month < 0 || (month === 0 && today.getUTCDate() < birth.getUTCDate())) age--;
   return age >= 0 && age <= 130 ? age : null;
 }
 
@@ -512,12 +503,9 @@ export function determineSexAgeCategory(
     }
   }
 
-  // Fallback si no hay fecha de nacimiento registrada
-  const fallbackCat = isFemale ? 'MUJER' : 'VARÓN';
   return {
-    category: fallbackCat,
-    age: null,
-    explanation: `Sin fecha de nacimiento ➔ Asignado según condición: ${fallbackCat}`,
+    category: '', age: null,
+    explanation: 'Falta una fecha de nacimiento válida. Verifica la condición antes de generar.',
   };
 }
 
@@ -587,7 +575,7 @@ export function buildComprehensiveReplacementMap(
 ): Record<string, string> {
   const map: Record<string, string> = {};
   const values: Record<string, string> = {};
-  const category = client?.sexAgeCategory || determineSexAgeCategory(client?.birthDate, client?.sex).category;
+  const category = determineSexAgeCategory(client?.birthDate, client?.sex).category;
   for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
     values[field] = fieldDefault(aliases[0], client, undefined, category);
   }
@@ -695,7 +683,7 @@ export function replaceTokensInWordXml(xml: string, replacementMap: Record<strin
       replacements.push(fragments);
     }
     let index = 0;
-    const updated = inner.replace(/<w:r\b([^>]*)>([\s\S]*?)<\/w:r>/gi, (run, runAttrs, runInner) => {
+    const updated = inner.replace(/<w:r\b([^>]*)>([\s\S]*?)<\/w:r>/gi, (run: string, runAttrs: string, runInner: string) => {
       const originalProps = runInner.match(/<w:rPr\b[^>]*>[\s\S]*?<\/w:rPr>/i)?.[0] || '';
       const content = runInner.replace(originalProps, '');
       let result = '';
@@ -773,21 +761,22 @@ export async function generateAndDownloadDocx(
   data: Record<string, string | number>,
   customDownloadFileName?: string,
   client?: Client | null,
-  signatureOptions?: SignatureLayoutOptions
+  signatureOptions?: SignatureLayoutOptions,
+  download = true
 ): Promise<{ blob: Blob; fileName: string; sizeFormatted: string }> {
-  if (!template.fileData) {
-    throw new Error('La plantilla seleccionada no contiene datos de archivo .docx válidos.');
-  }
+  if (!template.fileData) template = { ...template, fileData: await blobBase64(await entityFile('templates', template.sourceTemplateId || template.id)) };
+  if (template.approved === false) throw new Error('La plantilla necesita aprobación antes de generar.');
 
   const missing = template.placeholders.filter(key => !String(data[key] ?? '').trim());
   if (missing.length) throw new Error(`Completa los campos: ${missing.join(', ')}`);
-  const binaryString = atob(template.fileData);
+  const binaryString = atob(template.fileData!);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
 
   const zip = new PizZip(bytes);
+  validateWordArchive(zip);
 
   // 1. Build comprehensive multi-alias dictionary
   const replacementMap = buildComprehensiveReplacementMap(data, client);
@@ -809,6 +798,8 @@ export async function generateAndDownloadDocx(
       if (partPath === 'word/document.xml') {
         updatedXml = formatAndAlignSignatureBlockInWordXml(updatedXml, signatureOptions, replacementMap, client);
       }
+      const unresolved = extractParagraphsFromWordXml(updatedXml).flatMap(text => text.match(/\{\{[^{}]+\}\}/g) || []);
+      if (unresolved.length) throw new Error(`Hay marcadores pendientes en el Word: ${[...new Set(unresolved)].join(', ')}`);
       zip.file(partPath, updatedXml);
     }
   }
@@ -830,7 +821,7 @@ export async function generateAndDownloadDocx(
 
   const finalFileName = (customDownloadFileName ? customDownloadFileName.replace(/[<>:"/\\|?*]/g, '_').replace(/\.docx$/i, '') + '.docx' : '') || `${safeTemplateName}_${clientName}_${dateStamp}.docx`;
 
-  saveAs(outBlob, finalFileName);
+  if (download) saveAs(outBlob, finalFileName);
 
   const sizeFormatted = (outBlob.size / 1024).toFixed(1) + ' KB';
 
