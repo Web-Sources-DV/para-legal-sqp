@@ -1,3 +1,4 @@
+import { evaluateIdentityDocument } from "../services/identityStatus";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { documentTypeLabel } from "../services/fieldMapping";
 import { validateClient } from "../services/validation";
@@ -71,7 +72,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
       extraction.fullName ||
       `${extraction.firstName || ""} ${extraction.lastName || ""}`.trim(),
     passportNumber: extraction.passportNumber || "",
-    docType: extraction.docType || "pasaporte",
+    docType: extraction.docType || "otro",
     nationality: extraction.nationality || "",
     issuingCountry: extraction.issuingCountry || "",
     birthDate: extraction.birthDate || "",
@@ -344,22 +345,65 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
     }
   };
 
+  const documentStatus = evaluateIdentityDocument(
+    formData.birthDate,
+    formData.expiryDate,
+    formData.sex,
+  );
   return (
     <div className="space-y-6">
+      {documentStatus.expiryStatus === "vencido" && (
+        <div
+          role="alert"
+          className="border border-red-300 rounded-xl bg-red-50 text-red-900 p-4"
+        >
+          <strong>DOCUMENTO VENCIDO</strong>
+          <p>
+            Venció el {formData.expiryDate}. Puedes conservar el registro;
+            verifica su validez antes de realizar trámites.
+          </p>
+        </div>
+      )}
+      {documentStatus.expiryStatus === "desconocido" && (
+        <p role="status" className="bg-amber-50 text-amber-900 rounded-xl p-3">
+          Vencimiento no confirmado. Revisa el documento; algunas cédulas no
+          tienen fecha de caducidad.
+        </p>
+      )}
+      <div className="bg-slate-50 border rounded-xl p-3 text-sm">
+        Edad:{" "}
+        {documentStatus.age === null
+          ? "por confirmar"
+          : `${documentStatus.age} años`}{" "}
+        · Condición: {documentStatus.category || "por confirmar"}
+        {documentStatus.isMinor === true ? " (menor de 18 años)" : ""} ·
+        Documento:{" "}
+        {documentStatus.expiryStatus === "vigente"
+          ? "vigente"
+          : documentStatus.expiryStatus === "vencido"
+            ? "vencido"
+            : "por confirmar"}
+      </div>
       {reviewError && (
         <p role="alert" className="p-3 text-red-700 bg-red-50 rounded-xl">
           {reviewError}
         </p>
       )}
-      {extraction.warnings?.map((warning) => (
-        <p
-          key={warning}
-          role="alert"
-          className="bg-amber-50 p-3 text-amber-900"
-        >
-          {warning}
-        </p>
-      ))}
+      {extraction.warnings
+        ?.filter(
+          (warning) =>
+            !warning.startsWith("DOCUMENTO VENCIDO:") &&
+            !warning.startsWith("Vencimiento no detectado:"),
+        )
+        .map((warning) => (
+          <p
+            key={warning}
+            role="alert"
+            className="bg-amber-50 p-3 text-amber-900"
+          >
+            {warning}
+          </p>
+        ))}
       <label className="flex items-start gap-3 bg-white border rounded-xl p-4">
         <input
           type="checkbox"

@@ -1,3 +1,4 @@
+import { evaluateIdentityDocument } from "../services/identityStatus";
 import { searchClients } from "../services/storageService";
 import { useDialog } from "../hooks/useDialog";
 import React, { useState, useEffect } from "react";
@@ -327,7 +328,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                       </span>
                       {client.expiryDate && (
                         <div className="text-[10px] text-slate-400 mt-1">
-                          Vence: {client.expiryDate}
+                          {evaluateIdentityDocument(client.birthDate,client.expiryDate,client.sex).expiryStatus==='vencido'?'⚠ Vencido:':'Vence:'} {client.expiryDate}
                         </div>
                       )}
                     </td>

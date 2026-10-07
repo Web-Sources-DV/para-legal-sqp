@@ -476,6 +476,7 @@ export function determineSexAgeCategory(
 
   const age = calculateAgeFromBirthDate(birthDate);
   const normalizedSex = (sex || '').trim().toUpperCase();
+  if (age !== null && age < 18) return {category: age < 14 ? 'MENOR' : 'JOVEN', age, explanation: `${age} años; menor de edad.`};
   if (!['M', 'F', 'VARON', 'VARÓN', 'MUJER', 'MASCULINO', 'FEMENINO'].includes(normalizedSex)) return { category: '', age, explanation: 'Verifica la condición antes de generar.' };
   const isFemale = normalizedSex === 'F' || normalizedSex.startsWith('FEM') || normalizedSex === 'MUJER';
 

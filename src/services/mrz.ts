@@ -1,3 +1,4 @@
+import icaoCountries from "../data/icaoCountries.json";
 import { parseCalendarDate } from "./validation";
 
 const weights = [7, 3, 1];
@@ -70,34 +71,81 @@ export function mrzDate(value: string, birth: boolean): string {
 }
 
 export function countryName(code: string): string {
-  const countries: Record<string, string> = {
-    PAN: "PANAMÁ",
-    ESP: "ESPAÑA",
-    COL: "COLOMBIA",
-    MEX: "MÉXICO",
-    VEN: "VENEZUELA",
-    PER: "PERÚ",
-    ARG: "ARGENTINA",
-    CHL: "CHILE",
-    ECU: "ECUADOR",
-    DOM: "REPÚBLICA DOMINICANA",
-    CRI: "COSTA RICA",
-    GTM: "GUATEMALA",
-    HND: "HONDURAS",
-    NIC: "NICARAGUA",
-    SLV: "EL SALVADOR",
-    BOL: "BOLIVIA",
-    PRY: "PARAGUAY",
-    URY: "URUGUAY",
-    CUB: "CUBA",
-    USA: "ESTADOS UNIDOS",
-    FRA: "FRANCIA",
-    ITA: "ITALIA",
-    DEU: "ALEMANIA",
-    GBR: "REINO UNIDO",
-    PRT: "PORTUGAL",
-    BRA: "BRASIL",
-    CAN: "CANADÁ",
+  const normalized = code.toUpperCase().replace(/</g, "").trim();
+  const region = (icaoCountries as Record<string, string>)[normalized];
+  if (!region) return normalized;
+  return (
+    new Intl.DisplayNames(["es"], { type: "region" })
+      .of(region)
+      ?.toUpperCase() || normalized
+  );
+}
+
+// Only numeric MRZ positions are corrected. Letters in names and document numbers remain intact.
+export function normalizeMrzText(raw: string): string {
+  const lines = raw
+    .toUpperCase()
+    .split(/\r?\n/)
+    .map((line) => line.replace(/[«‹〈]/g, "<").replace(/\s/g, ""));
+  const numeric = (line: string, ranges: [number, number][]) => {
+    const characters = [...line];
+    for (const [start, end] of ranges)
+      for (let i = start; i < end; i++) {
+        characters[i] =
+          (
+            {
+              O: "0",
+              Q: "0",
+              D: "0",
+              I: "1",
+              L: "1",
+              Z: "2",
+              S: "5",
+              G: "6",
+              B: "8",
+            } as Record<string, string>
+          )[characters[i]] || characters[i];
+      }
+    return characters.join("");
   };
-  return countries[code] || code;
+  for (let i = 1; i < lines.length; i++) {
+    const previous = lines[i - 1],
+      current = lines[i];
+    if (
+      /^P[<A-Z]/.test(previous) &&
+      previous.length === 44 &&
+      current.length === 44
+    )
+      lines[i] = numeric(current, [
+        [9, 10],
+        [13, 20],
+        [21, 28],
+        [42, 44],
+      ]);
+    else if (
+      /^[IAC]/.test(previous) &&
+      previous.length === 36 &&
+      current.length === 36
+    )
+      lines[i] = numeric(current, [
+        [9, 10],
+        [13, 20],
+        [21, 28],
+        [35, 36],
+      ]);
+    else if (
+      /^[IAC]/.test(previous) &&
+      previous.length === 30 &&
+      current.length === 30
+    ) {
+      lines[i - 1] = numeric(previous, [[14, 15]]);
+      lines[i] = numeric(current, [
+        [0, 7],
+        [8, 15],
+        [29, 30],
+      ]);
+      i++; // The third TD1 line contains names, not numeric fields.
+    }
+  }
+  return lines.join("\n");
 }

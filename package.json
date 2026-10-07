@@ -17,7 +17,8 @@
     "test:database": "bash scripts/test-database.sh",
     "test:browser": "node scripts/test-browser.mjs",
     "check:functions": "deno check supabase/functions/para-legal-users/index.ts",
-    "check:deployment": "node scripts/check-deployment.mjs"
+    "check:deployment": "node scripts/check-deployment.mjs",
+    "test:ocr": "PL_OCR_VALIDATION=1 node scripts/test-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",
