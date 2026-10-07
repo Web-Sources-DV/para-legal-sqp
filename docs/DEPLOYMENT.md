@@ -5,7 +5,7 @@ La aplicación abre directamente sin cuentas, contraseñas ni gestión de usuari
 ## Activación
 
 1. Conserva un respaldo administrativo del proyecto antes de cambiar permisos.
-2. Aplica todas las migraciones en orden, incluida `20261007000100_pl_integrity_and_files.sql` y después `20261007000200_pl_public_workspace.sql`. Esta última agrega las funciones públicas y acceso a los archivos del bucket `para-legal-private`, incluidos los existentes. No modifica los permisos de otras aplicaciones ni las cuentas de Auth.
+2. Si ambas migraciones nuevas siguen pendientes, puedes ejecutar [SUPABASE_PUBLIC_ACCESS.sql](SUPABASE_PUBLIC_ACCESS.sql) en el [editor SQL del proyecto](https://supabase.com/dashboard/project/fipcnxfxxngdjunrlbat/sql/new). Este archivo reúne ambas migraciones; ejecútalo una sola vez después de guardar el respaldo. Si alguna ya se aplicó, ejecuta únicamente la restante. Aplica todas las migraciones en orden, incluida `20261007000100_pl_integrity_and_files.sql` y después `20261007000200_pl_public_workspace.sql`. Esta última agrega las funciones públicas y acceso a los archivos del bucket `para-legal-private`, incluidos los existentes. No modifica los permisos de otras aplicaciones ni las cuentas de Auth.
 3. Ejecuta `pnpm check:deployment`: requiere esquema **3**. Publica el frontend después de la migración.
 4. Verifica desde dos navegadores sin sesión: clientes y plantillas compartidos, generación y descarga del documento original. No hace falta activar Anonymous Sign-ins ni actualizar la función de gestión de usuarios para esta versión.
 
