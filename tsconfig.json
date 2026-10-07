@@ -22,7 +22,12 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "strict": true,
+    "types": [
+      "vite/client",
+      "node"
+    ]
   },
   "exclude": [
     "node_modules",
@@ -30,4 +35,3 @@
     "supabase/functions"
   ]
 }
-

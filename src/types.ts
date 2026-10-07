@@ -20,10 +20,13 @@ export interface Client {
   address?: string;
   city?: string;
   notes?: string;
+  imagePath?: string;
   passportImageBase64?: string;
   createdAt: string;
   updatedAt: string;
   documentCount?: number;
+  revision?: number;
+  archived?: boolean;
 }
 
 export type IdoneoName =
@@ -34,8 +37,9 @@ export type IdoneoName =
   | 'Antony Talla';
 
 export interface Idoneo {
+  revision?: number;
   id: string;
-  name: IdoneoName;
+  name: string;
   formalTitle: string;
   gender: 'F' | 'M';
   role: string;
@@ -75,6 +79,7 @@ export interface PlaceholderDef {
 }
 
 export interface Template {
+  sourceTemplateId?: string;
   id: string;
   name: string;
   description: string;
@@ -89,9 +94,15 @@ export interface Template {
   createdAt: string;
   updatedAt: string;
   usageCount: number;
+  revision?: number;
+  archived?: boolean;
+  version?: number;
+  filePath?: string;
+  approved?: boolean;
 }
 
 export interface GeneratedDocument {
+  revision?: number;
   id: string;
   title: string;
   fileName: string;
@@ -103,6 +114,8 @@ export interface GeneratedDocument {
   generatedAt: string;
   fileSizeFormatted: string;
   dataSnapshot: Record<string, string>;
+  filePath?: string;
+  templateVersion?: number;
   fileBase64?: string; // Optional stored generated docx
   signatureOptions?: SignatureLayoutOptions;
 }
@@ -127,15 +140,16 @@ export interface ExtractionResult {
   mrzLine1?: string;
   mrzLine2?: string;
   mrzLine3?: string;
+  warnings?: string[];
   confidenceScore?: number;
   notes?: string;
-  method: 'ocr' | 'tesseract' | 'ai' | 'manual' | 'users' | 'analytics';
+  method: 'ocr' | 'tesseract' | 'ai' | 'manual';
   rawOcrText?: string;
   imagePreview?: string;
   extractedJson?: Record<string, any>;
 }
 
-export type ActiveTab = 'wizard' | 'generator' | 'clients' | 'templates' | 'history' | 'database' | 'manual';
+export type ActiveTab = 'wizard' | 'generator' | 'clients' | 'templates' | 'history' | 'database' | 'manual' | 'users' | 'analytics';
 
 export interface DatabaseStats {
   totalClients: number;

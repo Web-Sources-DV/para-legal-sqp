@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import { useDialog } from "../hooks/useDialog";
+import { entityFile } from "../services/fileStorage";
+import { approveTemplate } from "../services/storageService";
+import React, { useState } from "react";
 import {
   FileText,
   Upload,
@@ -21,14 +24,20 @@ import {
   Scale,
   Shield,
   Briefcase,
-} from 'lucide-react';
-import saveAs from 'file-saver';
-import { Template, PlaceholderDef, Idoneo, IdoneoName } from '../types';
-import { parseDocxFile } from '../services/docxService';
-import { saveTemplate, deleteTemplate } from '../services/storageService';
-import { IDONEOS, DEFAULT_IDONEO, getIdoneoByName, customizeTemplateForIdoneo } from '../data/idoneos';
+} from "lucide-react";
+import saveAs from "file-saver";
+import { Template, PlaceholderDef, Idoneo, IdoneoName } from "../types";
+import { parseDocxFile } from "../services/docxService";
+import { saveTemplate, deleteTemplate } from "../services/storageService";
+import {
+  IDONEOS,
+  DEFAULT_IDONEO,
+  getIdoneoByName,
+  customizeTemplateForIdoneo,
+} from "../data/idoneos";
 
 interface TemplateManagerProps {
+  canApprove?: boolean;
   templates: Template[];
   onTemplatesChange: () => void;
   onUseTemplate: (template: Template) => void;
@@ -36,24 +45,30 @@ interface TemplateManagerProps {
 
 export const TemplateManager: React.FC<TemplateManagerProps> = ({
   templates,
+  canApprove = false,
   onTemplatesChange,
   onUseTemplate,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadSuccessMessage, setUploadSuccessMessage] = useState<string | null>(null);
+  const [uploadSuccessMessage, setUploadSuccessMessage] = useState<
+    string | null
+  >(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  
+
   // Selected Idóneo tab (default: Susana Sabalza)
-  const [selectedIdoneoId, setSelectedIdoneoId] = useState<string>(DEFAULT_IDONEO.id);
+  const [selectedIdoneoId, setSelectedIdoneoId] = useState<string>(
+    DEFAULT_IDONEO.id,
+  );
   const [viewingTemplate, setViewingTemplate] = useState<Template | null>(null);
 
-  const activeIdoneo: Idoneo = IDONEOS.find((i) => i.id === selectedIdoneoId) || DEFAULT_IDONEO;
+  const activeIdoneo: Idoneo =
+    IDONEOS.find((i) => i.id === selectedIdoneoId) || DEFAULT_IDONEO;
 
   // New Template Form State
   const [newTemplateData, setNewTemplateData] = useState<{
     name: string;
     description: string;
-    category: Template['category'];
+    category: Template["category"];
     targetIdoneo: string; // 'all' or specific Idoneo ID
     fileName: string;
     fileBase64: string;
@@ -62,14 +77,23 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     placeholderDefs: PlaceholderDef[];
   } | null>(null);
 
+  useDialog(!!newTemplateData, () => {
+    if (!isUploading) setNewTemplateData(null);
+  });
+
   const handleDocxUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = '';
+    e.target.value = "";
     if (!file) return;
-    if (file.size > 3 * 1024 * 1024) { setUploadError('La plantilla debe pesar menos de 3 MB para el almacenamiento local.'); return; }
+    if (file.size > 3 * 1024 * 1024) {
+      setUploadError("La plantilla debe pesar menos de 3 MB por archivo.");
+      return;
+    }
 
-    if (!file.name.toLowerCase().endsWith('.docx')) {
-      setUploadError('Por favor selecciona un archivo con extensión .docx de Microsoft Word.');
+    if (!file.name.toLowerCase().endsWith(".docx")) {
+      setUploadError(
+        "Por favor selecciona un archivo con extensión .docx de Microsoft Word.",
+      );
       return;
     }
 
@@ -82,14 +106,14 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
       const parsed = await parseDocxFile(buffer, file.name);
 
       const inferredName = file.name
-        .replace(/\.docx$/i, '')
-        .replace(/_/g, ' ')
-        .replace(/-/g, ' ');
+        .replace(/\.docx$/i, "")
+        .replace(/_/g, " ")
+        .replace(/-/g, " ");
 
       setNewTemplateData({
         name: inferredName,
         description: `Plantilla subida con ${parsed.placeholders.length} marcadores {{tags}} detectados.`,
-        category: 'General',
+        category: "General",
         targetIdoneo: activeIdoneo.id,
         fileName: file.name,
         fileBase64: parsed.fileBase64,
@@ -98,23 +122,25 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
         placeholderDefs: parsed.placeholderDefs,
       });
     } catch (err: any) {
-      console.error('Error parsing docx:', err);
-      setUploadError(`Error al procesar el archivo Word .docx: ${err.message || 'Estructura no válida'}`);
+      console.error("Error parsing docx:", err);
+      setUploadError(
+        `Error al procesar el archivo Word .docx: ${err.message || "Estructura no válida"}`,
+      );
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleSaveNewTemplate = async () => {
-    if (!newTemplateData) return;
+    if (!newTemplateData || isUploading) return;
 
     const assignedIdoneoObj =
-      newTemplateData.targetIdoneo === 'all'
+      newTemplateData.targetIdoneo === "all"
         ? undefined
         : IDONEOS.find((i) => i.id === newTemplateData.targetIdoneo)?.name;
 
     const templateToSave: Template = {
-      id: `tpl-${Date.now()}`,
+      id: `tpl-${crypto.randomUUID()}`,
       name: newTemplateData.name,
       description: newTemplateData.description,
       category: newTemplateData.category,
@@ -130,23 +156,52 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
       usageCount: 0,
     };
 
-    if (!templateToSave.name.trim()) { setUploadError('Escribe un nombre para la plantilla.'); return; }
-    try { await saveTemplate(templateToSave); } catch (error: any) { setUploadError(error.message || 'No se pudo guardar la plantilla.'); return; }
+    if (!templateToSave.name.trim()) {
+      setUploadError("Escribe un nombre para la plantilla.");
+      return;
+    }
+    setIsUploading(true);
+    try {
+      await saveTemplate(templateToSave);
+    } catch (error: any) {
+      setUploadError(error.message || "No se pudo guardar la plantilla.");
+      return;
+    } finally {
+      setIsUploading(false);
+    }
     onTemplatesChange();
     setNewTemplateData(null);
-    setUploadSuccessMessage(`¡Plantilla "${templateToSave.name}" guardada con éxito en la base de datos!`);
+    setUploadSuccessMessage(
+      `¡Plantilla "${templateToSave.name}" guardada con éxito en la base de datos!`,
+    );
     setTimeout(() => setUploadSuccessMessage(null), 5000);
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (confirm(`¿Estás seguro de eliminar la plantilla "${name}"?`)) {
-      try { await deleteTemplate(id); } catch (error: any) { setUploadError(error.message || 'No se pudo eliminar la plantilla.'); return; }
+    if (confirm(`¿Archivar la plantilla "${name}"?`)) {
+      try {
+        await deleteTemplate(id);
+      } catch (error: any) {
+        setUploadError(error.message || "No se pudo eliminar la plantilla.");
+        return;
+      }
       onTemplatesChange();
       if (viewingTemplate?.id === id) setViewingTemplate(null);
     }
   };
 
-  const handleDownloadBlankTemplate = (template: Template, idoneo: Idoneo) => {
+  const handleDownloadBlankTemplate = async (
+    template: Template,
+    idoneo: Idoneo,
+  ) => {
+    if (!template.fileData) {
+      try {
+        saveAs(await entityFile("templates", template.id), template.fileName);
+      } catch (error: any) {
+        setUploadError(error.message);
+      }
+      return;
+    }
     if (!template.fileData) return;
     const binaryString = atob(template.fileData);
     const bytes = new Uint8Array(binaryString.length);
@@ -154,9 +209,9 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
       bytes[i] = binaryString.charCodeAt(i);
     }
     const blob = new Blob([bytes], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     });
-    const safeName = `${template.name.replace(/[^a-zA-Z0-9]/g, '_')}_${idoneo.name.replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+    const safeName = `${template.name.replace(/[^a-zA-Z0-9]/g, "_")}_${idoneo.name.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
     saveAs(blob, safeName);
   };
 
@@ -182,7 +237,9 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-              Selecciona el Idóneo para acceder a todos los modelos de documentos Word (.docx) configurados con su nombre, número de colegiado y facultades de representación legal.
+              Selecciona el Idóneo para acceder a todos los modelos de
+              documentos Word (.docx) configurados con su nombre, número de
+              colegiado y facultades de representación legal.
             </p>
           </div>
         </div>
@@ -203,25 +260,29 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                   onClick={() => setSelectedIdoneoId(idoneo.id)}
                   className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all ${
                     isSelected
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-amber-500/50 scale-[1.02]'
-                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                      ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-amber-500/50 scale-[1.02]"
+                      : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
                   }`}
                 >
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
                       isSelected
-                        ? 'bg-amber-500 text-slate-950 font-extrabold'
-                        : 'bg-white text-slate-800 border border-slate-200'
+                        ? "bg-amber-500 text-slate-950 font-extrabold"
+                        : "bg-white text-slate-800 border border-slate-200"
                     }`}
                   >
                     {idoneo.initials}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className={`font-serif font-bold text-xs block truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                    <span
+                      className={`font-serif font-bold text-xs block truncate ${isSelected ? "text-white" : "text-slate-900"}`}
+                    >
                       {idoneo.name}
                     </span>
-                    <span className={`text-[10px] block truncate ${isSelected ? 'text-amber-300' : 'text-slate-500'}`}>
-                      {idoneo.colegiado.split('·')[0].trim()}
+                    <span
+                      className={`text-[10px] block truncate ${isSelected ? "text-amber-300" : "text-slate-500"}`}
+                    >
+                      {idoneo.colegiado.split("·")[0].trim()}
                     </span>
                   </div>
                 </button>
@@ -277,10 +338,14 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
               <Upload className="w-6 h-6" />
             </div>
             <h4 className="font-bold text-slate-800 text-sm mb-1">
-              {isUploading ? 'Analizando marcadores en el archivo .docx...' : 'Subir nueva plantilla Word (.docx)'}
+              {isUploading
+                ? "Analizando marcadores en el archivo .docx..."
+                : "Subir nueva plantilla Word (.docx)"}
             </h4>
             <p className="text-xs text-slate-500 max-w-md mx-auto mb-3">
-              Puedes asignar la plantilla a <strong className="text-slate-800">{activeIdoneo.name}</strong> o dejarla disponible para todos los Idóneos.
+              Puedes asignar la plantilla a{" "}
+              <strong className="text-slate-800">{activeIdoneo.name}</strong> o
+              dejarla disponible para todos los Idóneos.
             </p>
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-sm hover:bg-slate-800 transition-colors">
               <FileText className="w-4 h-4 text-amber-400" />
@@ -313,7 +378,13 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
 
       {/* Detected Tags Confirmation Modal when file is uploaded */}
       {newTemplateData && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Configurar plantilla"
+          tabIndex={-1}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <h4 className="font-serif font-bold text-base flex items-center gap-2">
@@ -331,8 +402,12 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
             <div className="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
                 <div>
-                  <span className="font-semibold text-slate-800">Archivo detectado: </span>
-                  <span className="font-mono text-amber-900">{newTemplateData.fileName}</span>
+                  <span className="font-semibold text-slate-800">
+                    Archivo detectado:{" "}
+                  </span>
+                  <span className="font-mono text-amber-900">
+                    {newTemplateData.fileName}
+                  </span>
                 </div>
                 <span className="bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded-full text-[10px]">
                   {newTemplateData.placeholders.length} marcadores
@@ -346,7 +421,12 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                 <input
                   type="text"
                   value={newTemplateData.name}
-                  onChange={(e) => setNewTemplateData({ ...newTemplateData, name: e.target.value })}
+                  onChange={(e) =>
+                    setNewTemplateData({
+                      ...newTemplateData,
+                      name: e.target.value,
+                    })
+                  }
                   className="w-full text-sm font-bold p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500"
                 />
               </div>
@@ -358,10 +438,17 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                   </label>
                   <select
                     value={newTemplateData.targetIdoneo}
-                    onChange={(e) => setNewTemplateData({ ...newTemplateData, targetIdoneo: e.target.value })}
+                    onChange={(e) =>
+                      setNewTemplateData({
+                        ...newTemplateData,
+                        targetIdoneo: e.target.value,
+                      })
+                    }
                     className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 bg-white font-semibold"
                   >
-                    <option value="all">🌐 Disponible para todos los Idóneos</option>
+                    <option value="all">
+                      🌐 Disponible para todos los Idóneos
+                    </option>
                     {IDONEOS.map((i) => (
                       <option key={i.id} value={i.id}>
                         👤 {i.name} ({i.role})
@@ -376,7 +463,12 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                   </label>
                   <select
                     value={newTemplateData.category}
-                    onChange={(e) => setNewTemplateData({ ...newTemplateData, category: e.target.value as any })}
+                    onChange={(e) =>
+                      setNewTemplateData({
+                        ...newTemplateData,
+                        category: e.target.value as any,
+                      })
+                    }
                     className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 bg-white"
                   >
                     <option value="Notarial">Notarial</option>
@@ -396,7 +488,12 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                 <input
                   type="text"
                   value={newTemplateData.description}
-                  onChange={(e) => setNewTemplateData({ ...newTemplateData, description: e.target.value })}
+                  onChange={(e) =>
+                    setNewTemplateData({
+                      ...newTemplateData,
+                      description: e.target.value,
+                    })
+                  }
                   className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500"
                 />
               </div>
@@ -408,7 +505,11 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                 </label>
                 {newTemplateData.placeholders.length === 0 ? (
                   <div className="p-3 bg-amber-50/60 rounded-lg text-amber-800 text-[11px]">
-                    ⚠️ No se encontraron marcadores con formato <code className="font-mono">{`{{nombre}}`}</code> o <code className="font-mono">(nombre)</code>. La plantilla podrá usarse pero no reemplazará campos dinámicos automáticamente.
+                    ⚠️ No se encontraron marcadores con formato{" "}
+                    <code className="font-mono">{`{{nombre}}`}</code> o{" "}
+                    <code className="font-mono">(nombre)</code>. La plantilla
+                    podrá usarse pero no reemplazará campos dinámicos
+                    automáticamente.
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200 max-h-40 overflow-y-auto">
@@ -418,7 +519,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                         className="font-mono text-[11px] bg-white text-slate-800 px-2 py-1 rounded border border-slate-300 font-semibold flex items-center gap-1 shadow-xs"
                       >
                         <Tag className="w-3 h-3 text-amber-600" />
-                        {tag.startsWith('(') ? tag : tag}
+                        {tag.startsWith("(") ? tag : tag}
                       </span>
                     ))}
                   </div>
@@ -451,7 +552,8 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
         <div className="flex items-center justify-between">
           <h4 className="font-serif font-bold text-slate-900 text-base flex items-center gap-2">
             <Scale className="w-4 h-4 text-amber-600" />
-            Documentos Disponibles para: <span className="text-amber-800">{activeIdoneo.name}</span>
+            Documentos Disponibles para:{" "}
+            <span className="text-amber-800">{activeIdoneo.name}</span>
           </h4>
           <span className="text-xs text-slate-500 font-medium">
             {templatesForActiveIdoneo.length} documentos listos para generar
@@ -468,7 +570,10 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                 No hay plantillas registradas para {activeIdoneo.name}
               </h5>
               <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                El apartado de plantillas se encuentra limpio. Sube tus documentos oficiales en formato Word (.docx) arriba para asignarlos a este Idóneo o dejarlos disponibles para todo el despacho.
+                El apartado de plantillas se encuentra limpio. Sube tus
+                documentos oficiales en formato Word (.docx) arriba para
+                asignarlos a este Idóneo o dejarlos disponibles para todo el
+                despacho.
               </p>
             </div>
             <div>
@@ -484,7 +589,10 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {templatesForActiveIdoneo.map((template) => {
-              const customizedTemplate = customizeTemplateForIdoneo(template, activeIdoneo);
+              const customizedTemplate = customizeTemplateForIdoneo(
+                template,
+                activeIdoneo,
+              );
 
               return (
                 <div
@@ -527,7 +635,9 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono flex items-center justify-between">
                         <span>Nº Colegiado:</span>
-                        <span className="text-amber-800 font-bold">{activeIdoneo.colegiado}</span>
+                        <span className="text-amber-800 font-bold">
+                          {activeIdoneo.colegiado}
+                        </span>
                       </div>
                     </div>
 
@@ -542,7 +652,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                             key={tag}
                             className="font-mono text-[10px] bg-slate-50 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200"
                           >
-                            {tag.startsWith('(') ? tag : tag}
+                            {tag.startsWith("(") ? tag : tag}
                           </span>
                         ))}
                         {template.placeholders.length > 4 && (
@@ -554,22 +664,55 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                     </div>
                   </div>
 
+                  {template.approved === false && (
+                    <div role="status" className="bg-amber-50 p-3">
+                      Pendiente de aprobación{" "}
+                      {canApprove && (
+                        <button
+                          disabled={isUploading}
+                          className="underline"
+                          onClick={async () => {
+                            setIsUploading(true);
+                            try {
+                              await approveTemplate(template);
+                              onTemplatesChange();
+                            } catch (error: any) {
+                              setUploadError(error.message);
+                            } finally {
+                              setIsUploading(false);
+                            }
+                          }}
+                        >
+                          Aprobar versión {template.version || 1}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {/* Bottom Actions */}
                   <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         title="Descargar Plantilla Base en Word (.docx)"
-                        onClick={() => handleDownloadBlankTemplate(template, activeIdoneo)}
+                        onClick={() =>
+                          handleDownloadBlankTemplate(template, activeIdoneo)
+                        }
                         className="p-2 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors border border-slate-200 text-xs flex items-center gap-1"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline text-[11px]">Base .docx</span>
+                        <span className="hidden sm:inline text-[11px]">
+                          Base .docx
+                        </span>
                       </button>
 
                       <button
                         type="button"
-                        title="Eliminar Plantilla"
+                        disabled={!canApprove}
+                        title={
+                          canApprove
+                            ? "Archivar plantilla (conserva historial)"
+                            : "Solo el propietario puede archivar"
+                        }
                         onClick={() => handleDelete(template.id, template.name)}
                         className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors border border-red-200 text-xs"
                       >
@@ -579,10 +722,11 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
 
                     <button
                       type="button"
+                      disabled={template.approved === false}
                       onClick={() => onUseTemplate(customizedTemplate)}
                       className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-sm transition-all active:scale-95"
                     >
-                      <span>⚡ Usar con {activeIdoneo.name.split(' ')[0]}</span>
+                      <span>⚡ Usar con {activeIdoneo.name.split(" ")[0]}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -604,10 +748,29 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
               ¿Cómo funcionan las pestañas por Idóneo en SQP PARA LEGAL?
             </h4>
             <p className="text-xs text-slate-400 leading-relaxed max-w-3xl mb-3">
-              Cada pestaña representa a uno de los letrados idóneos: <strong className="text-amber-300">Susana Sabalza</strong>, <strong className="text-amber-300">Marta Aparicio</strong>, <strong className="text-amber-300">Lizohar Godoy</strong>, <strong className="text-amber-300">Martín Downer</strong> y <strong className="text-amber-300">Antony Talla</strong>. Al seleccionar una plantilla desde cualquier pestaña, los campos <code className="text-amber-300 font-mono">(abogado_nombre)</code> y <code className="text-amber-300 font-mono">(abogado_colegiado)</code> se completan automáticamente con los datos del letrado elegido.
+              Cada pestaña representa a uno de los letrados idóneos:{" "}
+              <strong className="text-amber-300">Susana Sabalza</strong>,{" "}
+              <strong className="text-amber-300">Marta Aparicio</strong>,{" "}
+              <strong className="text-amber-300">Lizohar Godoy</strong>,{" "}
+              <strong className="text-amber-300">Martín Downer</strong> y{" "}
+              <strong className="text-amber-300">Antony Talla</strong>. Al
+              seleccionar una plantilla desde cualquier pestaña, los campos{" "}
+              <code className="text-amber-300 font-mono">(abogado_nombre)</code>{" "}
+              y{" "}
+              <code className="text-amber-300 font-mono">
+                (abogado_colegiado)
+              </code>{" "}
+              se completan automáticamente con los datos del letrado elegido.
             </p>
             <p className="text-xs text-amber-200/90 leading-relaxed max-w-3xl mb-3 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
-              <strong className="text-amber-300">Reglas automáticas de formato:</strong> Todos los datos reemplazados se insertan en <strong>MAYÚSCULAS Y EN NEGRITA</strong>, excepto <code className="text-amber-300 font-mono">(nacionalidad)</code> que se mantiene en <em>minúsculas y sin negrita</em> según las normas notariales.
+              <strong className="text-amber-300">
+                Reglas automáticas de formato:
+              </strong>{" "}
+              Todos los datos reemplazados se insertan en{" "}
+              <strong>MAYÚSCULAS Y EN NEGRITA</strong>, excepto{" "}
+              <code className="text-amber-300 font-mono">(nacionalidad)</code>{" "}
+              que se mantiene en <em>minúsculas y sin negrita</em> según las
+              normas notariales.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 font-mono text-[11px] text-amber-300 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
               <div>• (nombre)</div>
@@ -629,4 +792,3 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     </div>
   );
 };
-

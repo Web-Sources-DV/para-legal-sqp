@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { rotateImage } from "../services/imagePreprocessing";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Upload,
   Sparkles,
@@ -15,10 +16,13 @@ import {
   RotateCw,
   Sliders,
   Zap,
-} from 'lucide-react';
-import { ExtractionResult } from '../types';
-import { extractWithTesseract } from '../services/ocrService';
-import { preprocessDocumentForOCR, PreprocessedImages } from '../services/imagePreprocessing';
+} from "lucide-react";
+import { ExtractionResult } from "../types";
+import { extractWithTesseract } from "../services/ocrService";
+import {
+  preprocessDocumentForOCR,
+  PreprocessedImages,
+} from "../services/imagePreprocessing";
 
 interface PassportScannerProps {
   onExtractionComplete: (result: ExtractionResult) => void;
@@ -29,94 +33,119 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   onExtractionComplete,
   onCancel,
 }) => {
-  const [activeTab, setActiveTab] = useState<'upload' | 'camera'>('upload');
-  const [opticalFilter, setOpticalFilter] = useState<'enhanced' | 'binarized' | 'original'>('enhanced');
-  const [preprocessedPreview, setPreprocessedPreview] = useState<PreprocessedImages | null>(null);
+  const [activeTab, setActiveTab] = useState<"upload" | "camera">("upload");
+  const [opticalFilter, setOpticalFilter] = useState<
+    "enhanced" | "binarized" | "original"
+  >("enhanced");
+  const [preprocessedPreview, setPreprocessedPreview] =
+    useState<PreprocessedImages | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingStatus, setProcessingStatus] = useState<string>('');
+  const [processingStatus, setProcessingStatus] = useState<string>("");
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [selectedFilePreview, setSelectedFilePreview] = useState<string | null>(null);
+  const [selectedFilePreview, setSelectedFilePreview] = useState<string | null>(
+    null,
+  );
   const [isDragging, setIsDragging] = useState(false);
 
   // Camera states
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('environment');
+  const [cameraFacingMode, setCameraFacingMode] = useState<
+    "environment" | "user"
+  >("environment");
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraStarting, setIsCameraStarting] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
   const cameraRequest = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
   const processingRef = useRef(false);
   const mountedRef = useRef(true);
-  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      abortRef.current?.abort();
+    };
+  }, []);
   // Stop camera helper
   const stopCameraStream = useCallback(() => {
     cameraRequest.current++;
-    streamRef.current?.getTracks().forEach(track => track.stop());
+    streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     setCameraStream(null);
   }, []);
 
   // Start camera stream
-  const startCamera = useCallback(async (facing: 'environment' | 'user' = 'environment') => {
-    setIsCameraStarting(true);
-    setCameraError(null);
+  const startCamera = useCallback(
+    async (facing: "environment" | "user" = "environment") => {
+      setIsCameraStarting(true);
+      setCameraError(null);
 
-    stopCameraStream();
-    const request = cameraRequest.current;
+      stopCameraStream();
+      const request = cameraRequest.current;
 
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Tu navegador no soporta acceso directo a la cámara web.');
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: facing },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: false,
-      });
-
-      if (!mountedRef.current || request !== cameraRequest.current) { stream.getTracks().forEach(t => t.stop()); return; }
-      streamRef.current = stream;
-      setCameraStream(stream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
-      }
-    } catch (err: any) {
-      if (!mountedRef.current || request !== cameraRequest.current) return;
-      console.warn('Primary camera error, attempting fallback:', err);
       try {
-        // Fallback without strict facing constraints
-        const streamFallback = await navigator.mediaDevices.getUserMedia({
-          video: true,
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error(
+            "Tu navegador no soporta acceso directo a la cámara web.",
+          );
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facing },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
           audio: false,
         });
-        if (!mountedRef.current || request !== cameraRequest.current) { streamFallback.getTracks().forEach(t => t.stop()); return; }
-        streamRef.current = streamFallback;
-        setCameraStream(streamFallback);
+
+        if (!mountedRef.current || request !== cameraRequest.current) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        setCameraStream(stream);
         if (videoRef.current) {
-          videoRef.current.srcObject = streamFallback;
+          videoRef.current.srcObject = stream;
           videoRef.current.play().catch(() => {});
         }
-      } catch (fallbackErr: any) {
-        setCameraError(
-          'No se pudo acceder a la cámara. Verifica que diste permisos de cámara en tu navegador.'
-        );
+      } catch (err: any) {
+        if (!mountedRef.current || request !== cameraRequest.current) return;
+        console.warn("Primary camera error, attempting fallback:", err);
+        try {
+          // Fallback without strict facing constraints
+          const streamFallback = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+          if (!mountedRef.current || request !== cameraRequest.current) {
+            streamFallback.getTracks().forEach((t) => t.stop());
+            return;
+          }
+          streamRef.current = streamFallback;
+          setCameraStream(streamFallback);
+          if (videoRef.current) {
+            videoRef.current.srcObject = streamFallback;
+            videoRef.current.play().catch(() => {});
+          }
+        } catch (fallbackErr: any) {
+          setCameraError(
+            "No se pudo acceder a la cámara. Verifica que diste permisos de cámara en tu navegador.",
+          );
+        }
+      } finally {
+        setIsCameraStarting(false);
       }
-    } finally {
-      setIsCameraStarting(false);
-    }
-  }, [stopCameraStream]);
+    },
+    [stopCameraStream],
+  );
 
   // Trigger camera start when camera tab is active
   useEffect(() => {
-    if (activeTab === 'camera') {
+    if (activeTab === "camera") {
       startCamera(cameraFacingMode);
     } else {
       stopCameraStream();
@@ -128,34 +157,47 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   }, [activeTab, cameraFacingMode, startCamera, stopCameraStream]);
 
   useEffect(() => {
-    if (cameraStream && videoRef.current) { videoRef.current.srcObject = cameraStream; videoRef.current.play().catch(() => {}); }
+    if (cameraStream && videoRef.current) {
+      videoRef.current.srcObject = cameraStream;
+      videoRef.current.play().catch(() => {});
+    }
   }, [cameraStream]);
 
   // Switch between front and back cameras
   const handleToggleCameraFacing = () => {
-    const nextFacing = cameraFacingMode === 'environment' ? 'user' : 'environment';
+    const nextFacing =
+      cameraFacingMode === "environment" ? "user" : "environment";
     setCameraFacingMode(nextFacing);
-
   };
 
   // Capture snapshot from video stream
   const capturePhoto = () => {
-    if (!videoRef.current || !videoRef.current.videoWidth || !videoRef.current.videoHeight) { setCameraError('Espera a que la cámara muestre la imagen antes de capturar.'); return; }
+    if (
+      !videoRef.current ||
+      !videoRef.current.videoWidth ||
+      !videoRef.current.videoHeight
+    ) {
+      setCameraError(
+        "Espera a que la cámara muestre la imagen antes de capturar.",
+      );
+      return;
+    }
 
     const video = videoRef.current;
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth || 1280;
     canvas.height = video.videoHeight || 720;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const photoBase64 = canvas.toDataURL('image/jpeg', 0.95);
+    const photoBase64 = canvas.toDataURL("image/jpeg", 0.95);
 
     // Stop video and process image
     stopCameraStream();
-    processImage(photoBase64, 'image/jpeg');
+    setSelectedFilePreview(photoBase64);
+    setActiveTab("upload");
   };
 
   // Resize / optimize image before sending to OCR local to guarantee first-try reading
@@ -180,16 +222,16 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
           height = maxDim;
         }
 
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext("2d");
         if (!ctx) {
           resolve(dataUrl);
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.94));
+        resolve(canvas.toDataURL("image/jpeg", 0.94));
       };
       img.onerror = () => resolve(dataUrl);
       img.src = dataUrl;
@@ -197,9 +239,14 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   };
 
   // Perform extraction on an image base64
-  const processImage = async (imageBase64: string, mimeType: string = 'image/jpeg') => {
+  const processImage = async (
+    imageBase64: string,
+    mimeType: string = "image/jpeg",
+  ) => {
     if (processingRef.current) return;
     processingRef.current = true;
+    const controller = new AbortController();
+    abortRef.current = controller;
     setIsProcessing(true);
     setErrorMessage(null);
     setProgressPercent(15);
@@ -210,33 +257,45 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
       const optimizedBase64 = await optimizeImageIfNeeded(imageBase64);
 
       // 2. Preprocess optical filters (Grayscale, Contrast stretch, Sharpen, Otsu Binarization)
-      setProcessingStatus('Aplicando filtros ópticos: realce de bordes y binarización...');
+      setProcessingStatus(
+        "Aplicando filtros ópticos: realce de bordes y binarización...",
+      );
       setProgressPercent(30);
       const preprocessed = await preprocessDocumentForOCR(optimizedBase64);
       setPreprocessedPreview(preprocessed);
 
       // Select active image based on optical filter
       const imageToScan =
-        opticalFilter === 'binarized'
+        opticalFilter === "binarized"
           ? preprocessed.binarized
-          : opticalFilter === 'original'
-          ? preprocessed.original
-          : preprocessed.enhanced;
+          : opticalFilter === "original"
+            ? preprocessed.original
+            : preprocessed.enhanced;
 
-      setProcessingStatus('Iniciando OCR local (Tesseract spa+eng)...');
-      const result = await extractWithTesseract(imageToScan, (prog, status) => {
-        if (!mountedRef.current) return;
-        setProgressPercent(Math.max(30, prog));
-        setProcessingStatus(status);
-      }, { ...preprocessed, enhanced: imageToScan });
+      setProcessingStatus("Iniciando OCR local (Tesseract spa+eng)...");
+      const result = await extractWithTesseract(
+        imageToScan,
+        (prog, status) => {
+          if (!mountedRef.current) return;
+          setProgressPercent(Math.max(30, prog));
+          setProcessingStatus(status);
+        },
+        { ...preprocessed, enhanced: imageToScan },
+        controller.signal,
+      );
       result.imagePreview = preprocessed.enhanced || optimizedBase64;
-      if (mountedRef.current) {
+      if (mountedRef.current && !controller.signal.aborted) {
         setProgressPercent(100);
-        setProcessingStatus('Lectura OCR completada. Revisa los datos detectados.');
+        setProcessingStatus(
+          "Lectura OCR completada. Revisa los datos detectados.",
+        );
         onExtractionComplete(result);
       }
     } catch (err: any) {
-      if (mountedRef.current) setErrorMessage(`Error en OCR local: ${err.message || 'No se pudo leer el documento. Intenta otra fotografía.'}`);
+      if (mountedRef.current && !controller.signal.aborted)
+        setErrorMessage(
+          `Error en OCR local: ${err.message || "No se pudo leer el documento. Intenta otra fotografía."}`,
+        );
     } finally {
       processingRef.current = false;
       if (mountedRef.current) setIsProcessing(false);
@@ -246,17 +305,29 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   // Handle file input
   const handleFileUpload = (file: File) => {
     if (!file || processingRef.current) return;
-    if (!['image/jpeg', 'image/png', 'image/webp', 'image/bmp'].includes(file.type)) { setErrorMessage('Sube una imagen JPG, PNG, WEBP o BMP. Convierte PDF o HEIC a imagen primero.'); return; }
-    if (file.size > 15 * 1024 * 1024) { setErrorMessage('La imagen debe pesar menos de 15 MB.'); return; }
+    if (
+      !["image/jpeg", "image/png", "image/webp", "image/bmp"].includes(
+        file.type,
+      )
+    ) {
+      setErrorMessage(
+        "Sube una imagen JPG, PNG, WEBP o BMP. Convierte PDF o HEIC a imagen primero.",
+      );
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setErrorMessage("La imagen debe pesar menos de 15 MB.");
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
       const base64 = event.target?.result as string;
       if (base64) {
-        processImage(base64, file.type || 'image/jpeg');
+        setSelectedFilePreview(base64);
       }
     };
-    reader.onerror = () => setErrorMessage('No se pudo leer el archivo.');
+    reader.onerror = () => setErrorMessage("No se pudo leer el archivo.");
     reader.readAsDataURL(file);
   };
 
@@ -297,7 +368,9 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Lectura óptica de caracteres (OCR) sin inventar texto: detecta datos para revisar y guardar en formato JSON para plasmar en tu documento Word
+              Lectura óptica de caracteres (OCR) sin inventar texto: detecta
+              datos para revisar y guardar en formato JSON para plasmar en tu
+              documento Word
             </p>
           </div>
         </div>
@@ -327,11 +400,11 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
             <button
               id="tab-mode-upload"
               type="button"
-              onClick={() => setActiveTab('upload')}
+              onClick={() => setActiveTab("upload")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all border-t border-x ${
-                activeTab === 'upload'
-                  ? 'bg-white text-slate-900 border-slate-200 shadow-xs border-b-white translate-y-[1px]'
-                  : 'bg-transparent text-slate-500 border-transparent hover:text-slate-800'
+                activeTab === "upload"
+                  ? "bg-white text-slate-900 border-slate-200 shadow-xs border-b-white translate-y-[1px]"
+                  : "bg-transparent text-slate-500 border-transparent hover:text-slate-800"
               }`}
             >
               <Upload className="w-4 h-4 text-amber-600" />
@@ -341,11 +414,11 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
             <button
               id="tab-mode-camera"
               type="button"
-              onClick={() => setActiveTab('camera')}
+              onClick={() => setActiveTab("camera")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all border-t border-x ${
-                activeTab === 'camera'
-                  ? 'bg-white text-slate-900 border-slate-200 shadow-xs border-b-white translate-y-[1px]'
-                  : 'bg-transparent text-slate-500 border-transparent hover:text-slate-800'
+                activeTab === "camera"
+                  ? "bg-white text-slate-900 border-slate-200 shadow-xs border-b-white translate-y-[1px]"
+                  : "bg-transparent text-slate-500 border-transparent hover:text-slate-800"
               }`}
             >
               <Camera className="w-4 h-4 text-amber-600" />
@@ -365,7 +438,9 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
           <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3 text-red-700 text-sm">
             <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-semibold">Ocurrió un error al procesar el documento:</p>
+              <p className="font-semibold">
+                Ocurrió un error al procesar el documento:
+              </p>
               <p className="mt-0.5">{errorMessage}</p>
             </div>
             <button
@@ -387,7 +462,9 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
             <h4 className="font-serif font-bold text-lg text-slate-800 mb-1">
               Leyendo y extrayendo datos del pasaporte
             </h4>
-            <p className="text-sm text-slate-500 max-w-md mb-6">{processingStatus}</p>
+            <p className="text-sm text-slate-500 max-w-md mb-6">
+              {processingStatus}
+            </p>
 
             <div className="w-full max-w-md bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200">
               <div
@@ -395,12 +472,20 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <span className="text-xs text-slate-400 mt-2 font-mono">{progressPercent}% completado</span>
+            <span className="text-xs text-slate-400 mt-2 font-mono">
+              {progressPercent}% completado
+            </span>
+            <button
+              className="border rounded p-3 mt-4"
+              onClick={() => abortRef.current?.abort()}
+            >
+              Cancelar lectura
+            </button>
           </div>
         )}
 
         {/* Mode 1: File Upload */}
-        {!isProcessing && activeTab === 'upload' && (
+        {!isProcessing && activeTab === "upload" && (
           <div className="space-y-5">
             <div
               onDragOver={handleDragOver}
@@ -408,8 +493,8 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
               onDrop={handleDrop}
               className={`border-2 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center text-center transition-all ${
                 isDragging
-                  ? 'border-amber-500 bg-amber-50/60 scale-[1.01]'
-                  : 'border-slate-300 hover:border-amber-500 bg-slate-50 hover:bg-amber-50/30'
+                  ? "border-amber-500 bg-amber-50/60 scale-[1.01]"
+                  : "border-slate-300 hover:border-amber-500 bg-slate-50 hover:bg-amber-50/30"
               }`}
             >
               <label
@@ -423,7 +508,27 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                   Arrastra o haz clic para subir la foto del pasaporte o cédula
                 </h4>
                 <p className="text-xs text-slate-500 max-w-md mb-4">
-                  El sistema detectará automáticamente el <span className="font-semibold text-slate-700">nombre completo</span>, <span className="font-semibold text-slate-700">número de documento</span>, <span className="font-semibold text-slate-700">nacionalidad</span>, <span className="font-semibold text-slate-700">fecha de nacimiento</span> y <span className="font-semibold text-slate-700">condición (sexo/edad)</span> para que los revises antes de guardar.
+                  El sistema detectará automáticamente el{" "}
+                  <span className="font-semibold text-slate-700">
+                    nombre completo
+                  </span>
+                  ,{" "}
+                  <span className="font-semibold text-slate-700">
+                    número de documento
+                  </span>
+                  ,{" "}
+                  <span className="font-semibold text-slate-700">
+                    nacionalidad
+                  </span>
+                  ,{" "}
+                  <span className="font-semibold text-slate-700">
+                    fecha de nacimiento
+                  </span>{" "}
+                  y{" "}
+                  <span className="font-semibold text-slate-700">
+                    condición (sexo/edad)
+                  </span>{" "}
+                  para que los revises antes de guardar.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-md hover:bg-slate-800 transition-colors">
@@ -434,7 +539,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                     type="button"
                     onClick={(e) => {
                       e.preventDefault();
-                      setActiveTab('camera');
+                      setActiveTab("camera");
                     }}
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md transition-colors"
                   >
@@ -445,7 +550,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                 <input
                   id="passport-file-input"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/jpg,image/heic"
+                  accept="image/jpeg,image/png,image/webp,image/bmp"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleFileUpload(file);
@@ -455,42 +560,77 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
               </label>
             </div>
 
+            {selectedFilePreview && (
+              <div className="bg-white border rounded-xl p-4 space-y-3">
+                <img
+                  src={selectedFilePreview}
+                  alt="Imagen seleccionada para revisar antes del OCR"
+                  className="max-h-72 mx-auto"
+                />
+                <p className="text-sm">
+                  Comprueba que el documento esté derecho y completo antes de
+                  leerlo.
+                </p>
+                <button
+                  className="border rounded p-2 mr-3"
+                  onClick={async () => {
+                    try {
+                      setSelectedFilePreview(
+                        await rotateImage(selectedFilePreview),
+                      );
+                    } catch (error: any) {
+                      setErrorMessage(error.message);
+                    }
+                  }}
+                >
+                  Girar 90°
+                </button>
+                <button
+                  className="bg-slate-900 text-white rounded p-3"
+                  onClick={() => void processImage(selectedFilePreview)}
+                >
+                  Leer y revisar identidad
+                </button>
+              </div>
+            )}
             {/* Optical Preprocessing Filter Selector */}
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-amber-600" />
-                <span className="text-xs font-bold text-slate-800">Filtro de Preprocesamiento Óptico OCR:</span>
+                <span className="text-xs font-bold text-slate-800">
+                  Filtro de Preprocesamiento Óptico OCR:
+                </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setOpticalFilter('enhanced')}
+                  onClick={() => setOpticalFilter("enhanced")}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    opticalFilter === 'enhanced'
-                      ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                    opticalFilter === "enhanced"
+                      ? "bg-amber-500 text-slate-950 font-bold shadow-xs"
+                      : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
                   }`}
                 >
                   Realce Óptico (Recomendado)
                 </button>
                 <button
                   type="button"
-                  onClick={() => setOpticalFilter('binarized')}
+                  onClick={() => setOpticalFilter("binarized")}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    opticalFilter === 'binarized'
-                      ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                    opticalFilter === "binarized"
+                      ? "bg-amber-500 text-slate-950 font-bold shadow-xs"
+                      : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
                   }`}
                 >
                   Binarización B/N (Alto Contraste Otsu)
                 </button>
                 <button
                   type="button"
-                  onClick={() => setOpticalFilter('original')}
+                  onClick={() => setOpticalFilter("original")}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    opticalFilter === 'original'
-                      ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                    opticalFilter === "original"
+                      ? "bg-amber-500 text-slate-950 font-bold shadow-xs"
+                      : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
                   }`}
                 >
                   Original
@@ -503,22 +643,37 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
-                  <h5 className="text-xs font-bold text-slate-800">Mejora de legibilidad</h5>
-                  <p className="text-[11px] text-slate-500">Optimización de imagen y contraste automático previo al escaneo.</p>
+                  <h5 className="text-xs font-bold text-slate-800">
+                    Mejora de legibilidad
+                  </h5>
+                  <p className="text-[11px] text-slate-500">
+                    Optimización de imagen y contraste automático previo al
+                    escaneo.
+                  </p>
                 </div>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <h5 className="text-xs font-bold text-slate-800">Campos Legales Clave</h5>
-                  <p className="text-[11px] text-slate-500">Extrae (nombre), (numero de identidad), (nacionalidad), (sexo/edad) y fechas.</p>
+                  <h5 className="text-xs font-bold text-slate-800">
+                    Campos Legales Clave
+                  </h5>
+                  <p className="text-[11px] text-slate-500">
+                    Extrae (nombre), (numero de identidad), (nacionalidad),
+                    (sexo/edad) y fechas.
+                  </p>
                 </div>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
                 <ImageIcon className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <div>
-                  <h5 className="text-xs font-bold text-slate-800">Formatos Compatibles</h5>
-                  <p className="text-[11px] text-slate-500">Admite JPG, PNG, WEBP y fotos tomadas desde cualquier teléfono o escáner.</p>
+                  <h5 className="text-xs font-bold text-slate-800">
+                    Formatos Compatibles
+                  </h5>
+                  <p className="text-[11px] text-slate-500">
+                    Admite JPG, PNG, WEBP y fotos tomadas desde cualquier
+                    teléfono o escáner.
+                  </p>
                 </div>
               </div>
             </div>
@@ -526,7 +681,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
         )}
 
         {/* Mode 2: Live Camera Capture */}
-        {!isProcessing && activeTab === 'camera' && (
+        {!isProcessing && activeTab === "camera" && (
           <div className="space-y-4">
             {cameraError ? (
               <div className="p-8 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-4">
@@ -552,7 +707,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActiveTab('upload')}
+                    onClick={() => setActiveTab("upload")}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs"
                   >
                     <Upload className="w-3.5 h-3.5" />
@@ -592,7 +747,8 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                       {/* Guide Text */}
                       <div className="absolute top-3 left-3 right-3 text-center">
                         <span className="text-[11px] bg-slate-900/80 text-amber-300 px-3 py-1 rounded-full font-medium shadow-sm backdrop-blur-xs">
-                          Coloca la página principal del pasaporte dentro del marco
+                          Coloca la página principal del pasaporte dentro del
+                          marco
                         </span>
                       </div>
                     </div>
@@ -626,7 +782,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => setActiveTab('upload')}
+                    onClick={() => setActiveTab("upload")}
                     className="px-4 py-3 rounded-2xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors w-full sm:w-auto text-center"
                   >
                     Volver a Subir Archivo

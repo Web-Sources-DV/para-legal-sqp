@@ -3,6 +3,13 @@ import path from 'path';
 
 async function startServer() {
   const app = express();
+  app.disable('x-powered-by');
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(self), microphone=()');
+    next();
+  });
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   // Increase payload limit for base64 passport images

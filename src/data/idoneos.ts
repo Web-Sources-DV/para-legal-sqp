@@ -88,7 +88,7 @@ export const IDONEOS: Idoneo[] = [
   },
 ];
 
-export const DEFAULT_IDONEO = IDONEOS[0]; // Susana Sabalza
+export const DEFAULT_IDONEO = IDONEOS[0]; // Antony Talla
 
 export function getIdoneoByName(name?: string | null): Idoneo {
   if (!name) return DEFAULT_IDONEO;
@@ -120,8 +120,16 @@ export function customizeTemplateForIdoneo(template: Template, idoneo: Idoneo): 
 
   return {
     ...template,
+    sourceTemplateId: template.sourceTemplateId || template.id,
     id: `${template.id}-${idoneo.id}`,
     idoneo: idoneo.name,
     placeholderDefs: updatedDefs,
   };
+}
+
+export function updateLawyers(members: Idoneo[]) {
+  if (!members.length) return;
+  const defaultMember = members.find(member => member.id === DEFAULT_IDONEO.id);
+  if (defaultMember) Object.assign(DEFAULT_IDONEO, defaultMember);
+  IDONEOS.splice(0, IDONEOS.length, ...members);
 }

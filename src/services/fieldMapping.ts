@@ -47,7 +47,8 @@ export function fieldDefault(key: string, client?: Client | null, lawyer?: Idone
   if (field === 'lawyerCedula') return lawyer?.cedula || '';
   if (field === 'lawyerIdoneidad') return lawyer?.idoneidad || '';
   if (field === 'lawyerColegiado') return lawyer?.colegiado || '';
-  if (field === 'date') return new Date().toLocaleDateString('es-PA', { day: 'numeric', month: 'long', year: 'numeric' });
+  if (field === 'date') return new Date().toLocaleDateString('es-PA', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Panama' });
   if (field === 'passportNumber') return client?.passportNumber || client?.personalNumber || '';
-  return client && typeof client[field] === 'string' ? client[field] : '';
+  const value = client?.[field as keyof Client];
+  return typeof value === 'string' ? value : '';
 }

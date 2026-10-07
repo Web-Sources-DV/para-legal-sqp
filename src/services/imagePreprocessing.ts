@@ -227,3 +227,14 @@ function applySharpen(
 
   return dst;
 }
+
+export async function rotateImage(dataUri: string): Promise<string> {
+  const image = await loadImage(dataUri);
+  const canvas = document.createElement('canvas');
+  canvas.width = image.naturalHeight; canvas.height = image.naturalWidth;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('No se pudo girar la imagen.');
+  context.translate(canvas.width, 0); context.rotate(Math.PI / 2);
+  context.drawImage(image, 0, 0);
+  return canvas.toDataURL('image/jpeg', 0.94);
+}
