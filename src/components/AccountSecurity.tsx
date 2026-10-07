@@ -34,7 +34,7 @@ export function AccountSecurity() {
     <details className="bg-slate-800 rounded p-3 mb-3">
       <summary>Seguridad de la cuenta · verificación en dos pasos</summary>
       <p className="text-xs my-3">
-        La identidad y sus factores se comparten con SQP-Financing. Conserva
+        Esta identidad pertenece al proyecto de Para Legal. Conserva
         acceso a tu aplicación autenticadora y consulta al responsable si
         pierdes el dispositivo.
       </p>
