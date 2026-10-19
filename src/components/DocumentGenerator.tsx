@@ -63,7 +63,7 @@ interface DocumentGeneratorProps {
 }
 
 export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
-  clients,
+  clients: clientList,
   templates,
   selectedClient: initialClient,
   selectedTemplate: initialTemplate,
@@ -71,6 +71,14 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   onDocumentGenerated,
   onOpenTemplatesTab,
 }) => {
+  const clients = React.useMemo(
+    () =>
+      initialClient &&
+      !clientList.some((client) => client.id === initialClient.id)
+        ? [initialClient, ...clientList]
+        : clientList,
+    [clientList, initialClient],
+  );
   const templateBaseId = (template?: Template | null) => {
     if (!template) return "";
     return (
@@ -100,7 +108,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
   const [sourceRevision, setSourceRevision] = useState("");
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [dirty, setDirty] = useState(false);
-  useUnsavedChanges(dirty);
+
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [customFileName, setCustomFileName] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -301,21 +309,24 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
     null,
   );
   const generating = useRef(false);
+  useUnsavedChanges(dirty || isGenerating || !!pendingDocument.current);
 
   const handleGenerate = async () => {
-    if (!activeTemplate) {
+    if (!activeTemplate && !pendingDocument.current) {
       setErrorMessage("Por favor selecciona una plantilla válida.");
       return;
     }
 
     if (generating.current) return;
-    if (!activeClient) {
+    if (!activeClient && !pendingDocument.current) {
       setErrorMessage("Selecciona un cliente revisado antes de generar.");
       return;
     }
-    const missing = activeTemplate.placeholders.filter(
-      (key) => !formValues[key]?.trim(),
-    );
+    const missing = pendingDocument.current
+      ? []
+      : (activeTemplate?.placeholders || []).filter(
+          (key) => !formValues[key]?.trim(),
+        );
     if (missing.length) {
       setErrorMessage(`Completa los campos: ${missing.join(", ")}`);
       return;
@@ -338,6 +349,8 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         onDocumentGenerated?.(pending.doc);
         return;
       }
+      if (!activeTemplate || !activeClient)
+        throw new Error("Selecciona un cliente y una plantilla válidos.");
       const signatureOptions: SignatureLayoutOptions = {
         enabled: sigEnabled,
         alignment: sigAlignment,
@@ -361,7 +374,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
       );
 
       const newDoc: GeneratedDocument = {
-        id: `doc-${crypto.randomUUID()}`,
+        id: crypto.randomUUID(),
         title: `${activeTemplate.name} - ${activeIdoneo.name} (${activeClient ? activeClient.fullName : "Cliente"})`,
         fileName: result.fileName,
         templateId: templateBaseId(activeTemplate),
@@ -443,6 +456,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                 <button
                   key={idoneo.id}
                   type="button"
+                  disabled={isGenerating || !!pendingDocument.current}
                   onClick={() => setSelectedIdoneoId(idoneo.id)}
                   className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
                     isSelected
@@ -492,6 +506,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
 
             <select
               id="select-client-for-doc"
+              disabled={isGenerating || !!pendingDocument.current}
               value={selectedClientId}
               onChange={(e) => {
                 setSelectedClientId(e.target.value);
@@ -553,6 +568,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
 
             <select
               id="select-template-for-doc"
+              disabled={isGenerating || !!pendingDocument.current}
               value={selectedTemplateId}
               onChange={(e) => setSelectedTemplateId(e.target.value)}
               className="w-full text-sm font-semibold p-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-sm"
@@ -835,6 +851,20 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
           <span>{errorMessage}</span>
         </div>
+      )}
+
+      {pendingDocument.current && !isGenerating && (
+        <button
+          type="button"
+          className="border rounded-lg px-3 py-2 text-sm"
+          onClick={() => {
+            pendingDocument.current = null;
+            setErrorMessage(null);
+            setDirty(true);
+          }}
+        >
+          Descartar archivo pendiente y corregir datos
+        </button>
       )}
 
       {/* Form Fields Editor for all Placeholders in Active Template */}

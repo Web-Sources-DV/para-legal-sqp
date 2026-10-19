@@ -1,3 +1,4 @@
+import { normalizeSearchText as normalizeSearch } from "./search";
 import { updateLawyers } from "../data/idoneos";
 import type { Idoneo } from "../types";
 import type {
@@ -7,7 +8,6 @@ import type {
   DatabaseStats,
 } from "../types";
 import { publicSupabase as supabase } from "./publicSupabaseClient";
-
 
 import {
   validateClient,
@@ -55,6 +55,44 @@ const syncListeners = new Set<(state: CloudSyncState) => void>();
 let generation = 0;
 let cursor: number | null = null;
 let documentAfter = "";
+let documentQuery = "";
+let documentRequest = 0;
+let documentMatches: GeneratedDocument[] | null = null;
+const matchesDocument = (document: GeneratedDocument, query: string) =>
+  [
+    document.title,
+    document.clientName,
+    document.templateName,
+    document.passportNumber,
+  ].some((value) =>
+    normalizeSearch(value || "").includes(normalizeSearch(query)),
+  );
+async function scanDocumentMatches(query: string, request: number) {
+  const matches: GeneratedDocument[] = [];
+  let after = "";
+  while (request === documentRequest) {
+    const page = await rpc<Row[]>("pl_list_entities", {
+      entity: "documents",
+      after_id: after,
+      page_size: 250,
+      query: "",
+    });
+    if (request !== documentRequest) return [];
+    matches.push(
+      ...page
+        .map((row) => decode<GeneratedDocument>(row))
+        .filter((document) => matchesDocument(document, query)),
+    );
+    if (page.length < 250) break;
+    const next = page.at(-1)?.sort_key;
+    if (!next || next === after)
+      throw new Error(
+        "No se pudo avanzar en el historial. Reintenta la búsqueda.",
+      );
+    after = next;
+  }
+  return matches;
+}
 export function getClients() {
   return clients;
 }
@@ -106,7 +144,10 @@ async function rpc<T>(
   name: string,
   args: Record<string, unknown> = {},
 ): Promise<T> {
-  const { data, error } = await supabase.rpc(name.replace(/^pl_/, "pl_public_"), args);
+  const { data, error } = await supabase.rpc(
+    name.replace(/^pl_/, "pl_public_"),
+    args,
+  );
   if (error) throw error;
   return data as T;
 }
@@ -154,6 +195,7 @@ function decode<T>(row: Row): T {
 }
 async function rows<T>(entity: Entity, query = "", all = true): Promise<T[]> {
   const results: T[] = [];
+  const request = documentRequest;
   let after = "";
   do {
     const page = await rpc<Row[]>("pl_list_entities", {
@@ -163,24 +205,84 @@ async function rows<T>(entity: Entity, query = "", all = true): Promise<T[]> {
       query,
     });
     results.push(...page.map((row) => decode<T>(row)));
-    if (entity === "documents")
+    if (entity === "documents" && request === documentRequest && !documentQuery)
       documentAfter = page.at(-1)?.sort_key || page.at(-1)?.id || "";
     if (!all || page.length < 100) return results;
-    after = page.at(-1)!.id;
+    const next = page.at(-1)!.id;
+    if (next === after)
+      throw new Error("La paginación no avanzó. Reintenta la carga de datos.");
+    after = next;
   } while (true);
 }
+export async function getClientDocuments(
+  clientId: string,
+  signal?: AbortSignal,
+): Promise<GeneratedDocument[]> {
+  const documents: GeneratedDocument[] = [];
+  let after = "";
+  while (true) {
+    if (signal?.aborted)
+      throw new DOMException("Consulta cancelada", "AbortError");
+    const page = await rpc<Row[]>("pl_list_entities", {
+      entity: "documents",
+      after_id: after,
+      page_size: 250,
+      query: "",
+    });
+    if (signal?.aborted)
+      throw new DOMException("Consulta cancelada", "AbortError");
+    documents.push(
+      ...page
+        .filter((row) => row.payload.clientId === clientId)
+        .map((row) => decode<GeneratedDocument>(row)),
+    );
+    if (page.length < 250) return documents;
+    const next = page.at(-1)?.sort_key;
+    if (!next || next === after)
+      throw new Error(
+        "No se pudo avanzar en el historial del cliente. Reintenta.",
+      );
+    after = next;
+  }
+}
 export async function searchClients(query: string) {
-  return rows<Client>("clients", query, false);
+  const remote = await rows<Client>("clients", query, false);
+  const known = new Map(
+    clients
+      .filter((client) =>
+        [
+          client.fullName,
+          client.passportNumber,
+          client.email,
+          client.phone,
+        ].some((value) =>
+          normalizeSearch(value || "").includes(normalizeSearch(query)),
+        ),
+      )
+      .map((client) => [client.id, client]),
+  );
+  remote.forEach((client) => known.set(client.id, client));
+  return [...known.values()];
 }
 export async function loadMoreDocuments(query = "") {
+  if (normalizeSearch(query) !== normalizeSearch(documentQuery)) return false;
+  if (documentMatches) {
+    const limit = documents.length + 50;
+    documents = documentMatches.slice(0, limit);
+    notify();
+    return limit < documentMatches.length;
+  }
+  if (!documentAfter) return false;
+  const request = documentRequest;
   const page = await rpc<Row[]>("pl_list_entities", {
     entity: "documents",
     after_id: documentAfter,
     page_size: 50,
-    query,
+    query: "",
   });
-  documentAfter = page.at(-1)?.sort_key || page.at(-1)?.id || documentAfter;
-  const known = new Set(documents.map((doc) => doc.id));
+  if (request !== documentRequest) return false;
+  documentAfter = page.at(-1)?.sort_key || page.at(-1)?.id || "";
+  const known = new Set(documents.map((document) => document.id));
   documents = [
     ...documents,
     ...page
@@ -191,11 +293,18 @@ export async function loadMoreDocuments(query = "") {
   return page.length === 50;
 }
 export async function searchDocuments(query: string) {
-  const result = await rows<GeneratedDocument>("documents", query, false);
-  documents = result;
+  const request = ++documentRequest;
+  documentQuery = query.trim();
+  const result = documentQuery
+    ? await scanDocumentMatches(documentQuery, request)
+    : await rows<GeneratedDocument>("documents", "", false);
+  if (request !== documentRequest) return documents;
+  documentMatches = documentQuery ? result : null;
+  documents = result.slice(0, 50);
   notify();
-  return result;
+  return documents;
 }
+
 function merge<T extends { id: string }>(
   current: T[],
   updates: T[],
@@ -208,19 +317,22 @@ function merge<T extends { id: string }>(
 }
 async function reload(full = false) {
   const ticket = ++generation;
+  const historyRequest = documentRequest;
   syncState = { ...syncState, isSyncing: true };
   notify();
   try {
     let nextClients = clients,
       nextTemplates = templates,
-      nextDocuments = documents,
+      nextDocuments = documentMatches || documents,
       nextCursor = cursor;
     if (full || cursor === null) {
       nextCursor = await rpc<number>("pl_sync_cursor");
       [nextClients, nextTemplates, nextDocuments] = await Promise.all([
         rows<Client>("clients"),
         rows<Template>("templates"),
-        rows<GeneratedDocument>("documents", "", false),
+        documentQuery
+          ? scanDocumentMatches(documentQuery, historyRequest)
+          : rows<GeneratedDocument>("documents", "", false),
       ]);
     } else {
       type Change = {
@@ -248,8 +360,7 @@ async function reload(full = false) {
             nextClients = merge(nextClients, updates, removed);
           else if (entity === "templates")
             nextTemplates = merge(nextTemplates, updates, removed);
-          else
-            nextDocuments = merge(nextDocuments, updates, removed);
+          else nextDocuments = merge(nextDocuments, updates, removed);
         }
         if (changes.length) nextCursor = changes.at(-1)!.cursor;
       } while (changes.length === 1000);
@@ -264,7 +375,17 @@ async function reload(full = false) {
     if (Array.isArray(staff)) updateLawyers(staff);
     clients = nextClients;
     templates = nextTemplates;
-    documents = nextDocuments.sort((a, b) => b.generatedAt.localeCompare(a.generatedAt));
+    if (historyRequest === documentRequest) {
+      const sorted = nextDocuments.sort((a, b) =>
+        b.generatedAt.localeCompare(a.generatedAt),
+      );
+      documentMatches = documentQuery
+        ? sorted.filter((document) => matchesDocument(document, documentQuery))
+        : null;
+      documents = documentMatches
+        ? documentMatches.slice(0, Math.max(50, documents.length))
+        : sorted;
+    }
     cursor = nextCursor;
     syncState = {
       ...syncState,
@@ -292,6 +413,10 @@ async function reload(full = false) {
   }
 }
 export function initializeCloudSync() {
+  documentRequest++;
+  documentQuery = "";
+  documentMatches = null;
+  documentAfter = "";
   clients = [];
   templates = [];
   documents = [];
@@ -354,6 +479,17 @@ export async function saveClient(client: Client) {
     document: payload,
     expected_revision: client.revision ?? null,
   });
+  const previous = clients.findIndex((item) => item.id === payload.id);
+  clients =
+    previous < 0
+      ? [payload, ...clients]
+      : clients.map((item) => (item.id === payload.id ? payload : item));
+  if (previous < 0)
+    syncState = {
+      ...syncState,
+      cloudClientsCount: syncState.cloudClientsCount + 1,
+    };
+  notify();
   await refreshAfterWrite();
   return payload;
 }
@@ -373,6 +509,18 @@ export async function saveTemplate(template: Template) {
     document: payload,
     expected_revision: template.revision ?? null,
   });
+  payload.approved = true;
+  const previous = templates.findIndex((item) => item.id === payload.id);
+  templates =
+    previous < 0
+      ? [payload, ...templates]
+      : templates.map((item) => (item.id === payload.id ? payload : item));
+  if (previous < 0)
+    syncState = {
+      ...syncState,
+      cloudTemplatesCount: syncState.cloudTemplatesCount + 1,
+    };
+  notify();
   await refreshAfterWrite();
   return payload;
 }
@@ -422,9 +570,24 @@ export async function updateDocumentLog(doc: GeneratedDocument) {
   });
   await refreshAfterWrite();
 }
-export async function exportFullDatabaseJson(): Promise<string> { throw new Error("Los respaldos se administran fuera de la aplicación pública."); }
-export async function importDatabaseJson(_json: string) { return { success: false, message: "La restauración no está disponible en la aplicación pública." }; }
-export async function resetDatabaseToDefaults() { throw new Error("El vaciado global no está disponible."); }
+export async function exportFullDatabaseJson(): Promise<string> {
+  throw new Error(
+    "Los respaldos se administran fuera de la aplicación pública.",
+  );
+}
+export async function importDatabaseJson(_json: string) {
+  return {
+    success: false,
+    message: "La restauración no está disponible en la aplicación pública.",
+  };
+}
+export async function resetDatabaseToDefaults() {
+  throw new Error("El vaciado global no está disponible.");
+}
 export const clearEntireDatabase = resetDatabaseToDefaults;
-export async function downloadLegacyHtml(): Promise<string> { throw new Error("La versión HTML anterior fue retirada."); }
-export async function replaceLegacyHtml(_content: string) { throw new Error("La versión HTML anterior fue retirada."); }
+export async function downloadLegacyHtml(): Promise<string> {
+  throw new Error("La versión HTML anterior fue retirada.");
+}
+export async function replaceLegacyHtml(_content: string) {
+  throw new Error("La versión HTML anterior fue retirada.");
+}

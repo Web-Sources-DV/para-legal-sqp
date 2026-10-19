@@ -175,3 +175,23 @@ test("field names inside human names do not truncate the value", () => {
   );
   assert.equal(value.fullName, "ANNABELLE SEXTON");
 });
+
+test("front and back recognize the same identity number despite printed punctuation", () => {
+  const front: ExtractionResult = {
+    firstName: "DEMO",
+    lastName: "FIXTURE",
+    fullName: "DEMO FIXTURE",
+    passportNumber: "8-123-4567",
+    birthDate: "2000-01-01",
+    expiryDate: "",
+    sex: "F",
+    nationality: "",
+    issuingCountry: "PANAMÁ",
+    method: "tesseract",
+  };
+  assert.equal(
+    mergeIdentityReadings(front, { ...front, passportNumber: "81234567" })
+      .passportNumber,
+    "8-123-4567",
+  );
+});

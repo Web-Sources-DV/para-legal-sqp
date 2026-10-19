@@ -23,7 +23,9 @@ export class OcrWorkerSession {
       throw new DOMException("Lectura cancelada", "AbortError");
     this.busy = true;
     if (this.idle) clearTimeout(this.idle);
-    const promise = (this.worker ||= this.factory());
+    const promise = (this.worker ||= Promise.resolve().then(() =>
+      this.factory(),
+    ));
     let cancelled = false;
     let rejectAbort: (error: Error) => void = () => {};
     const interrupted = new Promise<never>((_, reject) => {
@@ -52,7 +54,10 @@ export class OcrWorkerSession {
       signal?.removeEventListener("abort", abort);
       this.busy = false;
       if (this.worker)
-        this.idle = setTimeout(() => void this.dispose(), this.idleMs);
+        this.idle = setTimeout(
+          () => void this.dispose().catch(() => {}),
+          this.idleMs,
+        );
     }
   }
   async dispose() {
@@ -95,7 +100,7 @@ let alternate: { language: OcrLanguage; session: OcrWorkerSession } | null =
 export function getOcrSession(language: OcrLanguage) {
   if (language === "spa+eng") return ocrWorkerSession;
   if (alternate?.language !== language) {
-    void alternate?.session.dispose();
+    void alternate?.session.dispose().catch(() => {});
     alternate = { language, session: makeSession(language) };
   }
   return alternate.session;

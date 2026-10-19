@@ -45,3 +45,23 @@ test("cancelling a stalled recognition rejects immediately and terminates the wo
   assert.equal(terminated, 1);
   await session.dispose();
 });
+
+test("a synchronous OCR factory failure does not lock later scans", async () => {
+  let calls = 0;
+  const session = new OcrWorkerSession(() => {
+    if (++calls === 1) throw new Error("Model initialization failed");
+    return Promise.resolve({
+      recognize: async () => ({ data: { text: "OK", confidence: 99 } }),
+      terminate: async () => {},
+    });
+  });
+  await assert.rejects(
+    session.run(async (worker) => worker.recognize("image")),
+    /initialization failed/,
+  );
+  assert.equal(
+    (await session.run((worker) => worker.recognize("image"))).data.text,
+    "OK",
+  );
+  await session.dispose();
+});

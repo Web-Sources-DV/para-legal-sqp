@@ -26,7 +26,7 @@ async function startServer() {
   });
 
   // The legacy download is available only through authenticated Supabase access.
-  app.get('/sqp-para-legal.html', (_req, res) => { res.status(404).send('Accede desde la aplicación con una cuenta autorizada.'); });
+  app.get('/sqp-para-legal.html', (_req, res) => { res.status(404).send('Esta versión HTML fue retirada. Abre la aplicación principal.'); });
 
   // Vite development middleware or static production serving
   if (process.env.NODE_ENV !== 'production') {

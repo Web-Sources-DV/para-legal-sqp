@@ -121,6 +121,7 @@ function extractParagraphsFromWordXml(xml: string): string[] {
  * - HTML/XML style: <nombre>, <numero_pasaporte>
  */
 function validateWordArchive(zip: PizZip) {
+  if (!zip.file('word/document.xml')) throw new Error('El archivo no contiene el documento principal de Word. Selecciona un .docx válido.');
   const entries = Object.entries(zip.files);
   if (entries.length > 1000) throw new Error('La plantilla contiene demasiadas partes.');
   let total = 0;

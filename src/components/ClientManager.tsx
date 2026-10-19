@@ -1,5 +1,7 @@
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import { normalizeSearchText } from "../services/search";
 import { evaluateIdentityDocument } from "../services/identityStatus";
-import { searchClients } from "../services/storageService";
+import { searchClients, getClientDocuments } from "../services/storageService";
 import { useDialog } from "../hooks/useDialog";
 import React, { useState, useEffect } from "react";
 import {
@@ -42,6 +44,8 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
   onGenerateForClient,
   onScanPassportForClient,
 }) => {
+  const [clientDirty, setClientDirty] = useState(false);
+  useUnsavedChanges(clientDirty);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,6 +57,9 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
   const [isNewClientModalOpen, setIsNewClientModalOpen] =
     useState<boolean>(false);
 
+  useEffect(() => {
+    if (!isNewClientModalOpen) setClientDirty(false);
+  }, [isNewClientModalOpen]);
   useDialog(isNewClientModalOpen || !!viewingClient, () => {
     if (!saving) {
       setIsNewClientModalOpen(false);
@@ -60,9 +67,39 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
     }
   });
 
+  const [clientHistory, setClientHistory] = useState<{
+    id: string;
+    documents: GeneratedDocument[];
+  } | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  useEffect(() => {
+    if (!viewingClient || !canViewHistory) return;
+    const id = viewingClient.id;
+    const controller = new AbortController();
+    setHistoryLoading(true);
+    setHistoryError("");
+    void getClientDocuments(id, controller.signal)
+      .then((documents) => {
+        if (!controller.signal.aborted) setClientHistory({ id, documents });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setHistoryError(error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setHistoryLoading(false);
+      });
+    return () => controller.abort();
+  }, [viewingClient?.id, canViewHistory]);
+  const visibleHistory =
+    clientHistory?.id === viewingClient?.id
+      ? clientHistory?.documents || []
+      : documents.filter((document) => document.clientId === viewingClient?.id);
   const [results, setResults] = useState<Client[] | null>(null);
   const [searching, setSearching] = useState(false);
   useEffect(() => {
+    setSearching(false);
+    setSaveError("");
     if (!searchTerm.trim()) {
       setResults(null);
       return;
@@ -86,13 +123,27 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
       clearTimeout(timer);
     };
   }, [searchTerm]);
-  // Filter clients
-  const filteredClients = (results || clients).filter((c) => {
+  // Keep fresh saved clients visible even when a search response was based on older metadata.
+  const candidates = new Map(clients.map((client) => [client.id, client]));
+  results?.forEach((client) => {
+    const current = candidates.get(client.id);
+    if (!current || (client.revision ?? 0) > (current.revision ?? 0))
+      candidates.set(client.id, client);
+  });
+  const filteredClients = [...candidates.values()].filter((c) => {
     const matchesSearch =
-      c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.passportNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (c.phone && c.phone.includes(searchTerm));
+      normalizeSearchText(c.fullName).includes(
+        normalizeSearchText(searchTerm),
+      ) ||
+      normalizeSearchText(c.passportNumber).includes(
+        normalizeSearchText(searchTerm),
+      ) ||
+      (c.email &&
+        normalizeSearchText(c.email).includes(
+          normalizeSearchText(searchTerm),
+        )) ||
+      (c.phone &&
+        normalizeSearchText(c.phone).includes(normalizeSearchText(searchTerm)));
 
     const matchesNat =
       selectedNationality === "all" ||
@@ -165,6 +216,9 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
         alert(error.message || "No se pudo eliminar el cliente.");
         return;
       }
+      setResults(
+        (previous) => previous?.filter((client) => client.id !== id) || null,
+      );
       onClientsChange();
       if (viewingClient?.id === id) setViewingClient(null);
     }
@@ -328,7 +382,14 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                       </span>
                       {client.expiryDate && (
                         <div className="text-[10px] text-slate-400 mt-1">
-                          {evaluateIdentityDocument(client.birthDate,client.expiryDate,client.sex).expiryStatus==='vencido'?'⚠ Vencido:':'Vence:'} {client.expiryDate}
+                          {evaluateIdentityDocument(
+                            client.birthDate,
+                            client.expiryDate,
+                            client.sex,
+                          ).expiryStatus === "vencido"
+                            ? "⚠ Vencido:"
+                            : "Vence:"}{" "}
+                          {client.expiryDate}
                         </div>
                       )}
                     </td>
@@ -428,6 +489,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                   : "Registrar Nuevo Cliente"}
               </h4>
               <button
+                disabled={saving}
                 onClick={() => {
                   setEditingClient(null);
                   setIsNewClientModalOpen(false);
@@ -440,8 +502,17 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
 
             <form
               onSubmit={handleSaveModal}
+              onChange={() => setClientDirty(true)}
               className="p-6 overflow-y-auto space-y-4 flex-1"
             >
+              {saveError && (
+                <p
+                  role="alert"
+                  className="bg-red-50 text-red-800 p-3 rounded-lg"
+                >
+                  {saveError}
+                </p>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
@@ -629,6 +700,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
               <div className="border-t border-slate-200 pt-4 flex justify-end gap-3">
                 <button
                   type="button"
+                  disabled={saving}
                   onClick={() => {
                     setEditingClient(null);
                     setIsNewClientModalOpen(false);
@@ -707,7 +779,13 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                     Sexo
                   </span>
                   <span className="font-bold text-slate-900">
-                    {viewingClient.sex === "M" ? "Masculino" : "Femenino"}
+                    {viewingClient.sex === "M"
+                      ? "Masculino"
+                      : viewingClient.sex === "F"
+                        ? "Femenino"
+                        : viewingClient.sex === "X"
+                          ? "Otro / no especificado"
+                          : "Sin confirmar"}
                   </span>
                 </div>
                 <div>
@@ -766,41 +844,47 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                   <div className="border-t border-slate-100 pt-4">
                     <h5 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">
                       Historial de Documentos Generados para este Cliente (
-                      {
-                        documents.filter((d) => d.clientId === viewingClient.id)
-                          .length
-                      }
-                      )
+                      {visibleHistory.length})
                     </h5>
-                    {documents.filter((d) => d.clientId === viewingClient.id)
-                      .length === 0 ? (
+                    {historyLoading && (
+                      <p role="status">Cargando historial completo…</p>
+                    )}
+                    {historyError && (
+                      <p role="alert" className="text-red-700">
+                        {historyError}
+                      </p>
+                    )}
+                    {visibleHistory.length === 0 ? (
                       <p className="text-slate-400 italic">
-                        No se han generado documentos aún para este cliente.
+                        {historyLoading
+                          ? "Buscando documentos del cliente…"
+                          : historyError
+                            ? "No se pudo confirmar el historial completo."
+                            : "No se han generado documentos aún para este cliente."}
                       </p>
                     ) : (
                       <div className="space-y-2">
-                        {documents
-                          .filter((d) => d.clientId === viewingClient.id)
-                          .map((doc) => (
-                            <div
-                              key={doc.id}
-                              className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between"
-                            >
-                              <div>
-                                <span className="font-semibold text-slate-900">
-                                  {doc.templateName}
-                                </span>
-                                <div className="text-[10px] text-slate-400 font-mono">
-                                  {doc.fileName}
-                                </div>
-                              </div>
-                              <span className="text-[10px] text-slate-500 font-mono">
-                                {new Date(doc.generatedAt).toLocaleDateString(
-                                  "es-ES",
-                                )}
+                        {visibleHistory.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between"
+                          >
+                            <div>
+                              <span className="font-semibold text-slate-900">
+                                {doc.templateName}
                               </span>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                {doc.fileName}
+                              </div>
                             </div>
-                          ))}
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              {new Date(doc.generatedAt).toLocaleDateString(
+                                "es-PA",
+                                { timeZone: "America/Panama" },
+                              )}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
