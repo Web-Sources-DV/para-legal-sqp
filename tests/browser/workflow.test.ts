@@ -104,7 +104,10 @@ test("public browser access, edits across refresh, stable archive retry and actu
         uploads++;
         result = { Key: "test" };
       } else if (url.pathname.includes("/rpc/")) {
-        const name = url.pathname.split("/").at(-1)?.replace("pl_public_", "pl_"),
+        const name = url.pathname
+            .split("/")
+            .at(-1)
+            ?.replace("pl_public_", "pl_"),
           args = request.postDataJSON();
         if (name === "pl_sync_cursor") result = 0;
         else if (name === "pl_entity_counts")
@@ -177,9 +180,14 @@ test("public browser access, edits across refresh, stable archive retry and actu
   );
   try {
     await page.goto(process.env.PL_BROWSER_URL!);
-    assert.equal(await page.getByLabel("Correo", {exact:true}).count(), 0);
+    assert.equal(await page.getByLabel("Correo", { exact: true }).count(), 0);
     assert.equal(authRequests, 0);
-    for (const selector of ['#btn-sign-out','#nav-tab-users','#nav-tab-database']) assert.equal(await page.locator(selector).count(), 0);
+    for (const selector of [
+      "#btn-sign-out",
+      "#nav-tab-users",
+      "#nav-tab-database",
+    ])
+      assert.equal(await page.locator(selector).count(), 0);
     await page.locator("#nav-tab-generator").click();
     await page.getByLabel("Nombre", { exact: true }).fill("CORRECTED NAME");
     modified = true;
@@ -219,7 +227,12 @@ test("public browser access, edits across refresh, stable archive retry and actu
     assert.equal(await (await repeated).failure(), null);
     assert.equal(archiveAttempts, 2);
     await page.locator("#nav-tab-manual").click();
-    for (const name of [/Versión HTML anterior/i, /Cerrar sesi[oó]n/i, /Base de Datos/i, /^Usuarios$/i]) {
+    for (const name of [
+      /Versión HTML anterior/i,
+      /Cerrar sesi[oó]n/i,
+      /Base de Datos/i,
+      /^Usuarios$/i,
+    ]) {
       assert.equal(await page.getByRole("button", { name }).count(), 0);
     }
     assert.equal(authRequests, 0);
@@ -233,6 +246,97 @@ test("public browser access, edits across refresh, stable archive retry and actu
     throw error;
   } finally {
     await context.close();
+    await browser.close();
+  }
+});
+
+test("review can save then continue with the saved revision, and displays retry errors beside actions", async () => {
+  const browser = await chromium.launch({
+    executablePath: existsSync("/usr/bin/chromium")
+      ? "/usr/bin/chromium"
+      : undefined,
+    args: ["--no-sandbox"],
+  });
+  try {
+    const page = await browser.newPage();
+    const writes: {
+      document: { id: string };
+      expected_revision: number | null;
+    }[] = [];
+    let failNext = false;
+    await page.route(
+      "https://fipcnxfxxngdjunrlbat.supabase.co/**",
+      async (route) => {
+        const name = new URL(route.request().url()).pathname.split("/").at(-1);
+        let data: unknown = [];
+        let status = 200;
+        if (name === "pl_public_sync_cursor") data = 0;
+        if (name === "pl_public_entity_counts")
+          data = { clients: 0, templates: 0, documents: 0 };
+        if (name === "pl_public_save_entity") {
+          const args = route.request().postDataJSON();
+          writes.push(args);
+          if (failNext) {
+            status = 503;
+            data = { message: "Fallo temporal de prueba" };
+            failNext = false;
+          } else if (writes.length > 1 && args.expected_revision !== 1) {
+            status = 409;
+            data = { code: "23505", message: "duplicate key" };
+          } else data = writes.length === 1 ? 1 : 2;
+        }
+        await route.fulfill({
+          status,
+          contentType: "application/json",
+          body: JSON.stringify(data),
+        });
+      },
+    );
+    page.on("dialog", (dialog) => dialog.accept());
+    await page.goto(process.env.PL_BROWSER_URL!);
+    await page.getByRole("button", { name: /Ingreso Manual Rápido/ }).click();
+    await page.getByPlaceholder("Ej. CARLOS ANDRÉS").fill("PRUEBA");
+    await page.getByPlaceholder("Ej. RESTREPO GÓMEZ").fill("FLUJO");
+    await page.getByPlaceholder("Ej. 8-765-4321 o PA1234567").fill("FLOW0001");
+    const confirm = page.getByRole("checkbox", { name: /He revisado nombre/ });
+    assert.equal(
+      await page.locator("#btn-confirm-and-generate").isEnabled(),
+      false,
+    );
+    await confirm.check();
+    await page.locator("#btn-save-client-only").click();
+    await page
+      .getByRole("radio", { name: /Actualizar Cliente Existente/ })
+      .waitFor();
+    await page.waitForFunction(() =>
+      document
+        .querySelector<HTMLInputElement>('input[name="assocMode"]:checked')
+        ?.parentElement?.textContent?.includes("Actualizar"),
+    );
+    failNext = true;
+    await page.locator("#btn-confirm-and-generate").click();
+    const error = page
+      .getByRole("alert")
+      .filter({ hasText: "Fallo temporal de prueba" });
+    await error.waitFor();
+    assert.equal(
+      await error.evaluate((element) => document.activeElement === element),
+      true,
+    );
+    assert.equal(
+      await page.getByPlaceholder("Ej. CARLOS ANDRÉS").inputValue(),
+      "PRUEBA",
+    );
+    await page.locator("#btn-confirm-and-generate").click();
+    await page
+      .getByText("Cliente seleccionado para este documento:", { exact: true })
+      .waitFor();
+    assert.equal(writes.length, 3);
+    assert.equal(writes[0].expected_revision, null);
+    assert.equal(writes[1].expected_revision, 1);
+    assert.equal(writes[2].expected_revision, 1);
+    assert.equal(writes[0].document.id, writes[2].document.id);
+  } finally {
     await browser.close();
   }
 });
