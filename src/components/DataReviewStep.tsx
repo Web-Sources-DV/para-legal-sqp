@@ -65,7 +65,10 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
 
   const [newClientId] = useState(() => `cli-${crypto.randomUUID()}`);
   const [retainImage, setRetainImage] = useState(false);
-  const [dirty, setDirty] = useState(false);
+  const [dirty, setDirty] = useState(
+    Boolean(extraction.fullName || extraction.passportNumber) &&
+      !selectedClient,
+  );
   useUnsavedChanges(dirty);
   const [saving, setSaving] = useState(false);
   const [identityConfirmed, setIdentityConfirmed] = useState(false);

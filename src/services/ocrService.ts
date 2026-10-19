@@ -313,7 +313,7 @@ export async function extractWithTesseract(
   const preprocessed = preparedImages || await preprocessDocumentForOCR(dataUri);
 
   if (onProgress) {
-    onProgress(30, 'Cargando motor OCR Tesseract (spa+eng)...');
+    onProgress(30, 'Cargando el motor OCR para el idioma elegido...');
   }
 
 

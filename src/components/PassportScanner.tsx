@@ -201,6 +201,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
     // Stop video and process image
     stopCameraStream();
     setSelectedFilePreview(photoBase64);
+    setReversePreview(null);
     setActiveTab("upload");
   };
 
@@ -276,7 +277,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
             ? preprocessed.original
             : preprocessed.enhanced;
 
-      setProcessingStatus("Iniciando OCR local (Tesseract spa+eng)...");
+      setProcessingStatus("Iniciando OCR local (idioma elegido)...");
       let result = await extractWithTesseract(
         imageToScan,
         (prog, status) => {
@@ -299,7 +300,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
         );
         result = mergeIdentityReadings(result, reverse);
       }
-      result.imagePreview = preprocessed.enhanced || optimizedBase64;
+      result.imagePreview = preprocessed.original || optimizedBase64;
       if (mountedRef.current && !controller.signal.aborted) {
         setProgressPercent(100);
         setProcessingStatus(

@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { useDialog } from "../hooks/useDialog";
 import { entityFile } from "../services/fileStorage";
 import { approveTemplate } from "../services/storageService";
@@ -66,6 +67,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
 
   // New Template Form State
   const [newTemplateData, setNewTemplateData] = useState<{
+    id: string;
     name: string;
     description: string;
     category: Template["category"];
@@ -77,6 +79,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
     placeholderDefs: PlaceholderDef[];
   } | null>(null);
 
+  useUnsavedChanges(!!newTemplateData);
   useDialog(!!newTemplateData, () => {
     if (!isUploading) setNewTemplateData(null);
   });
@@ -84,7 +87,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
   const handleDocxUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file) return;
+    if (!file || isUploading) return;
     if (file.size > 3 * 1024 * 1024) {
       setUploadError("La plantilla debe pesar menos de 3 MB por archivo.");
       return;
@@ -111,6 +114,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
         .replace(/-/g, " ");
 
       setNewTemplateData({
+        id: `tpl-${crypto.randomUUID()}`,
         name: inferredName,
         description: `Plantilla subida con ${parsed.placeholders.length} marcadores {{tags}} detectados.`,
         category: "General",
@@ -140,7 +144,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
         : IDONEOS.find((i) => i.id === newTemplateData.targetIdoneo)?.name;
 
     const templateToSave: Template = {
-      id: `tpl-${crypto.randomUUID()}`,
+      id: newTemplateData.id,
       name: newTemplateData.name,
       description: newTemplateData.description,
       category: newTemplateData.category,
@@ -392,6 +396,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                 Configurar Nueva Plantilla Word
               </h4>
               <button
+                disabled={isUploading}
                 onClick={() => setNewTemplateData(null)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg"
               >
@@ -400,6 +405,14 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
             </div>
 
             <div className="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
+              {uploadError && (
+                <p
+                  role="alert"
+                  className="rounded-lg bg-red-50 text-red-800 p-3"
+                >
+                  {uploadError}
+                </p>
+              )}
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
                 <div>
                   <span className="font-semibold text-slate-800">
@@ -529,6 +542,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
               <div className="border-t border-slate-200 pt-4 flex justify-end gap-3">
                 <button
                   type="button"
+                  disabled={isUploading}
                   onClick={() => setNewTemplateData(null)}
                   className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold"
                 >
@@ -536,10 +550,11 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                 </button>
                 <button
                   type="button"
+                  disabled={isUploading}
                   onClick={handleSaveNewTemplate}
                   className="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm"
                 >
-                  Guardar Plantilla en Base de Datos
+                  {isUploading ? "Guardando…" : "Guardar plantilla"}
                 </button>
               </div>
             </div>

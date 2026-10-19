@@ -4,7 +4,6 @@ import { forceCloudSyncNow } from "./services/storageService";
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Upload } from "lucide-react";
 
-
 import { Header } from "./components/Header";
 const GenerationWizard = lazy(() =>
   import("./components/GenerationWizard").then((module) => ({
@@ -159,7 +158,7 @@ function WorkspaceApp() {
           setSelectedClientForGenerator(null);
           setSelectedTemplateForGenerator(null);
           setWizardSession((session) => session + 1);
-          setActiveTab("wizard");
+          setRequestedTab("wizard");
         }}
       />
 

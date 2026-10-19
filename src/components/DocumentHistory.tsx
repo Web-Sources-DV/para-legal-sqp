@@ -1,8 +1,9 @@
+import { normalizeSearchText } from "../services/search";
 import { loadMoreDocuments, searchDocuments } from "../services/storageService";
 import { useDialog } from "../hooks/useDialog";
 import { entityFile } from "../services/fileStorage";
 import saveAs from "file-saver";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   FolderOpen,
   Search,
@@ -45,12 +46,15 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
   const [more, setMore] = useState(true);
   const [searchError, setSearchError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const currentQuery = useRef(searchTerm);
+  currentQuery.current = searchTerm;
   const [viewingDoc, setViewingDoc] = useState<GeneratedDocument | null>(null);
 
   useDialog(!!viewingDoc, () => setViewingDoc(null));
 
   useEffect(() => {
     let active = true;
+    setSearchError("");
     const timer = setTimeout(() => {
       setLoading(true);
       void searchDocuments(searchTerm)
@@ -71,10 +75,18 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
   }, [searchTerm]);
   const filteredDocs = documents.filter((doc) => {
     return (
-      doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.templateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.passportNumber.toLowerCase().includes(searchTerm.toLowerCase())
+      normalizeSearchText(doc.title).includes(
+        normalizeSearchText(searchTerm),
+      ) ||
+      normalizeSearchText(doc.clientName).includes(
+        normalizeSearchText(searchTerm),
+      ) ||
+      normalizeSearchText(doc.templateName).includes(
+        normalizeSearchText(searchTerm),
+      ) ||
+      normalizeSearchText(doc.passportNumber).includes(
+        normalizeSearchText(searchTerm),
+      )
     );
   });
 
@@ -164,7 +176,7 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
               Historial de Documentos Generados
             </h3>
             <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-200">
-              {documents.length} archivos registrados
+              {documents.length} archivos mostrados
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -193,7 +205,9 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
         onClick={async () => {
           setLoading(true);
           try {
-            setMore(await loadMoreDocuments(searchTerm));
+            const query = searchTerm;
+            const more = await loadMoreDocuments(query);
+            if (currentQuery.current === query) setMore(more);
           } catch (error: any) {
             setSearchError(error.message);
           } finally {
@@ -277,6 +291,7 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                         year: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
+                        timeZone: "America/Panama",
                       })}
                     </td>
                     <td className="px-6 py-4 font-mono text-[11px] text-slate-500">
@@ -397,7 +412,8 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                   </span>
                   <span className="font-bold text-slate-900">
                     {new Date(viewingDoc.generatedAt).toLocaleDateString(
-                      "es-ES",
+                      "es-PA",
+                      { timeZone: "America/Panama" },
                     )}
                   </span>
                 </div>

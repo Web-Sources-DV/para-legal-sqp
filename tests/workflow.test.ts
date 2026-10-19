@@ -139,3 +139,8 @@ test('invalid backups leave current data intact; quota failure rolls back all af
   assert.equal(getClients()[0].fullName, 'NUEVO');
 });
 
+
+test('renaming an arbitrary ZIP to docx does not create a usable Word template',async()=>{
+ const zip=new PizZip();zip.file('readme.txt','Synthetic invalid document');
+ await assert.rejects(parseDocxFile(zip.generate({type:'arraybuffer'}),'renamed.docx'),/documento principal/);
+});

@@ -13,7 +13,14 @@ export function mergeIdentityReadings(
     expiryDate: "vencimiento",
   };
   for (const key of Object.keys(labels) as (keyof typeof labels)[])
-    if (front[key] && reverse[key] && front[key] !== reverse[key])
+    if (
+      front[key] &&
+      reverse[key] &&
+      (key === "passportNumber"
+        ? front[key].toUpperCase().replace(/[ .-]/g, "") !==
+          reverse[key].toUpperCase().replace(/[ .-]/g, "")
+        : front[key] !== reverse[key])
+    )
       throw new Error(
         `El frente y reverso difieren en ${labels[key]}. Confirma que corresponden al mismo documento y vuelve a leer.`,
       );

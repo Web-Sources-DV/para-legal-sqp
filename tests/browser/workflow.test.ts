@@ -102,7 +102,13 @@ test("public browser access, edits across refresh, stable archive retry and actu
           : [profile];
       else if (url.pathname.startsWith("/storage/v1/object/")) {
         uploads++;
-        result = { Key: "test" };
+        if (!/\/shared\/documents\/[0-9a-f-]{36}$/.test(url.pathname)) {
+          status = 403;
+          result = {
+            message:
+              "Invalid object path: public storage accepts UUID file identifiers",
+          };
+        } else result = { Key: "test" };
       } else if (url.pathname.includes("/rpc/")) {
         const name = url.pathname
             .split("/")
@@ -145,7 +151,7 @@ test("public browser access, edits across refresh, stable archive retry and actu
           result = modified
             ? [
                 {
-                  cursor: 1,
+                  cursor: archiveAttempts === 1 ? 2 : 1,
                   entity: "clients",
                   id: "client",
                   record: {
@@ -158,6 +164,25 @@ test("public browser access, edits across refresh, stable archive retry and actu
                 },
               ]
             : [];
+        if (name === "pl_changes" && archiveAttempts === 1)
+          result = [
+            ...(result as unknown[]),
+            {
+              cursor: 3,
+              entity: "templates",
+              id: template.id,
+              record: {
+                id: template.id,
+                payload: {
+                  ...template,
+                  placeholders: [...template.placeholders, "{{nuevo_campo}}"],
+                },
+                revision: 2,
+                archived: false,
+                approved: true,
+              },
+            },
+          ];
         else if (name === "pl_entity_file")
           result = { data: fileData, path: null };
         else if (name === "pl_record_document") {
@@ -206,6 +231,20 @@ test("public browser access, edits across refresh, stable archive retry and actu
       .getByText(/Documento preparado, pendiente de archivar/)
       .waitFor();
     assert.equal(uploads, 1);
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await page.getByText(/Los datos de origen cambiaron/).waitFor();
+    await page
+      .getByText(/nuevo_campo/)
+      .first()
+      .waitFor();
+    assert.equal(
+      await page.locator("#select-client-for-doc").isDisabled(),
+      true,
+    );
+    assert.equal(
+      await page.locator("#select-template-for-doc").isDisabled(),
+      true,
+    );
     const download = page.waitForEvent("download");
     await generate.click();
     const downloaded = await download;
@@ -336,6 +375,93 @@ test("review can save then continue with the saved revision, and displays retry 
     assert.equal(writes[1].expected_revision, 1);
     assert.equal(writes[2].expected_revision, 1);
     assert.equal(writes[0].document.id, writes[2].document.id);
+  } finally {
+    await browser.close();
+  }
+});
+
+test("client details do not infer sex and load older history; failed saves stay visible in the dialog", async () => {
+  const browser = await chromium.launch({
+    executablePath: existsSync("/usr/bin/chromium")
+      ? "/usr/bin/chromium"
+      : undefined,
+    args: ["--no-sandbox"],
+  });
+  try {
+    const page = await browser.newPage();
+    await page.route(
+      "https://fipcnxfxxngdjunrlbat.supabase.co/**",
+      async (route) => {
+        const name = new URL(route.request().url()).pathname.split("/").at(-1);
+        const args = route.request().postDataJSON();
+        let data: unknown = [];
+        let status = 200;
+        if (name === "pl_public_sync_cursor") data = 0;
+        if (name === "pl_public_entity_counts")
+          data = { clients: 1, templates: 0, documents: 1 };
+        if (name === "pl_public_list_entities" && args.entity === "clients")
+          data = [
+            {
+              id: client.id,
+              payload: { ...client, sex: "", documentCount: 1 },
+              revision: 1,
+              archived: false,
+              approved: true,
+            },
+          ];
+        if (
+          name === "pl_public_list_entities" &&
+          args.entity === "documents" &&
+          args.page_size === 250
+        )
+          data = [
+            {
+              id: "older-fixture",
+              payload: {
+                id: "older-fixture",
+                title: "Older fixture",
+                clientId: client.id,
+                clientName: client.fullName,
+                templateName: "OLDER FIXTURE TEMPLATE",
+                fileName: "older.docx",
+                generatedAt: "2026-01-01T00:00:00Z",
+              },
+              revision: 1,
+              archived: false,
+              approved: true,
+            },
+          ];
+        if (name === "pl_public_save_entity") {
+          status = 503;
+          data = { message: "Fallo de guardado de prueba" };
+        }
+        await route.fulfill({
+          status,
+          contentType: "application/json",
+          body: JSON.stringify(data),
+        });
+      },
+    );
+    await page.goto(process.env.PL_BROWSER_URL!);
+    await page.locator("#nav-tab-clients").click();
+    await page.getByText(client.fullName, { exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Ficha de cliente" });
+    await dialog.getByText("Sin confirmar", { exact: true }).waitFor();
+    await dialog.getByText("OLDER FIXTURE TEMPLATE", { exact: true }).waitFor();
+    assert.equal(
+      await dialog.getByText("Femenino", { exact: true }).count(),
+      0,
+    );
+    await page.keyboard.press("Escape");
+    await page.getByTitle("Editar Ficha", { exact: true }).click();
+    await page
+      .getByRole("button", { name: "Guardar Cliente", exact: true })
+      .click();
+    await page
+      .getByRole("dialog")
+      .getByRole("alert")
+      .filter({ hasText: "Fallo de guardado de prueba" })
+      .waitFor();
   } finally {
     await browser.close();
   }
