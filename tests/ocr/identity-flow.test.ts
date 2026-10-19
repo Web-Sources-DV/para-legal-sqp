@@ -18,6 +18,7 @@ test(
       const context = await browser.newContext({ ignoreHTTPSErrors: true });
       const page = await context.newPage();
       let saved: Client | undefined;
+      const revisions: (number | null)[] = [];
       await page.route(
         "https://fipcnxfxxngdjunrlbat.supabase.co/**",
         async (route) => {
@@ -29,7 +30,9 @@ test(
           if (name === "pl_public_entity_counts")
             data = { clients: 0, templates: 0, documents: 0 };
           if (name === "pl_public_save_entity") {
-            saved = route.request().postDataJSON().document;
+            const args = route.request().postDataJSON();
+            revisions.push(args.expected_revision);
+            saved = args.document;
             data = 1;
           }
           await route.fulfill({
@@ -61,13 +64,11 @@ test(
         ].forEach((line, i) => ctx.fillText(line, 60, 70 + i * 90));
         return canvas.toDataURL("image/png").split(",")[1];
       });
-      await page
-        .locator("#passport-file-input")
-        .setInputFiles({
-          name: "synthetic-id.png",
-          mimeType: "image/png",
-          buffer: Buffer.from(png, "base64"),
-        });
+      await page.locator("#passport-file-input").setInputFiles({
+        name: "synthetic-id.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(png, "base64"),
+      });
       await page
         .getByRole("button", { name: "Leer y revisar identidad", exact: true })
         .click();
@@ -104,6 +105,11 @@ test(
       assert.equal(saved.sexAgeCategory, "JOVEN");
       assert.equal(saved.docType, "cedula");
       assert.equal(saved.age, 15);
+      await page.locator("#btn-confirm-and-generate").click();
+      await page
+        .getByText("Cliente seleccionado para este documento:", { exact: true })
+        .waitFor();
+      assert.deepEqual(revisions, [null, 1]);
       console.log(
         "PASS: synthetic image → real OCR → expired-document alert → reviewed client registration with all identity fields.",
       );

@@ -2,7 +2,7 @@ import { evaluateIdentityDocument } from "../services/identityStatus";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { documentTypeLabel } from "../services/fieldMapping";
 import { validateClient } from "../services/validation";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   CheckCircle,
   UserCheck,
@@ -45,11 +45,19 @@ interface DataReviewStepProps {
 
 export const DataReviewStep: React.FC<DataReviewStepProps> = ({
   extraction,
-  existingClients,
+  existingClients: clientList,
   onConfirmClient,
   onRescan,
   selectedClient,
 }) => {
+  const existingClients = useMemo(
+    () =>
+      selectedClient &&
+      !clientList.some((client) => client.id === selectedClient.id)
+        ? [selectedClient, ...clientList]
+        : clientList,
+    [clientList, selectedClient],
+  );
   const initialCategory = useMemo(() => {
     return determineSexAgeCategory(extraction.birthDate, extraction.sex)
       .category;
@@ -61,6 +69,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
   useUnsavedChanges(dirty);
   const [saving, setSaving] = useState(false);
   const [identityConfirmed, setIdentityConfirmed] = useState(false);
+  const errorRef = useRef<HTMLParagraphElement>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"form" | "json">("form");
 
@@ -102,6 +111,20 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
   const [jsonEditText, setJsonEditText] = useState("");
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [jsonSaveSuccess, setJsonSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!selectedClient) return;
+    setAssociateMode("existing");
+    setSelectedExistingId(selectedClient.id);
+    setFormData((previous) => ({
+      ...previous,
+      id: selectedClient.id,
+      revision: selectedClient.revision,
+    }));
+  }, [selectedClient?.id, selectedClient?.revision]);
+  useEffect(() => {
+    if (reviewError) errorRef.current?.focus();
+  }, [reviewError]);
 
   // Compute live structured JSON
   const currentStructuredJson = useMemo(() => {
@@ -164,6 +187,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
       setFormData((prev) => ({
         ...prev,
         id: existing.id,
+        revision: existing.revision,
         phone: existing.phone || "",
         email: existing.email || "",
         address: existing.address || "",
@@ -294,6 +318,12 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
         (c) => associateMode === "existing" && c.id === selectedExistingId,
       ),
       id: associateMode === "existing" ? selectedExistingId : newClientId,
+      revision:
+        associateMode === "existing"
+          ? (formData.revision ??
+            existingClients.find((client) => client.id === selectedExistingId)
+              ?.revision)
+          : undefined,
       firstName: (formData.firstName || "").toUpperCase(),
       lastName: (formData.lastName || "").toUpperCase(),
       fullName: (
@@ -339,7 +369,13 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
       await onConfirmClient(finalClient, nextAction);
       setDirty(false);
     } catch (error: any) {
-      setReviewError(error.message || "No se pudo guardar el cliente.");
+      setReviewError(
+        error.code === "23505" ||
+          /Ya existe un cliente/i.test(error.message || "")
+          ? "Esta identidad ya está registrada. Selecciona Actualizar Cliente Existente y elige su registro antes de continuar."
+          : error.message ||
+              "No se pudo guardar el cliente. Reintenta; tus datos siguen en el formulario.",
+      );
     } finally {
       setSaving(false);
     }
@@ -384,11 +420,6 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
             ? "vencido"
             : "por confirmar"}
       </div>
-      {reviewError && (
-        <p role="alert" className="p-3 text-red-700 bg-red-50 rounded-xl">
-          {reviewError}
-        </p>
-      )}
       {extraction.warnings
         ?.filter(
           (warning) =>
@@ -404,15 +435,6 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
             {warning}
           </p>
         ))}
-      <label className="flex items-start gap-3 bg-white border rounded-xl p-4">
-        <input
-          type="checkbox"
-          checked={identityConfirmed}
-          onChange={(e) => setIdentityConfirmed(e.target.checked)}
-        />
-        He revisado nombre, número de identidad, nacimiento, vencimiento y país
-        emisor contra el documento original.
-      </label>
       <label className="flex gap-3 bg-white border rounded-xl p-3">
         <input
           type="checkbox"
@@ -1010,28 +1032,57 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
           )}
 
           {/* Action Footer Buttons */}
-          <div className="border-t border-slate-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <button
-              type="button"
-              id="btn-save-client-only"
-              disabled={saving || !identityConfirmed}
-              onClick={() => handleContinue("save_only")}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-colors"
-            >
-              <Save className="w-4 h-4 text-slate-600" />
-              <span>Guardar en Directorio de Clientes</span>
-            </button>
+          <div className="border-t border-slate-200 pt-6 space-y-4">
+            <label className="flex items-start gap-3 bg-white border rounded-xl p-4">
+              <input
+                type="checkbox"
+                checked={identityConfirmed}
+                onChange={(e) => setIdentityConfirmed(e.target.checked)}
+              />
+              He revisado nombre, número de identidad, nacimiento, vencimiento y
+              país emisor contra el documento original.
+            </label>
+            {!identityConfirmed && (
+              <p className="text-sm text-amber-800">
+                Para continuar, revisa los datos y marca la casilla de
+                confirmación de arriba.
+              </p>
+            )}
+            {reviewError && (
+              <p
+                ref={errorRef}
+                tabIndex={-1}
+                role="alert"
+                className="p-3 text-red-700 bg-red-50 rounded-xl"
+              >
+                {reviewError}
+              </p>
+            )}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <button
+                type="button"
+                id="btn-save-client-only"
+                disabled={saving || !identityConfirmed}
+                onClick={() => handleContinue("save_only")}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-colors"
+              >
+                <Save className="w-4 h-4 text-slate-600" />
+                <span>Guardar en Directorio de Clientes</span>
+              </button>
 
-            <button
-              type="button"
-              id="btn-confirm-and-generate"
-              disabled={saving || !identityConfirmed}
-              onClick={() => handleContinue("generate")}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
-            >
-              <span>Continuar a Plasmar en Documento Word</span>
-              <ArrowRight className="w-4 h-4 text-slate-950" />
-            </button>
+              <button
+                type="button"
+                id="btn-confirm-and-generate"
+                disabled={saving || !identityConfirmed}
+                onClick={() => handleContinue("generate")}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+              >
+                <span>
+                  {saving ? "Guardando…" : "Guardar y continuar al generador"}
+                </span>
+                <ArrowRight className="w-4 h-4 text-slate-950" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
