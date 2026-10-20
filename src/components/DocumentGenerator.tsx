@@ -443,7 +443,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           <div className={guided ? "hidden" : ""}>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-teal-600" />
+                <Users className="w-4 h-4 text-brand-600" />
                 Cliente *
               </label>
               <span className="text-[11px] text-slate-500 font-medium">
@@ -460,7 +460,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                 const cli = clients.find((c) => c.id === e.target.value);
                 if (cli && onSelectClient) onSelectClient(cli);
               }}
-              className="w-full text-sm font-semibold p-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 shadow-sm"
+              className="w-full text-sm font-semibold p-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 shadow-sm"
             >
               {clients.length === 0 ? (
                 <option value="">
@@ -477,7 +477,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
             </select>
 
             {activeClient && (
-              <div className="mt-2.5 p-2.5 rounded-lg bg-teal-50/60 border border-teal-200/70 text-xs flex flex-wrap items-center justify-between gap-2 text-slate-700">
+              <div className="mt-2.5 p-2.5 rounded-lg bg-brand-50/60 border border-brand-200/70 text-xs flex flex-wrap items-center justify-between gap-2 text-slate-700">
                 <span>
                   <strong className="text-slate-900">Doc:</strong>{" "}
                   {activeClient.passportNumber || "S/N"} (
@@ -499,14 +499,14 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <FileText className="w-4 h-4 text-teal-600" />
+                <FileText className="w-4 h-4 text-brand-600" />
                 Plantilla Word (.docx) *
               </label>
               {onOpenTemplatesTab && (
                 <button
                   type="button"
                   onClick={onOpenTemplatesTab}
-                  className="text-xs text-teal-700 hover:text-teal-800 font-semibold underline"
+                  className="text-xs text-brand-700 hover:text-brand-800 font-semibold underline"
                 >
                   + Gestionar / Subir Plantillas
                 </button>
@@ -518,7 +518,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
               disabled={isGenerating || !!pendingDocument.current}
               value={selectedTemplateId}
               onChange={(e) => setSelectedTemplateId(e.target.value)}
-              className="w-full text-sm font-semibold p-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 shadow-sm"
+              className="w-full text-sm font-semibold p-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 shadow-sm"
             >
               {templates.length === 0 ? (
                 <option value="">
@@ -551,7 +551,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           <div className="pt-6 border-t border-slate-100">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                <Sparkles className="w-3.5 h-3.5 text-brand-600" />
                 Vista Previa de Formato Notarial & Letrado Asignado
               </span>
               <div className="flex items-center gap-2">
@@ -561,9 +561,9 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowJsonInspector((prev) => !prev)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-teal-500/10 hover:bg-teal-500/20 text-teal-800 text-[11px] font-bold border border-teal-300 transition-colors"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-brand-500/10 hover:bg-brand-500/20 text-brand-800 text-[11px] font-bold border border-brand-300 transition-colors"
                 >
-                  <Code className="w-3.5 h-3.5 text-teal-600" />
+                  <Code className="w-3.5 h-3.5 text-brand-600" />
                   <span>
                     {showJsonInspector ? "Ocultar JSON" : "Ver JSON (OCR)"}
                   </span>
@@ -575,7 +575,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
             {showJsonInspector && (
               <div className="mb-3 p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-white space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono text-teal-400 font-bold flex items-center gap-1.5">
+                  <span className="text-[11px] font-mono text-brand-400 font-bold flex items-center gap-1.5">
                     <Code className="w-3.5 h-3.5" />
                     Objeto JSON que alimenta las variables del documento:
                   </span>
@@ -639,7 +639,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                     )}
                   </button>
                 </div>
-                <pre className="text-[11px] font-mono text-teal-300 overflow-x-auto max-h-48 p-2 rounded bg-slate-900 border border-slate-800 leading-relaxed">
+                <pre className="text-[11px] font-mono text-brand-300 overflow-x-auto max-h-48 p-2 rounded bg-slate-900 border border-slate-800 leading-relaxed">
                   {JSON.stringify(
                     {
                       tipo_documento:
@@ -703,19 +703,19 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                   {activeClient.nationality.toLowerCase()}
                 </span>
               </div>
-              <div className="p-2.5 rounded-lg bg-teal-50/70 border border-teal-300">
-                <span className="text-[10px] text-teal-800 block font-mono font-bold">
+              <div className="p-2.5 rounded-lg bg-brand-50/70 border border-brand-300">
+                <span className="text-[10px] text-brand-800 block font-mono font-bold">
                   (abogado_nombre)
                 </span>
-                <strong className="text-teal-950 font-extrabold block truncate">
+                <strong className="text-brand-950 font-extrabold block truncate">
                   {activeIdoneo.formalTitle}
                 </strong>
               </div>
-              <div className="p-2.5 rounded-lg bg-teal-50/70 border border-teal-300">
-                <span className="text-[10px] text-teal-800 block font-mono font-bold">
+              <div className="p-2.5 rounded-lg bg-brand-50/70 border border-brand-300">
+                <span className="text-[10px] text-brand-800 block font-mono font-bold">
                   (sexo/edad)
                 </span>
-                <strong className="text-teal-950 font-extrabold block truncate">
+                <strong className="text-brand-950 font-extrabold block truncate">
                   {determineSexAgeCategory(
                     activeClient.birthDate,
                     activeClient.sex,
@@ -771,7 +771,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           `${activeClient?.revision || 0}:${activeTemplate?.revision || 0}:${activeIdoneo.revision || 0}` && (
           <div
             role="status"
-            className="bg-teal-50 border rounded-xl p-4 text-sm"
+            className="bg-brand-50 border rounded-xl p-4 text-sm"
           >
             Los datos de origen cambiaron. Tus correcciones se conservan. Revisa
             el cliente y la versión de plantilla antes de generar.{" "}
@@ -863,15 +863,15 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                   key={placeholderKey}
                   className={`p-3.5 rounded-xl border transition-all ${
                     isIdoneoField
-                      ? "bg-teal-50/40 border-teal-300/80 ring-1 ring-teal-400/20"
-                      : "bg-slate-50/70 border-slate-200 focus-within:border-teal-500 focus-within:bg-white"
+                      ? "bg-brand-50/40 border-brand-300/80 ring-1 ring-brand-400/20"
+                      : "bg-slate-50/70 border-slate-200 focus-within:border-brand-500 focus-within:bg-white"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-bold text-slate-800 truncate">
                       {def?.label || placeholderKey}
                     </label>
-                    <span className="font-mono text-[10px] text-teal-800 bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold shrink-0">
+                    <span className="font-mono text-[10px] text-brand-800 bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold shrink-0">
                       {placeholderKey}
                     </span>
                   </div>
@@ -885,7 +885,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                       onChange={(e) =>
                         handleFieldChange(placeholderKey, e.target.value)
                       }
-                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden"
+                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-brand-500 focus:outline-hidden"
                     />
                   ) : def?.type === "select" && def.options ? (
                     <select
@@ -895,7 +895,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                       onChange={(e) =>
                         handleFieldChange(placeholderKey, e.target.value)
                       }
-                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden font-semibold"
+                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-brand-500 focus:outline-hidden font-semibold"
                     >
                       <option value="">Selecciona / verifica</option>
                       {def.options.map((opt) => (
@@ -913,7 +913,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                       onChange={(e) =>
                         handleFieldChange(placeholderKey, e.target.value)
                       }
-                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden font-semibold"
+                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-brand-500 focus:outline-hidden font-semibold"
                     />
                   )}
                 </div>
@@ -967,7 +967,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
               type="button"
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-sm shadow-lg shadow-teal-500/25 transition-all active:scale-95 disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-brand-500 hover:bg-brand-400 text-slate-950 font-bold text-sm shadow-lg shadow-brand-500/25 transition-all active:scale-95 disabled:opacity-50"
             >
               {isGenerating ? (
                 <>

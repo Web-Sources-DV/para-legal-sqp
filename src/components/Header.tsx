@@ -18,7 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   onStartNewDocument,
 }) => {
   return (
-    <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-lg">
+    <header className="bg-slate-900 border-b border-gold-muted text-white sticky top-0 z-30 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between min-h-16 sm:min-h-20 gap-3 py-3">
           {/* Logo & Brand */}
@@ -27,15 +27,15 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setActiveTab("wizard")}
             title="Ir al Asistente de Inicio"
           >
-            <div className="p-1 rounded-xl bg-slate-800/90 border border-slate-700/80 group-hover:border-teal-500/50 flex items-center justify-center shadow-md transition-all shrink-0">
+            <div className="p-1 rounded-xl bg-slate-800/90 border border-gold-soft/70 group-hover:border-brand-500 flex items-center justify-center shadow-md transition-all shrink-0">
               <AppLogo size={42} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-serif font-bold text-lg sm:text-xl tracking-tight text-slate-50 group-hover:text-teal-300 transition-colors">
+                <span className="font-serif font-bold text-lg sm:text-xl tracking-tight text-slate-50 group-hover:text-brand-300 transition-colors">
                   SQP PARA LEGAL
                 </span>
-                <span className="text-[11px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.5 rounded-full font-sans font-semibold hidden sm:inline-block">
+                <span className="text-[11px] bg-brand-500/20 text-brand-300 border border-brand-500/30 px-2 py-0.5 rounded-full font-sans font-semibold hidden sm:inline-block">
                   OCR y plantillas Word
                 </span>
               </div>
@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="btn-quick-new-doc"
               onClick={onStartNewDocument}
-              className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-400 hover:from-teal-400 hover:to-teal-500 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-teal-500/25 transition-all active:scale-95 shrink-0"
+              className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-400 hover:from-brand-400 hover:to-brand-500 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-brand-500/25 transition-all active:scale-95 shrink-0"
             >
               <Sparkles className="w-4 h-4 text-slate-950" />
               <span>Nuevo Documento</span>
@@ -66,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="nav-tab-wizard"
             onClick={() => setActiveTab("wizard")}
-            className="px-3 py-2 rounded-lg text-sm font-semibold text-teal-300 hover:bg-slate-800"
+            className="px-3 py-2 rounded-lg text-sm font-semibold text-brand-300 hover:bg-slate-800"
           >
             Documento
           </button>
@@ -99,7 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
                       ?.removeAttribute("open");
                     setActiveTab(tab);
                   }}
-                  className={`block w-full px-3 py-2.5 rounded-lg text-left text-sm hover:bg-slate-800 ${activeTab === tab ? "text-teal-300" : "text-slate-200"}`}
+                  className={`block w-full px-3 py-2.5 rounded-lg text-left text-sm hover:bg-slate-800 ${activeTab === tab ? "text-brand-300" : "text-slate-200"}`}
                 >
                   {label}
                 </button>

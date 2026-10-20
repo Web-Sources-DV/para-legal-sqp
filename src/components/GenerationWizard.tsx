@@ -146,7 +146,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
               <li
                 key={label}
                 aria-current={currentStep === index + 1 ? "step" : undefined}
-                className={`rounded-lg px-2 py-3 text-center text-xs sm:text-sm font-semibold ${currentStep === index + 1 ? "bg-teal-100 text-teal-900" : "bg-slate-50 text-slate-600"}`}
+                className={`rounded-lg px-2 py-3 text-center text-xs sm:text-sm font-semibold ${currentStep === index + 1 ? "bg-brand-100 text-brand-900" : "bg-slate-50 text-slate-600"}`}
               >
                 {index + 1}. {label}
               </li>
@@ -156,7 +156,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
         {currentStep > 1 && (
           <button
             type="button"
-            className="mt-3 text-sm text-teal-800 underline"
+            className="mt-3 text-sm text-brand-800 underline"
             onClick={() => goBack(currentStep === 3 ? 2 : 1)}
           >
             Volver al paso anterior
@@ -216,7 +216,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                     value={clientSearchQuery}
                     onChange={(e) => setClientSearchQuery(e.target.value)}
                     placeholder="Buscar por nombre o pasaporte..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/50"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-500/50"
                   />
                 </div>
               </div>
@@ -233,7 +233,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                   </p>
                   <button
                     onClick={() => setStep1Mode("scan")}
-                    className="px-4 py-2 rounded-lg bg-teal-500 text-slate-950 font-bold text-xs"
+                    className="px-4 py-2 rounded-lg bg-brand-500 text-slate-950 font-bold text-xs"
                   >
                     Escanear Documento Ahora
                   </button>
@@ -248,18 +248,18 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                     <div
                       key={c.id}
                       onClick={() => handleSelectExistingClient(c)}
-                      className="p-4 rounded-xl border border-slate-200 hover:border-teal-500 hover:bg-teal-50/20 cursor-pointer transition-all flex flex-col justify-between group shadow-xs hover:shadow-md"
+                      className="p-4 rounded-xl border border-slate-200 hover:border-brand-500 hover:bg-brand-50/20 cursor-pointer transition-all flex flex-col justify-between group shadow-xs hover:shadow-md"
                     >
                       <div>
                         <div className="flex items-center justify-between gap-2 mb-2">
                           <span className="text-[10px] font-bold uppercase bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
                             {c.docType === "cedula" ? "Cédula" : "Pasaporte"}
                           </span>
-                          <span className="text-[11px] font-semibold text-teal-700">
+                          <span className="text-[11px] font-semibold text-brand-700">
                             {c.nationality}
                           </span>
                         </div>
-                        <h4 className="font-bold text-sm text-slate-900 group-hover:text-teal-800 transition-colors">
+                        <h4 className="font-bold text-sm text-slate-900 group-hover:text-brand-800 transition-colors">
                           {c.fullName}
                         </h4>
                         <p className="text-xs text-slate-600 font-mono mt-0.5">
@@ -267,7 +267,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                         </p>
                       </div>
 
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-teal-700 font-bold">
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-brand-700 font-bold">
                         <span>⚡ Usar y Generar Word</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </div>

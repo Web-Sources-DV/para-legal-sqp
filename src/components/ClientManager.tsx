@@ -238,7 +238,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
             <h3 className="font-serif font-bold text-slate-900 text-xl">
               Directorio y Gestión de Clientes
             </h3>
-            <span className="bg-teal-100 text-teal-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-teal-200">
+            <span className="bg-brand-100 text-brand-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-brand-200">
               {clients.length} registrados
             </span>
           </div>
@@ -254,7 +254,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
             onClick={onScanPassportForClient}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-md transition-all active:scale-95"
           >
-            <Upload className="w-4 h-4 text-teal-400" />
+            <Upload className="w-4 h-4 text-brand-400" />
             <span>Subir / Leer Pasaporte</span>
           </button>
 
@@ -272,7 +272,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
               });
               setIsNewClientModalOpen(true);
             }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs shadow-md shadow-teal-500/20 transition-all active:scale-95"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-slate-950 font-bold text-xs shadow-md shadow-brand-500/20 transition-all active:scale-95"
           >
             <UserPlus className="w-4 h-4 text-slate-950" />
             <span>Nuevo Cliente Manual</span>
@@ -293,7 +293,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
             placeholder="Buscar por nombre, pasaporte o email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
           />
         </div>
 
@@ -304,7 +304,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
           <select
             value={selectedNationality}
             onChange={(e) => setSelectedNationality(e.target.value)}
-            className="text-xs p-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 bg-white"
+            className="text-xs p-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 bg-white"
           >
             <option value="all">
               Todas las nacionalidades ({nationalities.length})
@@ -332,7 +332,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
             </p>
             <button
               onClick={onScanPassportForClient}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-500 text-slate-950 font-bold text-xs shadow-sm"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 text-slate-950 font-bold text-xs shadow-sm"
             >
               <Upload className="w-4 h-4" />
               <span>Subir Foto del Pasaporte</span>
@@ -355,17 +355,17 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                 {filteredClients.map((client) => (
                   <tr
                     key={client.id}
-                    className="hover:bg-teal-50/20 transition-colors"
+                    className="hover:bg-brand-50/20 transition-colors"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-900 text-teal-400 font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
+                        <div className="w-9 h-9 rounded-full bg-slate-900 text-brand-400 font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
                           {client.fullName.charAt(0)}
                         </div>
                         <div>
                           <div
                             onClick={() => setViewingClient(client)}
-                            className="font-bold text-slate-900 hover:text-teal-700 cursor-pointer text-sm"
+                            className="font-bold text-slate-900 hover:text-brand-700 cursor-pointer text-sm"
                           >
                             {client.fullName}
                           </div>
@@ -423,7 +423,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-brand-100 text-brand-800 border border-brand-200">
                         {client.documentCount || 0}
                       </span>
                     </td>
@@ -432,7 +432,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                         <button
                           title="Generar documento para este cliente"
                           onClick={() => onGenerateForClient(client)}
-                          className="p-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 transition-colors border border-teal-200"
+                          className="p-1.5 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-800 transition-colors border border-brand-200"
                         >
                           <FileText className="w-4 h-4" />
                         </button>
@@ -482,7 +482,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
           <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <h4 className="font-serif font-bold text-base flex items-center gap-2">
-                <Users className="w-4 h-4 text-teal-400" />
+                <Users className="w-4 h-4 text-brand-400" />
                 {editingClient.id &&
                 clients.some((c) => c.id === editingClient.id)
                   ? "Editar Datos del Cliente"
@@ -528,7 +528,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                         fullName: e.target.value,
                       })
                     }
-                    className="w-full text-sm font-bold p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-sm font-bold p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500"
                     placeholder="Ej. ELENA MORALES VEGA"
                   />
                 </div>
@@ -547,7 +547,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                         passportNumber: e.target.value,
                       })
                     }
-                    className="w-full text-sm font-mono font-bold text-red-700 p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-sm font-mono font-bold text-red-700 p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500"
                     placeholder="Ej. PAB492019"
                   />
                 </div>
@@ -565,7 +565,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                         nationality: e.target.value,
                       })
                     }
-                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500"
                     placeholder="Ej. ESPAÑOLA"
                   />
                 </div>
@@ -583,7 +583,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                         birthDate: e.target.value,
                       })
                     }
-                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
 
@@ -600,7 +600,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                         expiryDate: e.target.value,
                       })
                     }
-                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
 
@@ -616,7 +616,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                         sex: e.target.value as any,
                       })
                     }
-                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 bg-white"
+                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 bg-white"
                   >
                     <option value="">Sin leer / verificar</option>
                     <option value="M">M - Masculino</option>
@@ -638,7 +638,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                         phone: e.target.value,
                       })
                     }
-                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500"
                     placeholder="+34 600 000 000"
                   />
                 </div>
@@ -656,7 +656,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                         email: e.target.value,
                       })
                     }
-                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500"
                     placeholder="cliente@ejemplo.com"
                   />
                 </div>
@@ -674,7 +674,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                         address: e.target.value,
                       })
                     }
-                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500"
                     placeholder="Calle, número, ciudad..."
                   />
                 </div>
@@ -692,7 +692,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                         notes: e.target.value,
                       })
                     }
-                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
               </div>
@@ -712,7 +712,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                 <button
                   disabled={saving}
                   type="submit"
-                  className="px-5 py-2 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold shadow-sm"
+                  className="px-5 py-2 rounded-lg bg-brand-500 hover:bg-brand-400 text-slate-950 text-xs font-bold shadow-sm"
                 >
                   Guardar Cliente
                 </button>
@@ -734,7 +734,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
           <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-teal-500 text-slate-950 font-bold flex items-center justify-center text-sm">
+                <div className="w-10 h-10 rounded-full bg-brand-500 text-slate-950 font-bold flex items-center justify-center text-sm">
                   {viewingClient.fullName.charAt(0)}
                 </div>
                 <div>
@@ -832,7 +832,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                   {viewingClient.address || "No registrada"}
                 </p>
                 {viewingClient.notes && (
-                  <div className="p-3 bg-teal-50/60 rounded-lg border border-teal-200/60 text-slate-700 mt-2">
+                  <div className="p-3 bg-brand-50/60 rounded-lg border border-brand-200/60 text-slate-700 mt-2">
                     <strong>Notas del Expediente:</strong> {viewingClient.notes}
                   </div>
                 )}
@@ -905,7 +905,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
                     setViewingClient(null);
                     onGenerateForClient(cli);
                   }}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold shadow-sm"
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-brand-500 hover:bg-brand-400 text-slate-950 text-xs font-bold shadow-sm"
                 >
                   <FileText className="w-4 h-4" />
                   <span>Generar Documento con este Cliente</span>

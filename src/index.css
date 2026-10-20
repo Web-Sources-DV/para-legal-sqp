@@ -1,12 +1,31 @@
 @import "tailwindcss";
 
+/* Brand colors sampled from the supplied SVG; darker tints keep small text legible. */
 @theme {
-  --color-teal-500: #2dd4bf;
-  --color-teal-600: #0f766e;
-  --color-slate-50: #f4f7fa;
-  --color-slate-100: #eaf0f6;
-  --color-slate-800: #18334d;
-  --color-slate-900: #10263d;
+  --color-brand-50: #fdfaf0;
+  --color-brand-100: #faf2d0;
+  --color-brand-200: #f1dfa0;
+  --color-brand-300: #efda87;
+  --color-brand-400: #edcf62;
+  --color-brand-500: #e5bf29;
+  --color-brand-600: #7c691e;
+  --color-brand-700: #6b5a1d;
+  --color-brand-800: #594a1d;
+  --color-brand-900: #463b1c;
+  --color-brand-950: #292419;
+  --color-gold-muted: #9e8d47;
+  --color-gold-soft: #b7a658;
+  --color-slate-50: #faf9f5;
+  --color-slate-100: #f3f3ed;
+  --color-slate-200: #dfe6e8;
+  --color-slate-300: #bdced6;
+  --color-slate-400: #b7cad5;
+  --color-slate-500: #5c7184;
+  --color-slate-600: #486276;
+  --color-slate-700: #24536e;
+  --color-slate-800: #166a9c;
+  --color-slate-900: #065687;
+  --color-slate-950: #043956;
 }
 
 :root {
@@ -14,14 +33,15 @@
 }
 body {
   margin: 0;
-  background: #f4f7fa;
+  background: var(--color-slate-100);
 }
 button:enabled,
 a {
   -webkit-tap-highlight-color: transparent;
 }
 :where(button, a, input, select, textarea):focus-visible {
-  outline: 3px solid #0f766e;
+  outline: 3px solid #065687;
+  box-shadow: 0 0 0 6px #ffffff;
   outline-offset: 3px;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -32,4 +52,9 @@ a {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #065687;
 }
