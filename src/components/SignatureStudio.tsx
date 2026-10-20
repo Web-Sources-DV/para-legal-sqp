@@ -73,7 +73,7 @@ export function SignatureStudio({
     <>
       {/* Signature Studio & Document Sheet Preview (Antes de Generar) */}
       <div className="pt-6 border-t border-slate-200">
-        <label className="flex items-center gap-2 p-3 mb-3 bg-teal-50 rounded-xl text-sm">
+        <label className="flex items-center gap-2 p-3 mb-3 bg-brand-50 rounded-xl text-sm">
           <input
             type="checkbox"
             checked={sigEnabled}
@@ -87,7 +87,7 @@ export function SignatureStudio({
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-800">
             <div className="flex items-start gap-3.5">
-              <div className="w-11 h-11 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 shrink-0 mt-0.5">
+              <div className="w-11 h-11 rounded-xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 shrink-0 mt-0.5">
                 <PenTool className="w-5 h-5" />
               </div>
               <div>
@@ -103,7 +103,7 @@ export function SignatureStudio({
                 <p className="text-xs text-slate-300 mt-1 max-w-2xl">
                   Revisa y acomoda el nombre del cliente en el área de la firma
                   bajo{" "}
-                  <strong className="text-teal-400 font-bold">
+                  <strong className="text-brand-400 font-bold">
                     OTORGO PODER:
                   </strong>{" "}
                   antes de generar el Word. El sistema ajusta la alineación
@@ -135,7 +135,7 @@ export function SignatureStudio({
                 onClick={() => setShowSigAdvancedConfig(!showSigAdvancedConfig)}
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition-all"
               >
-                <Sliders className="w-3.5 h-3.5 text-teal-400" />
+                <Sliders className="w-3.5 h-3.5 text-brand-400" />
                 <span>Ajustes Finos</span>
                 {showSigAdvancedConfig ? (
                   <ChevronUp className="w-3.5 h-3.5" />
@@ -160,9 +160,9 @@ export function SignatureStudio({
                     max={68}
                     value={sigColumnOffset}
                     onChange={(e) => setSigColumnOffset(Number(e.target.value))}
-                    className="w-full accent-teal-500 cursor-pointer"
+                    className="w-full accent-brand-500 cursor-pointer"
                   />
-                  <span className="font-mono font-bold text-teal-400 text-xs w-9 text-right">
+                  <span className="font-mono font-bold text-brand-400 text-xs w-9 text-right">
                     {sigColumnOffset}%
                   </span>
                 </div>
@@ -179,7 +179,7 @@ export function SignatureStudio({
                       onClick={() => setSigColumnOffset(p.val)}
                       className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
                         sigColumnOffset === p.val
-                          ? "bg-teal-500 text-slate-950 border-teal-400 font-bold"
+                          ? "bg-brand-500 text-slate-950 border-brand-400 font-bold"
                           : "bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600"
                       }`}
                     >
@@ -206,7 +206,7 @@ export function SignatureStudio({
                       onClick={() => setSigBlankLines(s.val)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
                         sigBlankLines === s.val
-                          ? "bg-teal-500 text-slate-950 border-teal-400 font-bold"
+                          ? "bg-brand-500 text-slate-950 border-brand-400 font-bold"
                           : "bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600"
                       }`}
                     >
@@ -273,7 +273,7 @@ export function SignatureStudio({
                       setCustomSigClientName(e.target.value.toUpperCase())
                     }
                     placeholder="Ej. GUSTAVO JOSE ACOSTA MUÑOZ"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-teal-300 font-bold focus:ring-1 focus:ring-teal-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-brand-300 font-bold focus:ring-1 focus:ring-brand-500"
                   />
                 </div>
                 <div>
@@ -287,7 +287,7 @@ export function SignatureStudio({
                       setCustomSigClientDoc(e.target.value.toUpperCase())
                     }
                     placeholder="Ej. PASAPORTE No. TEST-001"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white font-medium focus:ring-1 focus:ring-teal-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white font-medium focus:ring-1 focus:ring-brand-500"
                   />
                 </div>
                 <div>
@@ -301,7 +301,7 @@ export function SignatureStudio({
                       setCustomSigLawyerTitle(e.target.value.toUpperCase())
                     }
                     placeholder="Ej. LCDO. ANTONY NATHANAEL TALLA COPRIS"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white font-medium focus:ring-1 focus:ring-teal-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white font-medium focus:ring-1 focus:ring-brand-500"
                   />
                 </div>
               </div>
@@ -311,7 +311,7 @@ export function SignatureStudio({
           {/* Visual Document Sheet Replica (Exact Layout from Image 2) */}
           <div className="mt-5 bg-slate-950/60 p-3 sm:p-5 rounded-2xl border border-slate-800">
             <div className="text-center text-xs font-semibold text-slate-400 mb-3 flex items-center justify-center gap-2">
-              <Eye className="w-3.5 h-3.5 text-teal-400" />
+              <Eye className="w-3.5 h-3.5 text-brand-400" />
               <span>Vista de texto y simulación del bloque de firmas</span>
             </div>
 
@@ -414,7 +414,7 @@ export function SignatureStudio({
                       </span>
                     </div>
 
-                    <div className="font-bold text-slate-950 uppercase text-[11px] sm:text-xs bg-teal-100 px-1 py-0.5 rounded border border-teal-300 inline-block font-sans">
+                    <div className="font-bold text-slate-950 uppercase text-[11px] sm:text-xs bg-brand-100 px-1 py-0.5 rounded border border-brand-300 inline-block font-sans">
                       {previewClientName}
                     </div>
                     <div className="font-bold text-slate-950 uppercase text-[10px] sm:text-[11px] block">
@@ -439,7 +439,7 @@ export function SignatureStudio({
               </div>
               <div className="text-slate-400">
                 Posición de columna:{" "}
-                <strong className="text-teal-400">{sigColumnOffset}%</strong>
+                <strong className="text-brand-400">{sigColumnOffset}%</strong>
               </div>
             </div>
           </div>

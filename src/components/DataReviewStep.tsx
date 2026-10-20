@@ -487,7 +487,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
         <div className="lg:col-span-4 space-y-4">
           <div className="bg-slate-900 text-white rounded-xl p-4 border border-slate-800 shadow-md">
             <h5 className="font-semibold text-xs tracking-wider uppercase text-slate-400 mb-3 flex items-center gap-2">
-              <Cpu className="w-3.5 h-3.5 text-teal-400" />
+              <Cpu className="w-3.5 h-3.5 text-brand-400" />
               Documento Leído por OCR
             </h5>
 
@@ -513,7 +513,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between py-1 border-b border-slate-800">
                   <span className="text-slate-400">Método de Lectura:</span>
-                  <span className="font-medium text-teal-400 uppercase">
+                  <span className="font-medium text-brand-400 uppercase">
                     {extraction.method === "tesseract"
                       ? "OCR Tesseract (Local)"
                       : extraction.method === "ocr"
@@ -534,7 +534,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     <span className="text-slate-400 block mb-1">
                       Zona MRZ de Lectura Mecánica:
                     </span>
-                    <div className="p-2 bg-slate-950 rounded font-mono text-[10px] text-teal-300 break-all leading-tight border border-slate-800 space-y-0.5">
+                    <div className="p-2 bg-slate-950 rounded font-mono text-[10px] text-brand-300 break-all leading-tight border border-slate-800 space-y-0.5">
                       <div>{extraction.mrzLine1}</div>
                       {extraction.mrzLine2 && <div>{extraction.mrzLine2}</div>}
                       {extraction.mrzLine3 && <div>{extraction.mrzLine3}</div>}
@@ -548,7 +548,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab("json")}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/30 text-xs font-semibold transition-all"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 border border-brand-500/30 text-xs font-semibold transition-all"
                 >
                   <Code className="w-3.5 h-3.5" />
                   <span>Ver Datos en JSON (OCR)</span>
@@ -563,7 +563,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
               Vincular con otro cliente (opcional)
             </summary>
             <h5 className="font-semibold text-slate-800 text-xs tracking-wider uppercase flex items-center gap-2">
-              <Users className="w-4 h-4 text-teal-600" />
+              <Users className="w-4 h-4 text-brand-600" />
               Asociación con Clientes
             </h5>
 
@@ -574,7 +574,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                   name="assocMode"
                   checked={associateMode === "new"}
                   onChange={() => setAssociateMode("new")}
-                  className="text-teal-600 focus:ring-teal-500"
+                  className="text-brand-600 focus:ring-brand-500"
                 />
                 <span className="font-medium text-slate-800">
                   Registrar como Nuevo Cliente
@@ -587,7 +587,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                   name="assocMode"
                   checked={associateMode === "existing"}
                   onChange={() => setAssociateMode("existing")}
-                  className="text-teal-600 focus:ring-teal-500"
+                  className="text-brand-600 focus:ring-brand-500"
                 />
                 <span className="font-medium text-slate-800">
                   Actualizar Cliente Existente ({existingClients.length})
@@ -603,7 +603,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                 <select
                   value={selectedExistingId}
                   onChange={(e) => handleSelectExisting(e.target.value)}
-                  className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+                  className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white"
                 >
                   <option value="">-- Elige un cliente existente --</option>
                   {existingClients.map((cli) => (
@@ -654,7 +654,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     type="text"
                     value={formData.firstName || ""}
                     onChange={(e) => handleChange("firstName", e.target.value)}
-                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 uppercase"
+                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 uppercase"
                     placeholder="Ej. CARLOS ANDRÉS"
                   />
                 </div>
@@ -668,7 +668,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     type="text"
                     value={formData.lastName || ""}
                     onChange={(e) => handleChange("lastName", e.target.value)}
-                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 uppercase"
+                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 uppercase"
                     placeholder="Ej. RESTREPO GÓMEZ"
                   />
                 </div>
@@ -682,7 +682,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     type="text"
                     value={formData.fullName || ""}
                     onChange={(e) => handleChange("fullName", e.target.value)}
-                    className="w-full text-sm font-bold text-slate-900 bg-slate-50 p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 uppercase"
+                    className="w-full text-sm font-bold text-slate-900 bg-slate-50 p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 uppercase"
                   />
                 </div>
 
@@ -694,7 +694,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                   <select
                     value={formData.docType || "pasaporte"}
                     onChange={(e) => handleChange("docType", e.target.value)}
-                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white"
                   >
                     <option value="pasaporte">Pasaporte</option>
                     <option value="cedula">Cédula de Identidad / C.C.</option>
@@ -714,7 +714,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     onChange={(e) =>
                       handleChange("passportNumber", e.target.value)
                     }
-                    className="w-full text-sm font-mono font-bold text-teal-900 bg-teal-50/50 p-2.5 rounded-lg border border-teal-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 uppercase"
+                    className="w-full text-sm font-mono font-bold text-brand-900 bg-brand-50/50 p-2.5 rounded-lg border border-brand-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 uppercase"
                     placeholder="Ej. 8-765-4321 o PA1234567"
                   />
                 </div>
@@ -730,7 +730,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     onChange={(e) =>
                       handleChange("nationality", e.target.value)
                     }
-                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 uppercase"
+                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 uppercase"
                     placeholder="Ej. PANAMEÑA o ESPAÑOLA"
                   />
                 </div>
@@ -746,7 +746,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     onChange={(e) =>
                       handleChange("issuingCountry", e.target.value)
                     }
-                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 uppercase"
+                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 uppercase"
                     placeholder="Ej. PANAMÁ o ESPAÑA"
                   />
                 </div>
@@ -760,7 +760,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     type="date"
                     value={formData.birthDate || ""}
                     onChange={(e) => handleChange("birthDate", e.target.value)}
-                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                   />
                 </div>
 
@@ -772,7 +772,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                   <select
                     value={formData.sex || ""}
                     onChange={(e) => handleChange("sex", e.target.value)}
-                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white"
                   >
                     <option value="">Sin leer / verificar</option>
                     <option value="X">Otro (X)</option>
@@ -787,7 +787,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                       Condición Legal en Documento ((sexo) / (sexo/edad))
                     </label>
-                    <span className="text-[11px] text-teal-700 font-semibold">
+                    <span className="text-[11px] text-brand-700 font-semibold">
                       Automático según edad y sexo
                     </span>
                   </div>
@@ -817,7 +817,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     type="date"
                     value={formData.expiryDate || ""}
                     onChange={(e) => handleChange("expiryDate", e.target.value)}
-                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-full text-sm font-medium p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                   />
                 </div>
 
@@ -835,7 +835,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                         type="text"
                         value={formData.phone || ""}
                         onChange={(e) => handleChange("phone", e.target.value)}
-                        className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                         placeholder="+34 600 000 000"
                       />
                     </div>
@@ -849,7 +849,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                         type="email"
                         value={formData.email || ""}
                         onChange={(e) => handleChange("email", e.target.value)}
-                        className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                         placeholder="cliente@ejemplo.com"
                       />
                     </div>
@@ -865,7 +865,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                         onChange={(e) =>
                           handleChange("address", e.target.value)
                         }
-                        className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        className="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                         placeholder="Calle, Número, Piso, Código Postal, Ciudad"
                       />
                     </div>
@@ -881,7 +881,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
               <div className="bg-slate-900 rounded-xl p-4 text-white space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <Code className="w-4 h-4 text-teal-400" />
+                    <Code className="w-4 h-4 text-brand-400" />
                     <span className="font-semibold text-xs tracking-wider uppercase text-slate-300">
                       Estructura JSON Oficial Extraída por OCR
                     </span>
@@ -913,7 +913,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                       onClick={handleDownloadJson}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium border border-slate-700 transition-colors"
                     >
-                      <Download className="w-3.5 h-3.5 text-teal-400" />
+                      <Download className="w-3.5 h-3.5 text-brand-400" />
                       <span>Descargar .json</span>
                     </button>
                   </div>
@@ -924,7 +924,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                     rows={15}
                     value={jsonEditText}
                     onChange={(e) => setJsonEditText(e.target.value)}
-                    className="w-full bg-slate-950 text-teal-300 font-mono text-xs p-3.5 rounded-lg border border-slate-800 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 leading-relaxed outline-none"
+                    className="w-full bg-slate-950 text-brand-300 font-mono text-xs p-3.5 rounded-lg border border-slate-800 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 leading-relaxed outline-none"
                     spellCheck={false}
                   />
                 </div>
@@ -953,7 +953,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                   <button
                     type="button"
                     onClick={handleApplyJsonToForm}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold transition-all shadow-sm"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-400 text-slate-950 text-xs font-bold transition-all shadow-sm"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Validar y Aplicar Cambios al Formulario</span>
@@ -962,58 +962,58 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
               </div>
 
               {/* Document Mapping Guide */}
-              <div className="bg-teal-50/70 border border-teal-200 rounded-xl p-4 space-y-2">
-                <h5 className="font-bold text-xs text-teal-950 uppercase tracking-wider flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-teal-700" />
+              <div className="bg-brand-50/70 border border-brand-200 rounded-xl p-4 space-y-2">
+                <h5 className="font-bold text-xs text-brand-950 uppercase tracking-wider flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-brand-700" />
                   Correspondencia Directa: Del JSON a tu Documento Word (.docx)
                 </h5>
-                <p className="text-xs text-teal-900 leading-relaxed">
+                <p className="text-xs text-brand-900 leading-relaxed">
                   Los valores leídos por el OCR se sustituyen automáticamente en
                   las siguientes variables de tu plantilla:
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-xs">
-                  <div className="p-2 bg-white rounded-lg border border-teal-200 flex justify-between items-center">
+                  <div className="p-2 bg-white rounded-lg border border-brand-200 flex justify-between items-center">
                     <code className="text-slate-800 font-bold">(nombre)</code>
-                    <span className="text-teal-800 font-mono text-[11px]">
+                    <span className="text-brand-800 font-mono text-[11px]">
                       {currentStructuredJson.nombre_completo || "NOMBRE"}
                     </span>
                   </div>
-                  <div className="p-2 bg-white rounded-lg border border-teal-200 flex justify-between items-center">
+                  <div className="p-2 bg-white rounded-lg border border-brand-200 flex justify-between items-center">
                     <code className="text-slate-800 font-bold">
                       (numero de identidad)
                     </code>
-                    <span className="text-teal-800 font-mono text-[11px]">
+                    <span className="text-brand-800 font-mono text-[11px]">
                       {currentStructuredJson.numero_identidad || "NUMERO"}
                     </span>
                   </div>
-                  <div className="p-2 bg-white rounded-lg border border-teal-200 flex justify-between items-center">
+                  <div className="p-2 bg-white rounded-lg border border-brand-200 flex justify-between items-center">
                     <code className="text-slate-800 font-bold">
                       (cedula/pasaporte)
                     </code>
-                    <span className="text-teal-800 font-mono text-[11px]">
+                    <span className="text-brand-800 font-mono text-[11px]">
                       {currentStructuredJson.tipo_documento}
                     </span>
                   </div>
-                  <div className="p-2 bg-white rounded-lg border border-teal-200 flex justify-between items-center">
+                  <div className="p-2 bg-white rounded-lg border border-brand-200 flex justify-between items-center">
                     <code className="text-slate-800 font-bold">
                       (nacionalidad)
                     </code>
-                    <span className="text-teal-800 font-mono text-[11px]">
+                    <span className="text-brand-800 font-mono text-[11px]">
                       {currentStructuredJson.nacionalidad?.toLowerCase()}
                     </span>
                   </div>
-                  <div className="p-2 bg-white rounded-lg border border-teal-200 flex justify-between items-center">
+                  <div className="p-2 bg-white rounded-lg border border-brand-200 flex justify-between items-center">
                     <code className="text-slate-800 font-bold">(sexo)</code>
-                    <span className="text-teal-800 font-mono text-[11px]">
+                    <span className="text-brand-800 font-mono text-[11px]">
                       {currentStructuredJson.condicion_juridica}
                     </span>
                   </div>
-                  <div className="p-2 bg-white rounded-lg border border-teal-200 flex justify-between items-center">
+                  <div className="p-2 bg-white rounded-lg border border-brand-200 flex justify-between items-center">
                     <code className="text-slate-800 font-bold">
                       (fecha_nacimiento)
                     </code>
-                    <span className="text-teal-800 font-mono text-[11px]">
+                    <span className="text-brand-800 font-mono text-[11px]">
                       {currentStructuredJson.fecha_nacimiento || "YYYY-MM-DD"}
                     </span>
                   </div>
@@ -1034,7 +1034,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
               país emisor contra el documento original.
             </label>
             {!identityConfirmed && (
-              <p className="text-sm text-teal-800">
+              <p className="text-sm text-brand-800">
                 Para continuar, revisa los datos y marca la casilla de
                 confirmación de arriba.
               </p>
@@ -1066,7 +1066,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                 id="btn-confirm-and-generate"
                 disabled={saving || !identityConfirmed}
                 onClick={() => handleContinue("generate")}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-slate-950 font-bold text-sm shadow-lg shadow-teal-500/20 active:scale-95 transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-brand-500 to-brand-500 hover:from-brand-400 hover:to-brand-500 text-slate-950 font-bold text-sm shadow-lg shadow-brand-500/20 active:scale-95 transition-all"
               >
                 <span>
                   {saving ? "Guardando…" : "Guardar y continuar al generador"}

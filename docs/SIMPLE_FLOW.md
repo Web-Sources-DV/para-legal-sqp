@@ -18,4 +18,4 @@ Prueba orientativa en Chromium, mismo entorno, con documentos ficticios y escrit
 
 Validación automatizada: controles de selección de pasadas y controles MRZ fallidos, preparación/reutilización/cancelación del motor, flujo completo de tres pasos hasta verificar el texto del Word descargado, navegación responsive y OCR real de cédula y pasaporte.
 
-Los colores actuales se conservan a la espera de la imagen de referencia solicitada por el usuario. No se cambian el esquema de Supabase, el acceso compartido ni el logo oficial. Los Word siguen sin logos.
+La interfaz usa la paleta azul y oro del SVG proporcionado por el usuario, documentada en [BRAND_PALETTE.md](BRAND_PALETTE.md). No se cambian el esquema de Supabase, el acceso compartido ni el logo oficial. Los Word siguen sin logos.
