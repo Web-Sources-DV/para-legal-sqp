@@ -65,3 +65,24 @@ test("a synchronous OCR factory failure does not lock later scans", async () => 
   );
   await session.dispose();
 });
+
+test("preparing OCR during image review reuses one worker for the actual scan", async () => {
+  let created = 0;
+  const session = new OcrWorkerSession(async () => {
+    created++;
+    return {
+      recognize: async () => ({ data: { text: "READY", confidence: 95 } }),
+      terminate: async () => {},
+    };
+  });
+  try {
+    await Promise.all([session.warm(), session.warm()]);
+    assert.equal(
+      (await session.run((worker) => worker.recognize("image"))).data.text,
+      "READY",
+    );
+    assert.equal(created, 1);
+  } finally {
+    await session.dispose();
+  }
+});

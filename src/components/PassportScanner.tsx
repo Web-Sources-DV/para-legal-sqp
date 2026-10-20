@@ -1,5 +1,9 @@
 import { mergeIdentityReadings } from "../services/identityReadings";
-import { OCR_LANGUAGES, type OcrLanguage } from "../services/ocrWorker";
+import {
+  getOcrSession,
+  OCR_LANGUAGES,
+  type OcrLanguage,
+} from "../services/ocrWorker";
 import { rotateImage } from "../services/imagePreprocessing";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -20,9 +24,7 @@ import {
 } from "lucide-react";
 import { ExtractionResult } from "../types";
 import { extractWithTesseract } from "../services/ocrService";
-import {
-  preprocessDocumentForOCR,
-} from "../services/imagePreprocessing";
+import { preprocessDocumentForOCR } from "../services/imagePreprocessing";
 
 interface PassportScannerProps {
   onExtractionComplete: (result: ExtractionResult) => void;
@@ -143,6 +145,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   // Trigger camera start when camera tab is active
   useEffect(() => {
     if (activeTab === "camera") {
+      void getOcrSession(ocrLanguage).warm().catch(() => {});
       startCamera(cameraFacingMode);
     } else {
       stopCameraStream();
@@ -159,6 +162,10 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
       videoRef.current.play().catch(() => {});
     }
   }, [cameraStream]);
+
+  useEffect(() => {
+    if (selectedFilePreview) void getOcrSession(ocrLanguage).warm().catch(() => {});
+  }, [ocrLanguage, selectedFilePreview]);
 
   // Switch between front and back cameras
   const handleToggleCameraFacing = () => {
@@ -198,44 +205,6 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
     setActiveTab("upload");
   };
 
-  // Resize / optimize image before sending to OCR local to guarantee first-try reading
-  const optimizeImageIfNeeded = (dataUrl: string): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const maxDim = 2800;
-        let width = img.width;
-        let height = img.height;
-
-        if (width <= maxDim && height <= maxDim) {
-          resolve(dataUrl);
-          return;
-        }
-
-        if (width > height) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          resolve(dataUrl);
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", 0.94));
-      };
-      img.onerror = () => resolve(dataUrl);
-      img.src = dataUrl;
-    });
-  };
-
   // Perform extraction on an image base64
   const processImage = async (
     imageBase64: string,
@@ -252,7 +221,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
 
     try {
       // 1. Optimize image resolution for crystal clear OCR
-      const optimizedBase64 = await optimizeImageIfNeeded(imageBase64);
+      const optimizedBase64 = imageBase64;
 
       // 2. Preprocess optical filters (Grayscale, Contrast stretch, Sharpen, Otsu Binarization)
       setProcessingStatus(
@@ -327,6 +296,9 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
     reader.onload = (event) => {
       const base64 = event.target?.result as string;
       if (base64) {
+        void getOcrSession(ocrLanguage)
+          .warm()
+          .catch(() => {});
         setSelectedFilePreview(base64);
         setReversePreview(null);
       }
@@ -369,7 +341,8 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
               </h3>
             </div>
             <p className="text-xs text-slate-400">
-              Extrae los datos del documento. Revísalos antes de guardarlos y generar tu Word.
+              Extrae los datos del documento. Revísalos antes de guardarlos y
+              generar tu Word.
             </p>
           </div>
         </div>
@@ -491,7 +464,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center text-center transition-all ${
+              className={`border-2 border-dashed rounded-2xl p-6 ${selectedFilePreview ? "hidden" : "flex"} flex-col items-center justify-center text-center transition-all ${
                 isDragging
                   ? "border-teal-500 bg-teal-50/60 scale-[1.01]"
                   : "border-slate-300 hover:border-teal-500 bg-slate-50 hover:bg-teal-50/30"
@@ -508,44 +481,13 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                   Arrastra o haz clic para subir la foto del pasaporte o cédula
                 </h4>
                 <p className="text-xs text-slate-500 max-w-md mb-4">
-                  El sistema detectará automáticamente el{" "}
-                  <span className="font-semibold text-slate-700">
-                    nombre completo
-                  </span>
-                  ,{" "}
-                  <span className="font-semibold text-slate-700">
-                    número de documento
-                  </span>
-                  ,{" "}
-                  <span className="font-semibold text-slate-700">
-                    nacionalidad
-                  </span>
-                  ,{" "}
-                  <span className="font-semibold text-slate-700">
-                    fecha de nacimiento
-                  </span>{" "}
-                  y{" "}
-                  <span className="font-semibold text-slate-700">
-                    condición (sexo/edad)
-                  </span>{" "}
-                  para que los revises antes de guardar.
+                  Foto nítida, sin reflejos y con todos los bordes visibles.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-md hover:bg-slate-800 transition-colors">
                     <FileSearch className="w-4 h-4 text-teal-400" />
                     Seleccionar Archivo de Imagen
                   </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setActiveTab("camera");
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold shadow-md transition-colors"
-                  >
-                    <Camera className="w-4 h-4 text-slate-950" />
-                    Usar Cámara Web
-                  </button>
                 </div>
                 <input
                   id="passport-file-input"
@@ -591,9 +533,18 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                 >
                   Leer y revisar identidad
                 </button>
+                <label
+                  htmlFor="passport-file-input"
+                  className="inline-block cursor-pointer underline text-sm ml-3"
+                >
+                  Cambiar imagen
+                </label>
               </div>
             )}
-            <div className="bg-white border rounded-xl p-4 space-y-3">
+            <details className="bg-white border rounded-xl p-4 space-y-3">
+              <summary className="cursor-pointer text-sm font-semibold">
+                Idioma y reverso (opcional)
+              </summary>
               <label className="block text-sm font-semibold">
                 Idioma del documento
                 <select
@@ -650,46 +601,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                 letras nítidas. En un pasaporte incluye completa la zona de
                 letras y signos &lt; de la parte inferior.
               </p>
-            </div>
-            {/* Helpful instructions card */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <h5 className="text-xs font-bold text-slate-800">
-                    Mejora de legibilidad
-                  </h5>
-                  <p className="text-[11px] text-slate-500">
-                    Optimización de imagen y contraste automático previo al
-                    escaneo.
-                  </p>
-                </div>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
-                <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-                <div>
-                  <h5 className="text-xs font-bold text-slate-800">
-                    Campos Legales Clave
-                  </h5>
-                  <p className="text-[11px] text-slate-500">
-                    Extrae (nombre), (numero de identidad), (nacionalidad),
-                    (sexo/edad) y fechas.
-                  </p>
-                </div>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
-                <ImageIcon className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <div>
-                  <h5 className="text-xs font-bold text-slate-800">
-                    Formatos Compatibles
-                  </h5>
-                  <p className="text-[11px] text-slate-500">
-                    Admite JPG, PNG, WEBP y fotos tomadas desde cualquier
-                    teléfono o escáner.
-                  </p>
-                </div>
-              </div>
-            </div>
+            </details>
           </div>
         )}
 

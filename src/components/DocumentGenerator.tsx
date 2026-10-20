@@ -53,6 +53,7 @@ import { saveDocumentLog } from "../services/storageService";
 import { IDONEOS, DEFAULT_IDONEO, getIdoneoByName } from "../data/idoneos";
 
 interface DocumentGeneratorProps {
+  guided?: boolean;
   clients: Client[];
   templates: Template[];
   selectedClient?: Client | null;
@@ -63,6 +64,7 @@ interface DocumentGeneratorProps {
 }
 
 export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
+  guided = false,
   clients: clientList,
   templates,
   selectedClient: initialClient,
@@ -195,10 +197,15 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
     }
   }, [activeIdoneo.id]);
 
-  const previewClientName = customSigClientName || activeClient?.fullName.toUpperCase() || "[nombre pendiente]";
-  const previewClientDoc = customSigClientDoc || (activeClient?.passportNumber
-    ? `${documentTypeLabel(activeClient.docType).toUpperCase()} No. ${activeClient.passportNumber}`
-    : "[número pendiente]");
+  const previewClientName =
+    customSigClientName ||
+    activeClient?.fullName.toUpperCase() ||
+    "[nombre pendiente]";
+  const previewClientDoc =
+    customSigClientDoc ||
+    (activeClient?.passportNumber
+      ? `${documentTypeLabel(activeClient.docType).toUpperCase()} No. ${activeClient.passportNumber}`
+      : "[número pendiente]");
 
   // Sync selected client if prop changes
   useEffect(() => {
@@ -414,67 +421,30 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
     <div className="space-y-6">
       {/* Top Selection Box */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
-        {/* Idóneo Selector Bar */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-              <Scale className="w-4 h-4 text-teal-600" />
-              1. Idóneo / Letrado Responsable del Documento *
-            </label>
-            <span className="text-[11px] text-teal-800 font-semibold bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
-              {activeIdoneo.role}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            {IDONEOS.map((idoneo) => {
-              const isSelected = idoneo.id === activeIdoneo.id;
-              return (
-                <button
-                  key={idoneo.id}
-                  type="button"
-                  disabled={isGenerating || !!pendingDocument.current}
-                  onClick={() => setSelectedIdoneoId(idoneo.id)}
-                  className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
-                    isSelected
-                      ? "bg-slate-900 text-white border-slate-900 shadow-sm ring-2 ring-teal-500/50"
-                      : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
-                  }`}
-                >
-                  <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
-                      isSelected
-                        ? "bg-teal-500 text-slate-950"
-                        : "bg-white text-slate-700 border border-slate-200"
-                    }`}
-                  >
-                    {idoneo.initials}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span
-                      className={`font-serif font-bold text-xs block truncate ${isSelected ? "text-white" : "text-slate-900"}`}
-                    >
-                      {idoneo.name}
-                    </span>
-                    <span
-                      className={`text-[10px] block truncate ${isSelected ? "text-teal-300" : "text-slate-500"}`}
-                    >
-                      {idoneo.colegiado.split("·")[0].trim()}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <label className="block text-sm font-semibold text-slate-700">
+          Letrado responsable
+          <select
+            aria-label="Letrado responsable"
+            value={selectedIdoneoId}
+            disabled={isGenerating || !!pendingDocument.current}
+            onChange={(event) => setSelectedIdoneoId(event.target.value)}
+            className="mt-2 block w-full rounded-xl border border-slate-300 p-3"
+          >
+            {IDONEOS.map((idoneo) => (
+              <option key={idoneo.id} value={idoneo.id}>
+                {idoneo.name}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-100">
           {/* Client Selector */}
-          <div>
+          <div className={guided ? "hidden" : ""}>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                 <Users className="w-4 h-4 text-teal-600" />
-                2. Cliente Destinatario *
+                Cliente *
               </label>
               <span className="text-[11px] text-slate-500 font-medium">
                 {clients.length} clientes registrados
@@ -530,7 +500,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                 <FileText className="w-4 h-4 text-teal-600" />
-                3. Plantilla Word (.docx) *
+                Plantilla Word (.docx) *
               </label>
               {onOpenTemplatesTab && (
                 <button
@@ -577,7 +547,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         </div>
 
         {/* Real-time Replacement Inspector Banner */}
-        {activeClient && activeTemplate && (
+        {!guided && activeClient && activeTemplate && (
           <div className="pt-6 border-t border-slate-100">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -850,14 +820,13 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div>
               <h3 className="font-serif font-bold text-slate-900 text-lg">
-                Campos y Variables del Documento (
-                {activeTemplate.placeholders.length} marcadores)
+                Datos del documento
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Valores auto-rellenados con los datos del pasaporte y del
                 letrado idóneo{" "}
                 <strong className="text-slate-800">{activeIdoneo.name}</strong>.
-                Puedes editarlos antes de compilar.
+                Revisa y completa los datos que falten.
               </p>
             </div>
 
@@ -952,34 +921,39 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
             })}
           </div>
 
-          <SignatureStudio
-            activeTemplate={activeTemplate}
-            formValues={formValues}
-            sigAlignment={sigAlignment}
-            sigEnabled={sigEnabled}
-            setSigEnabled={edited(setSigEnabled)}
-            sigColumnOffset={sigColumnOffset}
-            setSigColumnOffset={edited(setSigColumnOffset)}
-            sigBlankLines={sigBlankLines}
-            setSigBlankLines={edited(setSigBlankLines)}
-            sigUseTable={sigUseTable}
-            setSigUseTable={edited(setSigUseTable)}
-            customSigClientName={customSigClientName}
-            setCustomSigClientName={edited(setCustomSigClientName)}
-            customSigClientDoc={customSigClientDoc}
-            setCustomSigClientDoc={edited(setCustomSigClientDoc)}
-            customSigLawyerTitle={customSigLawyerTitle}
-            setCustomSigLawyerTitle={edited(setCustomSigLawyerTitle)}
-            customSigLawyerCedula={customSigLawyerCedula}
-            customSigLawyerIdoneidad={customSigLawyerIdoneidad}
-            showVerticalGuide={showVerticalGuide}
-            setShowVerticalGuide={setShowVerticalGuide}
-            showSigAdvancedConfig={showSigAdvancedConfig}
-            setShowSigAdvancedConfig={setShowSigAdvancedConfig}
-            previewClientName={previewClientName}
-            previewClientDoc={previewClientDoc}
-            activeClient={activeClient}
-          />
+          <details className="border-t border-slate-200 pt-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+              Opciones de firma (opcional)
+            </summary>
+            <SignatureStudio
+              activeTemplate={activeTemplate}
+              formValues={formValues}
+              sigAlignment={sigAlignment}
+              sigEnabled={sigEnabled}
+              setSigEnabled={edited(setSigEnabled)}
+              sigColumnOffset={sigColumnOffset}
+              setSigColumnOffset={edited(setSigColumnOffset)}
+              sigBlankLines={sigBlankLines}
+              setSigBlankLines={edited(setSigBlankLines)}
+              sigUseTable={sigUseTable}
+              setSigUseTable={edited(setSigUseTable)}
+              customSigClientName={customSigClientName}
+              setCustomSigClientName={edited(setCustomSigClientName)}
+              customSigClientDoc={customSigClientDoc}
+              setCustomSigClientDoc={edited(setCustomSigClientDoc)}
+              customSigLawyerTitle={customSigLawyerTitle}
+              setCustomSigLawyerTitle={edited(setCustomSigLawyerTitle)}
+              customSigLawyerCedula={customSigLawyerCedula}
+              customSigLawyerIdoneidad={customSigLawyerIdoneidad}
+              showVerticalGuide={showVerticalGuide}
+              setShowVerticalGuide={setShowVerticalGuide}
+              showSigAdvancedConfig={showSigAdvancedConfig}
+              setShowSigAdvancedConfig={setShowSigAdvancedConfig}
+              previewClientName={previewClientName}
+              previewClientDoc={previewClientDoc}
+              activeClient={activeClient}
+            />
+          </details>
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs text-slate-500 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

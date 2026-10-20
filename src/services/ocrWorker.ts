@@ -14,6 +14,24 @@ export class OcrWorkerSession {
     private factory: () => Promise<Worker>,
     private idleMs = 60000,
   ) {}
+  async warm(): Promise<void> {
+    const promise = (this.worker ||= Promise.resolve().then(() =>
+      this.factory(),
+    ));
+    try {
+      await promise;
+      if (this.worker === promise && !this.busy) {
+        if (this.idle) clearTimeout(this.idle);
+        this.idle = setTimeout(
+          () => void this.dispose().catch(() => {}),
+          this.idleMs,
+        );
+      }
+    } catch (error) {
+      if (this.worker === promise) this.worker = null;
+      throw error;
+    }
+  }
   async run<T>(
     action: (worker: Worker) => Promise<T>,
     signal?: AbortSignal,
