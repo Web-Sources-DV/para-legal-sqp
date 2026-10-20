@@ -52,6 +52,14 @@ for (const identity of [
       try {
         const context = await browser.newContext({ ignoreHTTPSErrors: true });
         const page = await context.newPage();
+        await page.addInitScript(`
+          window.__ocrRecognitions = 0;
+          const originalSend = Worker.prototype.postMessage;
+          Worker.prototype.postMessage = function(message) {
+            if (message && message.action === "recognize") window.__ocrRecognitions++;
+            return originalSend.apply(this, arguments);
+          };
+        `);
         let saved: Client | undefined;
         const revisions: (number | null)[] = [];
         await page.route(
@@ -108,6 +116,7 @@ for (const identity of [
           mimeType: "image/png",
           buffer: Buffer.from(png, "base64"),
         });
+        const readStarted = Date.now();
         await page
           .getByRole("button", {
             name: "Leer y revisar identidad",
@@ -117,6 +126,9 @@ for (const identity of [
         await page
           .getByText("DOCUMENTO VENCIDO", { exact: true })
           .waitFor({ timeout: 120000 });
+        console.log(
+          `${identity.type}: ${Date.now() - readStarted} ms desde Leer hasta revisión; ${await page.evaluate(() => (window as any).__ocrRecognitions)} pasadas OCR.`,
+        );
         const expiry = page.locator("input[type=date]").nth(1);
         assert.equal(await expiry.inputValue(), "2024-01-01");
         await expiry.fill("2100-01-01");

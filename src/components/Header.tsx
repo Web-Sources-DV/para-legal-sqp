@@ -1,5 +1,5 @@
 import React from "react";
-import { FileText, Users, FolderOpen, Sparkles, FileCode2, BookOpen } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { ActiveTab, DatabaseStats } from "../types";
 import { CloudSyncState } from "../services/storageService";
 import { AppLogo } from "./AppLogo";
@@ -15,13 +15,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
-  stats = {
-    totalClients: 0,
-    totalTemplates: 0,
-    totalGeneratedDocs: 0,
-    storageUsageEstimateKb: 0,
-  },
-  syncState,
   onStartNewDocument,
 }) => {
   return (
@@ -66,115 +59,54 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Intuitive Navigation Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-800/90 py-2.5">
+        <nav
+          aria-label="Navegación"
+          className="flex items-center justify-between gap-3 border-t border-slate-800 py-2"
+        >
           <button
             id="nav-tab-wizard"
             onClick={() => setActiveTab("wizard")}
-            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
-              activeTab === "wizard"
-                ? "bg-teal-500 text-slate-950 shadow-md shadow-teal-500/20 font-bold"
-                : "text-slate-300 hover:text-white hover:bg-slate-800/80"
-            }`}
+            className="px-3 py-2 rounded-lg text-sm font-semibold text-teal-300 hover:bg-slate-800"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Asistente</span>
+            Documento
           </button>
-
-          <button
-            id="nav-tab-generator"
-            onClick={() => setActiveTab("generator")}
-            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
-              activeTab === "generator"
-                ? "bg-teal-500 text-slate-950 shadow-md shadow-teal-500/20 font-bold"
-                : "text-slate-300 hover:text-white hover:bg-slate-800/80"
-            }`}
+          <details
+            className="relative"
+            onKeyDown={(event) => {
+              if (event.key === "Escape")
+                event.currentTarget.removeAttribute("open");
+            }}
           >
-            <FileCode2 className="w-4 h-4" />
-            <span>Generador</span>
-          </button>
-
-          <button
-            id="nav-tab-clients"
-            onClick={() => setActiveTab("clients")}
-            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
-              activeTab === "clients"
-                ? "bg-teal-500 text-slate-950 shadow-md font-bold"
-                : "text-slate-300 hover:text-white hover:bg-slate-800/80"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Clientes</span>
-            <span
-              className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
-                activeTab === "clients"
-                  ? "bg-slate-950 text-teal-400"
-                  : "bg-slate-800 text-slate-300 border border-slate-700"
-              }`}
-            >
-              {stats.totalClients}
-            </span>
-          </button>
-
-          <button
-            id="nav-tab-templates"
-            onClick={() => setActiveTab("templates")}
-            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
-              activeTab === "templates"
-                ? "bg-teal-500 text-slate-950 shadow-md font-bold"
-                : "text-slate-300 hover:text-white hover:bg-slate-800/80"
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>Plantillas</span>
-            <span
-              className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
-                activeTab === "templates"
-                  ? "bg-slate-950 text-teal-400"
-                  : "bg-slate-800 text-slate-300 border border-slate-700"
-              }`}
-            >
-              {stats.totalTemplates}
-            </span>
-          </button>
-
-          {(
-            <button
-              id="nav-tab-history"
-              onClick={() => setActiveTab("history")}
-              className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
-                activeTab === "history"
-                  ? "bg-teal-500 text-slate-950 shadow-md font-bold"
-                  : "text-slate-300 hover:text-white hover:bg-slate-800/80"
-              }`}
-            >
-              <FolderOpen className="w-4 h-4" />
-              <span>Historial</span>
-              <span
-                className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
-                  activeTab === "history"
-                    ? "bg-slate-950 text-teal-400"
-                    : "bg-slate-800 text-slate-300 border border-slate-700"
-                }`}
-              >
-                {stats.totalGeneratedDocs}
-              </span>
-            </button>
-          )}
-
-          <button
-            id="nav-tab-manual"
-            onClick={() => setActiveTab("manual")}
-            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap border ${
-              activeTab === "manual"
-                ? "bg-teal-500 text-slate-950 border-teal-400 shadow-md font-bold"
-                : "text-teal-300 bg-teal-500/10 border-teal-500/30 hover:bg-teal-500/20 hover:text-teal-200"
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Manual</span>
-          </button>
-        </div>
+            <summary className="cursor-pointer whitespace-nowrap px-3 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800">
+              Herramientas
+            </summary>
+            <div className="absolute right-0 top-full mt-2 w-56 max-w-[85vw] p-2 rounded-xl border border-slate-700 bg-slate-900 shadow-xl z-40">
+              {(
+                [
+                  ["clients", "Clientes"],
+                  ["templates", "Plantillas"],
+                  ["history", "Historial"],
+                  ["manual", "Ayuda"],
+                  ["generator", "Generador avanzado"],
+                ] as [ActiveTab, string][]
+              ).map(([tab, label]) => (
+                <button
+                  key={tab}
+                  id={`nav-tab-${tab}`}
+                  onClick={(event) => {
+                    event.currentTarget
+                      .closest("details")
+                      ?.removeAttribute("open");
+                    setActiveTab(tab);
+                  }}
+                  className={`block w-full px-3 py-2.5 rounded-lg text-left text-sm hover:bg-slate-800 ${activeTab === tab ? "text-teal-300" : "text-slate-200"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </details>
+        </nav>
       </div>
     </header>
   );

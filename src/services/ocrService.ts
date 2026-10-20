@@ -1,3 +1,4 @@
+import { hasCompleteVisualReading } from "./ocrReadPolicy";
 import { reconcileVisualReadings } from "./ocrConsensus";
 import { parseInternationalDocumentText } from "./documentTextParser";
 import { evaluateIdentityDocument } from "./identityStatus";
@@ -338,6 +339,7 @@ export async function extractWithTesseract(
   let mrzResult: Partial<ExtractionResult> = {};
   const candidates: Partial<ExtractionResult>[] = [];
   const visualCandidates: Partial<ExtractionResult>[] = [];
+  let completeVisual = false;
   await getOcrSession(language).run(async worker => {
     const read=async (image:string, mrzOnly=false) => {
       await worker.setParameters?.({tessedit_pageseg_mode:mrzOnly?6:11,tessedit_char_whitelist:mrzOnly?'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<':''});
@@ -345,21 +347,30 @@ export async function extractWithTesseract(
       rawText += '\n'+ret.data.text;
       confidence=Math.max(confidence,Math.round(ret.data.confidence)||0);
       candidates.push(parseMRZ(ret.data.text));
-      if(!mrzOnly) visualCandidates.push(parseVisualDocumentText(ret.data.text));
+      if(!mrzOnly) {
+        const visual = parseVisualDocumentText(ret.data.text);
+        visualCandidates.push(visual);
+        completeVisual ||= hasCompleteVisualReading(visual, ret.data.confidence);
+      }
     };
     await read(preprocessed.enhanced);
     const validMrz=()=>candidates.some(value=>value.passportNumber && value.fullName && !value.warnings?.length);
-    if(preprocessed.mrz && !validMrz()) {
-      onProgress?.(62,'Leyendo la zona MRZ con su alfabeto y controles...');
+    const needsMoreVisual = () => !completeVisual || candidates.some(value => value.mrzLine1 && value.warnings?.length);
+    let readStrip = false;
+    if(preprocessed.mrz && /<{2}|[«‹〈]{2}/.test(rawText) && !validMrz() && needsMoreVisual()) {
+      onProgress?.(62,'Leyendo la zona MRZ...');
       await read(preprocessed.mrz,true);
+      readStrip = true;
     }
-    const visual=visualCandidates[0];
-    if(!validMrz() || !visual?.fullName || !visual?.birthDate || !visual?.passportNumber) {
-      onProgress?.(73,'Comparando una segunda lectura de alto contraste...');
+    if(!validMrz() && needsMoreVisual()) {
+      onProgress?.(73,'Recuperando los datos que faltan con más contraste...');
       await read(preprocessed.binarized);
     }
-    if(!validMrz() && confidence<70) {
-      onProgress?.(82,'Revisando la imagen original para recuperar detalles...');
+    if(preprocessed.mrz && !readStrip && !validMrz() && needsMoreVisual()) {
+      await read(preprocessed.mrz,true);
+    }
+    if(!validMrz() && needsMoreVisual() && confidence<70) {
+      onProgress?.(82,'Revisando la imagen original...');
       await read(preprocessed.original);
     }
     await worker.setParameters?.({tessedit_pageseg_mode:11,tessedit_char_whitelist:''});

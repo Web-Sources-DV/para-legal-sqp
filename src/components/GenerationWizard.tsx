@@ -1,20 +1,6 @@
+import { hasUnsavedChanges } from "../hooks/useUnsavedChanges";
 import React, { useState } from "react";
-import {
-  Camera,
-  CheckCircle2,
-  FileText,
-  Sparkles,
-  ArrowLeft,
-  ArrowRight,
-  Shield,
-  Layers,
-  RotateCcw,
-  Users,
-  Search,
-  PenTool,
-  UserCheck,
-  FileDown,
-} from "lucide-react";
+import { ArrowRight, Users, Search } from "lucide-react";
 import {
   ExtractionResult,
   Client,
@@ -25,7 +11,6 @@ import { PassportScanner } from "./PassportScanner";
 import { DataReviewStep } from "./DataReviewStep";
 import { DocumentGenerator } from "./DocumentGenerator";
 import { saveClient } from "../services/storageService";
-import { BookOpen } from "lucide-react";
 
 interface GenerationWizardProps {
   clients: Client[];
@@ -52,6 +37,15 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
   const [extractionResult, setExtractionResult] =
     useState<ExtractionResult | null>(null);
   const [activeClient, setActiveClient] = useState<Client | null>(null);
+
+  const goBack = (step: 1 | 2) => {
+    if (
+      hasUnsavedChanges() &&
+      !confirm("¿Volver y descartar los cambios sin guardar de este paso?")
+    )
+      return;
+    setCurrentStep(step);
+  };
 
   // Handle completion of scanner
   const handleExtractionComplete = (result: ExtractionResult) => {
@@ -128,13 +122,6 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
     }
   };
 
-  const handleResetWizard = () => {
-    setCurrentStep(1);
-    setExtractionResult(null);
-    setActiveClient(null);
-    setStep1Mode("scan");
-  };
-
   const filteredClients = clients.filter(
     (c) =>
       c.fullName.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
@@ -146,238 +133,61 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Wizard Progress Steps Header */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-800 border border-teal-500/30 text-[11px] font-bold tracking-wide uppercase">
-                Paso {currentStep} de 3
-              </span>
-              <h2 className="font-serif font-bold text-slate-900 text-xl">
-                {currentStep === 1 &&
-                  "Paso 1: Identificación y Lectura del Cliente"}
-                {currentStep === 2 &&
-                  "Paso 2: Validación y Edición de Datos Extraídos"}
-                {currentStep === 3 &&
-                  "Paso 3: Selección de Plantilla y Compilación Word (.docx)"}
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              {currentStep === 1 &&
-                "Elige leer un pasaporte o cédula con OCR local, seleccionar un cliente registrado o ingresar los datos manualmente."}
-              {currentStep === 2 &&
-                "Confirma que los nombres, número de pasaporte y nacionalidad sean correctos antes de compilar."}
-              {currentStep === 3 &&
-                "Elige la plantilla Word a rellenar y descarga el documento listo para firmar o imprimir."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {onOpenManualTab && (
-              <button
-                onClick={onOpenManualTab}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-900 border border-teal-500/30 text-xs font-semibold transition-all"
-                aria-label="Ver Manual de Uso y Guía Paso a Paso"
-                title="Ver Manual de Uso y Guía Paso a Paso"
+      <section className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+        <h2 className="font-serif font-bold text-slate-900 text-xl">
+          Documento en 3 pasos
+        </h2>
+        <ol
+          aria-label="Progreso del documento"
+          className="grid grid-cols-3 gap-2 mt-4"
+        >
+          {(["Cliente", "Revisar", "Generar Word"] as const).map(
+            (label, index) => (
+              <li
+                key={label}
+                aria-current={currentStep === index + 1 ? "step" : undefined}
+                className={`rounded-lg px-2 py-3 text-center text-xs sm:text-sm font-semibold ${currentStep === index + 1 ? "bg-teal-100 text-teal-900" : "bg-slate-50 text-slate-600"}`}
               >
-                <BookOpen className="w-3.5 h-3.5 text-teal-700" />
-                <span className="hidden sm:inline">Manual de Uso</span>
-              </button>
-            )}
-
-            {currentStep > 1 && (
-              <button
-                onClick={handleResetWizard}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-all shadow-xs"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reiniciar</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Steps Indicators */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 relative">
-          {/* Step 1 */}
+                {index + 1}. {label}
+              </li>
+            ),
+          )}
+        </ol>
+        {currentStep > 1 && (
           <button
             type="button"
-            aria-current={currentStep === 1 ? "step" : undefined}
-            onClick={() => setCurrentStep(1)}
-            className={`text-left p-3.5 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${
-              currentStep === 1
-                ? "bg-teal-500/15 border-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500/50"
-                : currentStep > 1
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                  : "bg-slate-50 border-slate-200 text-slate-400"
-            }`}
+            className="mt-3 text-sm text-teal-800 underline"
+            onClick={() => goBack(currentStep === 3 ? 2 : 1)}
           >
-            <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
-                currentStep === 1
-                  ? "bg-teal-500 text-slate-950 font-extrabold"
-                  : currentStep > 1
-                    ? "bg-emerald-500 text-white"
-                    : "bg-slate-200 text-slate-600"
-              }`}
-            >
-              {currentStep > 1 ? <CheckCircle2 className="w-5 h-5" /> : "1"}
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider block text-slate-500">
-                Paso 1
-              </span>
-              <span className="font-bold text-xs block truncate text-slate-900">
-                {activeClient ? activeClient.fullName : "Identificar Cliente"}
-              </span>
-            </div>
+            Volver al paso anterior
           </button>
-
-          {/* Step 2 */}
-          <button
-            type="button"
-            aria-current={currentStep === 2 ? "step" : undefined}
-            disabled={!extractionResult}
-            onClick={() => extractionResult && setCurrentStep(2)}
-            className={`text-left p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
-              !extractionResult
-                ? "cursor-not-allowed opacity-60"
-                : "cursor-pointer"
-            } ${
-              currentStep === 2
-                ? "bg-teal-500/15 border-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500/50"
-                : currentStep > 2
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                  : "bg-slate-50 border-slate-200 text-slate-400"
-            }`}
-          >
-            <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
-                currentStep === 2
-                  ? "bg-teal-500 text-slate-950 font-extrabold"
-                  : currentStep > 2
-                    ? "bg-emerald-500 text-white"
-                    : "bg-slate-200 text-slate-600"
-              }`}
-            >
-              {currentStep > 2 ? <CheckCircle2 className="w-5 h-5" /> : "2"}
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider block text-slate-500">
-                Paso 2
-              </span>
-              <span className="font-bold text-xs block truncate text-slate-900">
-                Revisar Datos
-              </span>
-            </div>
-          </button>
-
-          {/* Step 3 */}
-          <button
-            type="button"
-            aria-current={currentStep === 3 ? "step" : undefined}
-            disabled={!activeClient}
-            onClick={() => activeClient && setCurrentStep(3)}
-            className={`text-left p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
-              !activeClient ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-            } ${
-              currentStep === 3
-                ? "bg-teal-500/15 border-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500/50"
-                : "bg-slate-50 border-slate-200 text-slate-400"
-            }`}
-          >
-            <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
-                currentStep === 3
-                  ? "bg-teal-500 text-slate-950 font-extrabold"
-                  : "bg-slate-200 text-slate-600"
-              }`}
-            >
-              3
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider block text-slate-500">
-                Paso 3
-              </span>
-              <span className="font-bold text-xs block truncate text-slate-900">
-                Generar Word (.docx)
-              </span>
-            </div>
-          </button>
-        </div>
-      </div>
+        )}
+      </section>
 
       {/* Step 1: Scanner & Choice Cards */}
       {currentStep === 1 && (
         <div className="space-y-6">
-          {/* Quick Choice Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div
+            className="flex flex-wrap gap-2"
+            aria-label="Cómo identificar al cliente"
+          >
             <button
               onClick={() => setStep1Mode("scan")}
-              className={`p-4 rounded-xl border text-left flex items-center gap-3.5 transition-all ${
-                step1Mode === "scan"
-                  ? "bg-white border-teal-500 ring-2 ring-teal-500/20 shadow-md"
-                  : "bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white text-slate-600"
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm ${step1Mode === "scan" ? "bg-slate-900 text-white" : "bg-white border"}`}
             >
-              <div
-                className={`p-2.5 rounded-xl ${step1Mode === "scan" ? "bg-teal-500 text-slate-950" : "bg-slate-100 text-slate-600"}`}
-              >
-                <Camera className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="font-bold text-xs text-slate-900 block">
-                  Escanear Documento
-                </span>
-                <span className="text-[11px] text-slate-500 block">
-                  Con OCR local Tesseract
-                </span>
-              </div>
+              Leer documento
             </button>
-
             <button
               onClick={() => setStep1Mode("select_client")}
-              className={`p-4 rounded-xl border text-left flex items-center gap-3.5 transition-all ${
-                step1Mode === "select_client"
-                  ? "bg-white border-teal-500 ring-2 ring-teal-500/20 shadow-md"
-                  : "bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white text-slate-600"
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm ${step1Mode === "select_client" ? "bg-slate-900 text-white" : "bg-white border"}`}
             >
-              <div
-                className={`p-2.5 rounded-xl ${step1Mode === "select_client" ? "bg-teal-500 text-slate-950" : "bg-slate-100 text-slate-600"}`}
-              >
-                <Users className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="font-bold text-xs text-slate-900 block">
-                  Clientes Guardados
-                </span>
-                <span className="text-[11px] text-slate-500 block">
-                  {clients.length} clientes disponibles
-                </span>
-              </div>
+              Cliente guardado
             </button>
-
             <button
               onClick={handleStartManual}
-              className={`p-4 rounded-xl border text-left flex items-center gap-3.5 transition-all ${
-                step1Mode === "manual"
-                  ? "bg-white border-teal-500 ring-2 ring-teal-500/20 shadow-md"
-                  : "bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white text-slate-600"
-              }`}
+              className="px-3 py-2 rounded-lg text-sm bg-white border"
             >
-              <div className="p-2.5 rounded-xl bg-slate-100 text-slate-600">
-                <PenTool className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="font-bold text-xs text-slate-900 block">
-                  Ingreso Manual Rápido
-                </span>
-                <span className="text-[11px] text-slate-500 block">
-                  Escribir datos directamente
-                </span>
-              </div>
+              Ingreso Manual Rápido
             </button>
           </div>
 
@@ -485,7 +295,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
           existingClients={clients}
           selectedClient={activeClient}
           onConfirmClient={handleConfirmClient}
-          onRescan={() => setCurrentStep(1)}
+          onRescan={() => goBack(1)}
         />
       )}
 
@@ -510,16 +320,11 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
               </span>
             </div>
 
-            <button
-              onClick={() => setCurrentStep(2)}
-              className="text-teal-800 hover:text-teal-900 font-bold text-xs flex items-center gap-1.5 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg border border-teal-200 transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Modificar o Corregir Datos</span>
-            </button>
+
           </div>
 
           <DocumentGenerator
+            guided
             clients={clients}
             templates={templates}
             selectedClient={activeClient}
