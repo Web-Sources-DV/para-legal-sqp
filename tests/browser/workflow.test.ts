@@ -466,3 +466,74 @@ test("client details do not infer sex and load older history; failed saves stay 
     await browser.close();
   }
 });
+
+test("public navigation and scanner controls fit mobile and desktop screens", async () => {
+  const browser = await chromium.launch({
+    executablePath:
+      process.env.PL_CHROMIUM_PATH ||
+      (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined),
+    args: ["--no-sandbox"],
+  });
+  const page = await browser.newPage();
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.route("https://*.supabase.co/**", async (route) => {
+    const name = new URL(route.request().url()).pathname.split("/").at(-1);
+    const result = name?.endsWith("entity_counts")
+      ? { clients: 0, templates: 0, documents: 0 }
+      : name?.endsWith("sync_cursor")
+        ? 0
+        : [];
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(result),
+    });
+  });
+  try {
+    await page.goto(process.env.PL_BROWSER_URL || "http://127.0.0.1:3100");
+    for (const width of [375, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 960 });
+      for (const tab of [
+        "generator",
+        "clients",
+        "templates",
+        "history",
+        "manual",
+        "wizard",
+      ]) {
+        const button = page.locator(`#nav-tab-${tab}`);
+        await button.click();
+        await page
+          .getByText("Cargando sección...", { exact: true })
+          .waitFor({ state: "hidden" });
+        const box = await button.boundingBox();
+        assert.ok(
+          box && box.x >= 0 && box.x + box.width <= width,
+          `${tab} button fits ${width}px`,
+        );
+        assert.equal(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth > innerWidth,
+          ),
+          false,
+          `${tab} does not overflow at ${width}px`,
+        );
+      }
+      await page
+        .getByRole("heading", {
+          name: "Lector OCR de Pasaporte, Cédula y Carnet",
+        })
+        .waitFor();
+      assert.equal(
+        await page
+          .getByText("Filtro de Preprocesamiento Óptico OCR", { exact: true })
+          .count(),
+        0,
+      );
+    }
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});

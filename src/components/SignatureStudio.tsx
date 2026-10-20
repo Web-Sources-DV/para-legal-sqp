@@ -33,10 +33,6 @@ interface Props {
   setCustomSigLawyerTitle: React.Dispatch<React.SetStateAction<string>>;
   customSigLawyerCedula: string;
   customSigLawyerIdoneidad: string;
-  simulatedNameLength: "actual" | "short" | "medium" | "long" | "very_long";
-  setSimulatedNameLength: React.Dispatch<
-    React.SetStateAction<"actual" | "short" | "medium" | "long" | "very_long">
-  >;
   showVerticalGuide: boolean;
   setShowVerticalGuide: React.Dispatch<React.SetStateAction<boolean>>;
   showSigAdvancedConfig: boolean;
@@ -65,8 +61,6 @@ export function SignatureStudio({
   setCustomSigLawyerTitle,
   customSigLawyerCedula,
   customSigLawyerIdoneidad,
-  simulatedNameLength,
-  setSimulatedNameLength,
   showVerticalGuide,
   setShowVerticalGuide,
   showSigAdvancedConfig,
@@ -79,7 +73,7 @@ export function SignatureStudio({
     <>
       {/* Signature Studio & Document Sheet Preview (Antes de Generar) */}
       <div className="pt-6 border-t border-slate-200">
-        <label className="flex items-center gap-2 p-3 mb-3 bg-amber-50 rounded-xl text-sm">
+        <label className="flex items-center gap-2 p-3 mb-3 bg-teal-50 rounded-xl text-sm">
           <input
             type="checkbox"
             checked={sigEnabled}
@@ -93,7 +87,7 @@ export function SignatureStudio({
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-800">
             <div className="flex items-start gap-3.5">
-              <div className="w-11 h-11 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+              <div className="w-11 h-11 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 shrink-0 mt-0.5">
                 <PenTool className="w-5 h-5" />
               </div>
               <div>
@@ -109,7 +103,7 @@ export function SignatureStudio({
                 <p className="text-xs text-slate-300 mt-1 max-w-2xl">
                   Revisa y acomoda el nombre del cliente en el área de la firma
                   bajo{" "}
-                  <strong className="text-amber-400 font-bold">
+                  <strong className="text-teal-400 font-bold">
                     OTORGO PODER:
                   </strong>{" "}
                   antes de generar el Word. El sistema ajusta la alineación
@@ -141,7 +135,7 @@ export function SignatureStudio({
                 onClick={() => setShowSigAdvancedConfig(!showSigAdvancedConfig)}
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition-all"
               >
-                <Sliders className="w-3.5 h-3.5 text-amber-400" />
+                <Sliders className="w-3.5 h-3.5 text-teal-400" />
                 <span>Ajustes Finos</span>
                 {showSigAdvancedConfig ? (
                   <ChevronUp className="w-3.5 h-3.5" />
@@ -149,84 +143,6 @@ export function SignatureStudio({
                   <ChevronDown className="w-3.5 h-3.5" />
                 )}
               </button>
-            </div>
-          </div>
-
-          {/* Interactive Name Length Simulator */}
-          <div className="mt-4 p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
-                <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>
-                  Simulador de Nombres (Prueba de Acomodo Corto vs Largo):
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setSimulatedNameLength("actual")}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-all font-semibold ${
-                    simulatedNameLength === "actual"
-                      ? "bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30 scale-105"
-                      : "bg-slate-700/80 hover:bg-slate-600 text-slate-300"
-                  }`}
-                  title="Nombre real del cliente seleccionado"
-                >
-                  Actual (
-                  {activeClient
-                    ? activeClient.fullName.split(" ")[0]
-                    : "Cliente"}
-                  )
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSimulatedNameLength("short")}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-all font-semibold ${
-                    simulatedNameLength === "short"
-                      ? "bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30 scale-105"
-                      : "bg-slate-700/80 hover:bg-slate-600 text-slate-300"
-                  }`}
-                  title="Probar nombre muy corto (6 caracteres)"
-                >
-                  Corto: ANA LI
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSimulatedNameLength("medium")}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-all font-semibold ${
-                    simulatedNameLength === "medium"
-                      ? "bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30 scale-105"
-                      : "bg-slate-700/80 hover:bg-slate-600 text-slate-300"
-                  }`}
-                  title="Probar nombre medio (15 caracteres)"
-                >
-                  Medio: CARLOS RESTREPO
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSimulatedNameLength("long")}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-all font-semibold ${
-                    simulatedNameLength === "long"
-                      ? "bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30 scale-105"
-                      : "bg-slate-700/80 hover:bg-slate-600 text-slate-300"
-                  }`}
-                  title="Probar nombre largo del Ejemplo 2 (25 caracteres)"
-                >
-                  Largo: GUSTAVO JOSE ACOSTA MUÑOZ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSimulatedNameLength("very_long")}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-all font-semibold ${
-                    simulatedNameLength === "very_long"
-                      ? "bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30 scale-105"
-                      : "bg-slate-700/80 hover:bg-slate-600 text-slate-300"
-                  }`}
-                  title="Probar nombre muy largo/compuesto (39 caracteres)"
-                >
-                  Muy Largo: MARIA DE LOS ANGELES...
-                </button>
-              </div>
             </div>
           </div>
 
@@ -244,9 +160,9 @@ export function SignatureStudio({
                     max={68}
                     value={sigColumnOffset}
                     onChange={(e) => setSigColumnOffset(Number(e.target.value))}
-                    className="w-full accent-amber-500 cursor-pointer"
+                    className="w-full accent-teal-500 cursor-pointer"
                   />
-                  <span className="font-mono font-bold text-amber-400 text-xs w-9 text-right">
+                  <span className="font-mono font-bold text-teal-400 text-xs w-9 text-right">
                     {sigColumnOffset}%
                   </span>
                 </div>
@@ -263,7 +179,7 @@ export function SignatureStudio({
                       onClick={() => setSigColumnOffset(p.val)}
                       className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
                         sigColumnOffset === p.val
-                          ? "bg-amber-500 text-slate-950 border-amber-400 font-bold"
+                          ? "bg-teal-500 text-slate-950 border-teal-400 font-bold"
                           : "bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600"
                       }`}
                     >
@@ -290,7 +206,7 @@ export function SignatureStudio({
                       onClick={() => setSigBlankLines(s.val)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
                         sigBlankLines === s.val
-                          ? "bg-amber-500 text-slate-950 border-amber-400 font-bold"
+                          ? "bg-teal-500 text-slate-950 border-teal-400 font-bold"
                           : "bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600"
                       }`}
                     >
@@ -357,7 +273,7 @@ export function SignatureStudio({
                       setCustomSigClientName(e.target.value.toUpperCase())
                     }
                     placeholder="Ej. GUSTAVO JOSE ACOSTA MUÑOZ"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-amber-300 font-bold focus:ring-1 focus:ring-amber-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-teal-300 font-bold focus:ring-1 focus:ring-teal-500"
                   />
                 </div>
                 <div>
@@ -371,7 +287,7 @@ export function SignatureStudio({
                       setCustomSigClientDoc(e.target.value.toUpperCase())
                     }
                     placeholder="Ej. PASAPORTE No. TEST-001"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white font-medium focus:ring-1 focus:ring-amber-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white font-medium focus:ring-1 focus:ring-teal-500"
                   />
                 </div>
                 <div>
@@ -385,7 +301,7 @@ export function SignatureStudio({
                       setCustomSigLawyerTitle(e.target.value.toUpperCase())
                     }
                     placeholder="Ej. LCDO. ANTONY NATHANAEL TALLA COPRIS"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white font-medium focus:ring-1 focus:ring-amber-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white font-medium focus:ring-1 focus:ring-teal-500"
                   />
                 </div>
               </div>
@@ -395,7 +311,7 @@ export function SignatureStudio({
           {/* Visual Document Sheet Replica (Exact Layout from Image 2) */}
           <div className="mt-5 bg-slate-950/60 p-3 sm:p-5 rounded-2xl border border-slate-800">
             <div className="text-center text-xs font-semibold text-slate-400 mb-3 flex items-center justify-center gap-2">
-              <Eye className="w-3.5 h-3.5 text-amber-400" />
+              <Eye className="w-3.5 h-3.5 text-teal-400" />
               <span>Vista de texto y simulación del bloque de firmas</span>
             </div>
 
@@ -498,7 +414,7 @@ export function SignatureStudio({
                       </span>
                     </div>
 
-                    <div className="font-bold text-slate-950 uppercase text-[11px] sm:text-xs bg-amber-100 px-1 py-0.5 rounded border border-amber-300 inline-block font-sans">
+                    <div className="font-bold text-slate-950 uppercase text-[11px] sm:text-xs bg-teal-100 px-1 py-0.5 rounded border border-teal-300 inline-block font-sans">
                       {previewClientName}
                     </div>
                     <div className="font-bold text-slate-950 uppercase text-[10px] sm:text-[11px] block">
@@ -523,7 +439,7 @@ export function SignatureStudio({
               </div>
               <div className="text-slate-400">
                 Posición de columna:{" "}
-                <strong className="text-amber-400">{sigColumnOffset}%</strong>
+                <strong className="text-teal-400">{sigColumnOffset}%</strong>
               </div>
             </div>
           </div>

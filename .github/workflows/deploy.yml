@@ -40,6 +40,7 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:browser
       - run: PL_BROWSER_PRODUCTION=1 pnpm test:browser
+      - run: PL_BROWSER_PRODUCTION=1 pnpm test:ocr
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.7.5

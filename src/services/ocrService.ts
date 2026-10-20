@@ -1,3 +1,4 @@
+import { reconcileVisualReadings } from "./ocrConsensus";
 import { parseInternationalDocumentText } from "./documentTextParser";
 import { evaluateIdentityDocument } from "./identityStatus";
 import { countryName, validateMrz, mrzDate, normalizeMrzText } from './mrz';
@@ -73,12 +74,22 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
   const rawLines = normalizeMrzText(rawText)
     .split('\n')
     .map((l) => l.toUpperCase().trim().replace(/[«‹〈]/g, '<').replace(/\s+/g, ''))
-    .filter((l) => l.length >= 25 && /^[A-Z0-9<]+$/.test(l) && l.includes('<'));
+    .filter((l) => l.length > 0);
 
   const result: Partial<ExtractionResult> = {};
+  // Select contiguous MRZ blocks. Do not combine distant prose lines of a similar length.
+  const block = (minimum: number, maximum: number, count: number, prefix: RegExp) => {
+    for (let i = rawLines.length - count; i >= 0; i--) {
+      const lines = rawLines.slice(i, i + count);
+      if (prefix.test(lines[0]) && lines[0].includes("<") &&
+          lines.every(line => line.length >= minimum && line.length <= maximum && /^[A-Z0-9<]+$/.test(line)) &&
+          (count === 3 ? lines[2].includes("<<") : lines[0].includes("<<"))) return lines;
+    }
+    return [];
+  };
 
   // Case 1: TD1 format (3 lines of ~30 characters - Cédula / Carnet / DNI)
-  const td1CandidateLines = rawLines.filter((l) => l.length >= 28 && l.length <= 32);
+  const td1CandidateLines = block(28, 32, 3, /^[ICA]/);
   if (td1CandidateLines.length >= 3) {
     const l1 = td1CandidateLines[td1CandidateLines.length - 3];
     const l2 = td1CandidateLines[td1CandidateLines.length - 2];
@@ -133,7 +144,7 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
   }
 
   // Case 2: TD3 format (2 lines of 44 characters - Standard Passport)
-  const td3CandidateLines = rawLines.filter((l) => l.length >= 40);
+  const td3CandidateLines = block(40, 46, 2, /^[PIV]/);
   if (td3CandidateLines.length >= 2) {
     const l1 = td3CandidateLines[td3CandidateLines.length - 2];
     const l2 = td3CandidateLines[td3CandidateLines.length - 1];
@@ -185,7 +196,7 @@ export function parseMRZ(rawText: string): Partial<ExtractionResult> {
   }
 
   // Case 3: TD2 format (2 lines of ~36 characters - ID Card or Visa)
-  const td2CandidateLines = rawLines.filter((l) => l.length >= 34 && l.length <= 38);
+  const td2CandidateLines = block(34, 38, 2, /^[IAV]/);
   if (td2CandidateLines.length >= 2) {
     const l1 = td2CandidateLines[td2CandidateLines.length - 2];
     const l2 = td2CandidateLines[td2CandidateLines.length - 1];
@@ -355,11 +366,10 @@ export async function extractWithTesseract(
   }, signal);
   const score=(value:Partial<ExtractionResult>)=>['fullName','passportNumber','birthDate','expiryDate','sex'].filter(key=>value[key as keyof ExtractionResult]).length*10-(value.warnings?.length || 0)*15;
   mrzResult=candidates.filter(value=>value.mrzLine1).sort((a,b)=>score(b)-score(a))[0] || {};
-  const visualResult=visualCandidates.sort((a,b)=>score(b)-score(a))[0] || {};
-  for(const item of visualCandidates) for(const key of Object.keys(item) as (keyof ExtractionResult)[]) if(!visualResult[key] && item[key]) Object.assign(visualResult,{[key]:item[key]});
+  const { result: visualResult, warnings: visualWarnings } = reconcileVisualReadings(visualCandidates);
   const conflicting=['passportNumber','firstName','lastName','birthDate','expiryDate','sex'].filter(key=>mrzResult[key as keyof ExtractionResult] && visualResult[key as keyof ExtractionResult] && mrzResult[key as keyof ExtractionResult]!==visualResult[key as keyof ExtractionResult]);
   const fieldLabels: Record<string,string>={passportNumber:'número de identidad',firstName:'nombres',lastName:'apellidos',birthDate:'fecha de nacimiento',expiryDate:'vencimiento',sex:'sexo'};
-  const warnings=[...(mrzResult.warnings || []),...conflicting.map(key=>`Las lecturas MRZ y visual difieren en ${fieldLabels[key] || key}. Compara con el documento original.`)];
+  const warnings=[...visualWarnings,...(mrzResult.warnings || []),...conflicting.map(key=>`Las lecturas MRZ y visual difieren en ${fieldLabels[key] || key}. Compara con el documento original.`)];
   if(mrzResult.warnings?.length) {
     // Invalid MRZ must not override labeled visual fields that were read successfully.
     for(const key of ['firstName','lastName','fullName','passportNumber','birthDate','expiryDate','sex','nationality'] as const) if(visualResult[key]) mrzResult[key]=visualResult[key];

@@ -34,15 +34,15 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setActiveTab("wizard")}
             title="Ir al Asistente de Inicio"
           >
-            <div className="p-1 rounded-xl bg-slate-800/90 border border-slate-700/80 group-hover:border-amber-500/50 flex items-center justify-center shadow-md transition-all shrink-0">
+            <div className="p-1 rounded-xl bg-slate-800/90 border border-slate-700/80 group-hover:border-teal-500/50 flex items-center justify-center shadow-md transition-all shrink-0">
               <AppLogo size={42} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-serif font-bold text-lg sm:text-xl tracking-tight text-slate-50 group-hover:text-amber-300 transition-colors">
+                <span className="font-serif font-bold text-lg sm:text-xl tracking-tight text-slate-50 group-hover:text-teal-300 transition-colors">
                   SQP PARA LEGAL
                 </span>
-                <span className="text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-sans font-semibold hidden sm:inline-block">
+                <span className="text-[11px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.5 rounded-full font-sans font-semibold hidden sm:inline-block">
                   OCR y plantillas Word
                 </span>
               </div>
@@ -58,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="btn-quick-new-doc"
               onClick={onStartNewDocument}
-              className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/25 transition-all active:scale-95 shrink-0"
+              className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-400 hover:from-teal-400 hover:to-teal-500 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-teal-500/25 transition-all active:scale-95 shrink-0"
             >
               <Sparkles className="w-4 h-4 text-slate-950" />
               <span>Nuevo Documento</span>
@@ -73,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setActiveTab("wizard")}
             className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
               activeTab === "wizard"
-                ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold"
+                ? "bg-teal-500 text-slate-950 shadow-md shadow-teal-500/20 font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/80"
             }`}
           >
@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setActiveTab("generator")}
             className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
               activeTab === "generator"
-                ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold"
+                ? "bg-teal-500 text-slate-950 shadow-md shadow-teal-500/20 font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/80"
             }`}
           >
@@ -99,7 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setActiveTab("clients")}
             className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === "clients"
-                ? "bg-amber-500 text-slate-950 shadow-md font-bold"
+                ? "bg-teal-500 text-slate-950 shadow-md font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/80"
             }`}
           >
@@ -108,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span
               className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
                 activeTab === "clients"
-                  ? "bg-slate-950 text-amber-400"
+                  ? "bg-slate-950 text-teal-400"
                   : "bg-slate-800 text-slate-300 border border-slate-700"
               }`}
             >
@@ -121,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setActiveTab("templates")}
             className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === "templates"
-                ? "bg-amber-500 text-slate-950 shadow-md font-bold"
+                ? "bg-teal-500 text-slate-950 shadow-md font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/80"
             }`}
           >
@@ -130,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span
               className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
                 activeTab === "templates"
-                  ? "bg-slate-950 text-amber-400"
+                  ? "bg-slate-950 text-teal-400"
                   : "bg-slate-800 text-slate-300 border border-slate-700"
               }`}
             >
@@ -144,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setActiveTab("history")}
               className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === "history"
-                  ? "bg-amber-500 text-slate-950 shadow-md font-bold"
+                  ? "bg-teal-500 text-slate-950 shadow-md font-bold"
                   : "text-slate-300 hover:text-white hover:bg-slate-800/80"
               }`}
             >
@@ -153,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span
                 className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
                   activeTab === "history"
-                    ? "bg-slate-950 text-amber-400"
+                    ? "bg-slate-950 text-teal-400"
                     : "bg-slate-800 text-slate-300 border border-slate-700"
                 }`}
               >
@@ -167,8 +167,8 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setActiveTab("manual")}
             className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap border ${
               activeTab === "manual"
-                ? "bg-amber-500 text-slate-950 border-amber-400 shadow-md font-bold"
-                : "text-amber-300 bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 hover:text-amber-200"
+                ? "bg-teal-500 text-slate-950 border-teal-400 shadow-md font-bold"
+                : "text-teal-300 bg-teal-500/10 border-teal-500/30 hover:bg-teal-500/20 hover:text-teal-200"
             }`}
           >
             <BookOpen className="w-4 h-4" />

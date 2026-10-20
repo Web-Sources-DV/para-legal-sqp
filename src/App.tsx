@@ -142,7 +142,7 @@ function WorkspaceApp() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800 antialiased selection:bg-amber-500 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800 antialiased selection:bg-teal-500 selection:text-slate-950">
       {/* Top Professional Legal Header */}
       <Header
         activeTab={activeTab}
@@ -210,7 +210,7 @@ function WorkspaceApp() {
                     onClick={handleScanForNewClient}
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-sm transition-all"
                   >
-                    <Upload className="w-4 h-4 text-amber-400" />
+                    <Upload className="w-4 h-4 text-teal-400" />
                     <span>Subir / Leer Pasaporte</span>
                   </button>
                 </div>
@@ -287,7 +287,7 @@ function WorkspaceApp() {
           <div className="flex items-center gap-6">
             <button
               onClick={() => setActiveTab("manual")}
-              className="text-[11px] text-amber-700 hover:text-amber-800 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-[11px] text-teal-700 hover:text-teal-800 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>📖 Manual de Uso & Guía Paso a Paso</span>
             </button>

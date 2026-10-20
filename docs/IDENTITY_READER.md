@@ -17,3 +17,11 @@ El registro guarda los campos revisados: tipo, identidad, nombre, nacimiento, se
 - `PL_BROWSER_PRODUCTION=1 pnpm test:ocr`: lo mismo sobre el servidor compilado, después de `pnpm build`.
 
 Las comprobaciones actuales usan imágenes sintéticas de pasaporte y cédula. La precisión sobre fotos reales, reflejos, desenfoque, diseños y escrituras de todos los países requiere muestras adicionales. No se garantiza extracción completa de todos los documentos. Ante campos vacíos, avisos o diferencias, repite la fotografía o completa los datos manualmente.
+
+## Revisión de octubre de 2026
+
+La selección de filtros es automática. Las pasadas visuales votan por campo: se conserva el valor con más coincidencias y se avisa de cualquier discrepancia, incluso si existe mayoría. Los nombres y apellidos provienen de una misma lectura. En caso de empate se conserva la lectura más completa; el usuario debe verificarla. La coincidencia entre pasadas no garantiza que el valor sea correcto.
+
+La búsqueda de MRZ usa bloques consecutivos, exige el encabezado y los separadores de nombres, y acepta líneas numéricas sin caracteres de relleno. Los controles ICAO siguen validando número y fechas; no certifican nombres ni autenticidad del documento.
+
+La prueba del motor real incluye una cédula y un pasaporte ficticios, con registro de los datos revisados y alerta de vencimiento. Todas las escrituras se interceptan. No equivale a probar todos los países, fotografías, cámaras o condiciones de iluminación.
