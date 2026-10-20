@@ -157,9 +157,6 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
     useState<string>("");
   const [customSigLawyerIdoneidad, setCustomSigLawyerIdoneidad] =
     useState<string>("");
-  const [simulatedNameLength, setSimulatedNameLength] = useState<
-    "actual" | "short" | "medium" | "long" | "very_long"
-  >("actual");
   const [showVerticalGuide, setShowVerticalGuide] = useState<boolean>(true);
   const [showSigAdvancedConfig, setShowSigAdvancedConfig] =
     useState<boolean>(false);
@@ -198,30 +195,10 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
     }
   }, [activeIdoneo.id]);
 
-  // Simulated client name for testing short and long names
-  const previewClientName = React.useMemo(() => {
-    if (simulatedNameLength === "short") return "ANA LI";
-    if (simulatedNameLength === "medium") return "CARLOS RESTREPO";
-    if (simulatedNameLength === "long") return "GUSTAVO JOSE ACOSTA MUÑOZ";
-    if (simulatedNameLength === "very_long")
-      return "MARIA DE LOS ANGELES RESTREPO FERNANDEZ";
-    return (
-      customSigClientName ||
-      (activeClient
-        ? activeClient.fullName.toUpperCase()
-        : "GUSTAVO JOSE ACOSTA MUÑOZ")
-    );
-  }, [simulatedNameLength, customSigClientName, activeClient]);
-
-  const previewClientDoc = React.useMemo(() => {
-    if (simulatedNameLength === "short") return "PASAPORTE No. P8829104";
-    return (
-      customSigClientDoc ||
-      (activeClient?.passportNumber
-        ? `PASAPORTE No. ${activeClient.passportNumber}`
-        : "[número pendiente]")
-    );
-  }, [simulatedNameLength, customSigClientDoc, activeClient]);
+  const previewClientName = customSigClientName || activeClient?.fullName.toUpperCase() || "[nombre pendiente]";
+  const previewClientDoc = customSigClientDoc || (activeClient?.passportNumber
+    ? `${documentTypeLabel(activeClient.docType).toUpperCase()} No. ${activeClient.passportNumber}`
+    : "[número pendiente]");
 
   // Sync selected client if prop changes
   useEffect(() => {
@@ -441,10 +418,10 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-              <Scale className="w-4 h-4 text-amber-600" />
+              <Scale className="w-4 h-4 text-teal-600" />
               1. Idóneo / Letrado Responsable del Documento *
             </label>
-            <span className="text-[11px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+            <span className="text-[11px] text-teal-800 font-semibold bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
               {activeIdoneo.role}
             </span>
           </div>
@@ -460,14 +437,14 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                   onClick={() => setSelectedIdoneoId(idoneo.id)}
                   className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
                     isSelected
-                      ? "bg-slate-900 text-white border-slate-900 shadow-sm ring-2 ring-amber-500/50"
+                      ? "bg-slate-900 text-white border-slate-900 shadow-sm ring-2 ring-teal-500/50"
                       : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
                   }`}
                 >
                   <div
                     className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
                       isSelected
-                        ? "bg-amber-500 text-slate-950"
+                        ? "bg-teal-500 text-slate-950"
                         : "bg-white text-slate-700 border border-slate-200"
                     }`}
                   >
@@ -480,7 +457,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                       {idoneo.name}
                     </span>
                     <span
-                      className={`text-[10px] block truncate ${isSelected ? "text-amber-300" : "text-slate-500"}`}
+                      className={`text-[10px] block truncate ${isSelected ? "text-teal-300" : "text-slate-500"}`}
                     >
                       {idoneo.colegiado.split("·")[0].trim()}
                     </span>
@@ -496,7 +473,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-amber-600" />
+                <Users className="w-4 h-4 text-teal-600" />
                 2. Cliente Destinatario *
               </label>
               <span className="text-[11px] text-slate-500 font-medium">
@@ -513,7 +490,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                 const cli = clients.find((c) => c.id === e.target.value);
                 if (cli && onSelectClient) onSelectClient(cli);
               }}
-              className="w-full text-sm font-semibold p-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-sm"
+              className="w-full text-sm font-semibold p-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 shadow-sm"
             >
               {clients.length === 0 ? (
                 <option value="">
@@ -530,7 +507,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
             </select>
 
             {activeClient && (
-              <div className="mt-2.5 p-2.5 rounded-lg bg-amber-50/60 border border-amber-200/70 text-xs flex flex-wrap items-center justify-between gap-2 text-slate-700">
+              <div className="mt-2.5 p-2.5 rounded-lg bg-teal-50/60 border border-teal-200/70 text-xs flex flex-wrap items-center justify-between gap-2 text-slate-700">
                 <span>
                   <strong className="text-slate-900">Doc:</strong>{" "}
                   {activeClient.passportNumber || "S/N"} (
@@ -552,14 +529,14 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <FileText className="w-4 h-4 text-amber-600" />
+                <FileText className="w-4 h-4 text-teal-600" />
                 3. Plantilla Word (.docx) *
               </label>
               {onOpenTemplatesTab && (
                 <button
                   type="button"
                   onClick={onOpenTemplatesTab}
-                  className="text-xs text-amber-700 hover:text-amber-800 font-semibold underline"
+                  className="text-xs text-teal-700 hover:text-teal-800 font-semibold underline"
                 >
                   + Gestionar / Subir Plantillas
                 </button>
@@ -571,7 +548,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
               disabled={isGenerating || !!pendingDocument.current}
               value={selectedTemplateId}
               onChange={(e) => setSelectedTemplateId(e.target.value)}
-              className="w-full text-sm font-semibold p-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-sm"
+              className="w-full text-sm font-semibold p-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 shadow-sm"
             >
               {templates.length === 0 ? (
                 <option value="">
@@ -604,7 +581,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           <div className="pt-6 border-t border-slate-100">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
                 Vista Previa de Formato Notarial & Letrado Asignado
               </span>
               <div className="flex items-center gap-2">
@@ -614,9 +591,9 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowJsonInspector((prev) => !prev)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 text-[11px] font-bold border border-amber-300 transition-colors"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-teal-500/10 hover:bg-teal-500/20 text-teal-800 text-[11px] font-bold border border-teal-300 transition-colors"
                 >
-                  <Code className="w-3.5 h-3.5 text-amber-600" />
+                  <Code className="w-3.5 h-3.5 text-teal-600" />
                   <span>
                     {showJsonInspector ? "Ocultar JSON" : "Ver JSON (OCR)"}
                   </span>
@@ -628,7 +605,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
             {showJsonInspector && (
               <div className="mb-3 p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-white space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono text-amber-400 font-bold flex items-center gap-1.5">
+                  <span className="text-[11px] font-mono text-teal-400 font-bold flex items-center gap-1.5">
                     <Code className="w-3.5 h-3.5" />
                     Objeto JSON que alimenta las variables del documento:
                   </span>
@@ -692,7 +669,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                     )}
                   </button>
                 </div>
-                <pre className="text-[11px] font-mono text-amber-300 overflow-x-auto max-h-48 p-2 rounded bg-slate-900 border border-slate-800 leading-relaxed">
+                <pre className="text-[11px] font-mono text-teal-300 overflow-x-auto max-h-48 p-2 rounded bg-slate-900 border border-slate-800 leading-relaxed">
                   {JSON.stringify(
                     {
                       tipo_documento:
@@ -756,19 +733,19 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                   {activeClient.nationality.toLowerCase()}
                 </span>
               </div>
-              <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-300">
-                <span className="text-[10px] text-amber-800 block font-mono font-bold">
+              <div className="p-2.5 rounded-lg bg-teal-50/70 border border-teal-300">
+                <span className="text-[10px] text-teal-800 block font-mono font-bold">
                   (abogado_nombre)
                 </span>
-                <strong className="text-amber-950 font-extrabold block truncate">
+                <strong className="text-teal-950 font-extrabold block truncate">
                   {activeIdoneo.formalTitle}
                 </strong>
               </div>
-              <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-300">
-                <span className="text-[10px] text-amber-800 block font-mono font-bold">
+              <div className="p-2.5 rounded-lg bg-teal-50/70 border border-teal-300">
+                <span className="text-[10px] text-teal-800 block font-mono font-bold">
                   (sexo/edad)
                 </span>
-                <strong className="text-amber-950 font-extrabold block truncate">
+                <strong className="text-teal-950 font-extrabold block truncate">
                   {determineSexAgeCategory(
                     activeClient.birthDate,
                     activeClient.sex,
@@ -824,7 +801,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           `${activeClient?.revision || 0}:${activeTemplate?.revision || 0}:${activeIdoneo.revision || 0}` && (
           <div
             role="status"
-            className="bg-amber-50 border rounded-xl p-4 text-sm"
+            className="bg-teal-50 border rounded-xl p-4 text-sm"
           >
             Los datos de origen cambiaron. Tus correcciones se conservan. Revisa
             el cliente y la versión de plantilla antes de generar.{" "}
@@ -917,15 +894,15 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                   key={placeholderKey}
                   className={`p-3.5 rounded-xl border transition-all ${
                     isIdoneoField
-                      ? "bg-amber-50/40 border-amber-300/80 ring-1 ring-amber-400/20"
-                      : "bg-slate-50/70 border-slate-200 focus-within:border-amber-500 focus-within:bg-white"
+                      ? "bg-teal-50/40 border-teal-300/80 ring-1 ring-teal-400/20"
+                      : "bg-slate-50/70 border-slate-200 focus-within:border-teal-500 focus-within:bg-white"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-bold text-slate-800 truncate">
                       {def?.label || placeholderKey}
                     </label>
-                    <span className="font-mono text-[10px] text-amber-800 bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold shrink-0">
+                    <span className="font-mono text-[10px] text-teal-800 bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold shrink-0">
                       {placeholderKey}
                     </span>
                   </div>
@@ -939,7 +916,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                       onChange={(e) =>
                         handleFieldChange(placeholderKey, e.target.value)
                       }
-                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden"
                     />
                   ) : def?.type === "select" && def.options ? (
                     <select
@@ -949,7 +926,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                       onChange={(e) =>
                         handleFieldChange(placeholderKey, e.target.value)
                       }
-                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-semibold"
+                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden font-semibold"
                     >
                       <option value="">Selecciona / verifica</option>
                       {def.options.map((opt) => (
@@ -967,7 +944,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                       onChange={(e) =>
                         handleFieldChange(placeholderKey, e.target.value)
                       }
-                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-semibold"
+                      className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden font-semibold"
                     />
                   )}
                 </div>
@@ -995,8 +972,6 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
             setCustomSigLawyerTitle={edited(setCustomSigLawyerTitle)}
             customSigLawyerCedula={customSigLawyerCedula}
             customSigLawyerIdoneidad={customSigLawyerIdoneidad}
-            simulatedNameLength={simulatedNameLength}
-            setSimulatedNameLength={setSimulatedNameLength}
             showVerticalGuide={showVerticalGuide}
             setShowVerticalGuide={setShowVerticalGuide}
             showSigAdvancedConfig={showSigAdvancedConfig}
@@ -1018,7 +993,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
               type="button"
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/25 transition-all active:scale-95 disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-sm shadow-lg shadow-teal-500/25 transition-all active:scale-95 disabled:opacity-50"
             >
               {isGenerating ? (
                 <>

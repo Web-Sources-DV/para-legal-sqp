@@ -175,7 +175,7 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
             <h3 className="font-serif font-bold text-slate-900 text-xl">
               Historial de Documentos Generados
             </h3>
-            <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-200">
+            <span className="bg-teal-100 text-teal-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-teal-200">
               {documents.length} archivos mostrados
             </span>
           </div>
@@ -193,7 +193,7 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
             placeholder="Buscar por cliente, documento o plantilla..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500"
+            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500"
           />
         </div>
       </div>
@@ -251,7 +251,7 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                 {filteredDocs.map((doc) => (
                   <tr
                     key={doc.id}
-                    className="hover:bg-amber-50/20 transition-colors"
+                    className="hover:bg-teal-50/20 transition-colors"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -261,7 +261,7 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                         <div>
                           <div
                             onClick={() => setViewingDoc(doc)}
-                            className="font-bold text-slate-900 hover:text-amber-700 cursor-pointer text-xs"
+                            className="font-bold text-slate-900 hover:text-teal-700 cursor-pointer text-xs"
                           >
                             {doc.fileName}
                           </div>
@@ -309,7 +309,7 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                         <button
                           title="Re-descargar Documento Word (.docx)"
                           onClick={() => handleRegenerateFromSnapshot(doc)}
-                          className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 transition-colors border border-amber-200"
+                          className="p-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 transition-colors border border-teal-200"
                         >
                           <Download className="w-4 h-4" />
                         </button>
@@ -368,7 +368,7 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
           <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500 text-slate-950 font-bold">
+                <div className="p-2 rounded-lg bg-teal-500 text-slate-950 font-bold">
                   <FileCheck className="w-5 h-5" />
                 </div>
                 <div>
@@ -429,7 +429,7 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                       key={k}
                       className="p-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 bg-white hover:bg-slate-50"
                     >
-                      <span className="font-mono text-amber-800 font-semibold">
+                      <span className="font-mono text-teal-800 font-semibold">
                         {k}
                       </span>
                       <span className="font-medium text-slate-800 max-w-sm break-words">
@@ -451,7 +451,7 @@ export const DocumentHistory: React.FC<DocumentHistoryProps> = ({
                 <button
                   type="button"
                   onClick={() => handleRegenerateFromSnapshot(viewingDoc)}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-sm"
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold shadow-sm"
                 >
                   <Download className="w-4 h-4" />
                   <span>Descargar Archivo Word (.docx)</span>

@@ -195,3 +195,81 @@ test("front and back recognize the same identity number despite printed punctuat
     "8-123-4567",
   );
 });
+
+test("MRZ accepts a complete numeric line without filler characters", async () => {
+  const { checkDigit } = await import("../src/services/mrz");
+  const first = "P<UTOERIKSSON<<ANNA<MARIA".padEnd(44, "<");
+  const optional = "12345678901234";
+  const data =
+    "L898902C3" +
+    checkDigit("L898902C3") +
+    "UTO" +
+    "740812" +
+    checkDigit("740812") +
+    "F" +
+    "300415" +
+    checkDigit("300415") +
+    optional +
+    checkDigit(optional);
+  const second =
+    data +
+    checkDigit(data.slice(0, 10) + data.slice(13, 20) + data.slice(21, 43));
+  assert.equal(second.length, 44);
+  assert.equal(second.includes("<"), false);
+  const result = parseMRZ(first + "\n" + second);
+  assert.equal(result.passportNumber, "L898902C3");
+  assert.equal(result.fullName, "ANNA MARIA ERIKSSON");
+  assert.deepEqual(result.warnings, []);
+});
+
+test("visual consensus prefers repeated evidence and flags disagreement without mixing names", async () => {
+  const { reconcileVisualReadings } = await import(
+    "../src/services/ocrConsensus"
+  );
+  const inputs = [
+    {
+      fullName: "ANA GOMEZ",
+      firstName: "ANA",
+      lastName: "GOMEZ",
+      passportNumber: "AB1",
+      birthDate: "2000-01-01",
+    },
+    {
+      fullName: "ANA LOPEZ",
+      firstName: "ANA",
+      lastName: "LOPEZ",
+      passportNumber: "AB2",
+    },
+    {
+      fullName: "ANA LOPEZ",
+      firstName: "ANA",
+      lastName: "LOPEZ",
+      passportNumber: "AB2",
+    },
+  ];
+  const snapshot = JSON.stringify(inputs);
+  const { result, warnings } = reconcileVisualReadings(inputs);
+  assert.equal(result.passportNumber, "AB2");
+  assert.equal(result.fullName, "ANA LOPEZ");
+  assert.equal(result.lastName, "LOPEZ");
+  assert.equal(result.birthDate, "2000-01-01");
+  assert.equal(warnings.length, 2);
+  assert.equal(JSON.stringify(inputs), snapshot);
+});
+
+test("uppercase prose cannot become a MRZ and trailing prose cannot replace passport data", () => {
+  assert.deepEqual(
+    parseMRZ(
+      "IDENTIFICATIONDOCUMENTFORINTERNATIONALTRAVEL\nPERSONALIDENTIFICATIONDOCUMENTINFORMATION",
+    ),
+    {},
+  );
+  const mrz =
+    "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<\nL898902C36UTO7408122F1204159ZE184226B<<<<<10";
+  assert.deepEqual(parseMRZ(mrz.replace("\n", "\nUNRELATED TEXT\n")), {});
+  assert.equal(
+    parseMRZ(mrz + "\nPERSONALIDENTIFICATIONDOCUMENTINFORMATIONXX")
+      .passportNumber,
+    "L898902C3",
+  );
+});

@@ -77,10 +77,10 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header Banner */}
       <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl relative overflow-hidden">
-        <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold">
               <BookOpen className="w-3.5 h-3.5" />
               <span>Manual Oficial de Operaciones & Guía Paso a Paso</span>
             </div>
@@ -97,7 +97,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => onNavigateTab('wizard')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-teal-500/20 transition-all"
             >
               <Sparkles className="w-4 h-4 text-slate-950" />
               <span>Iniciar Asistente Ahora</span>
@@ -112,7 +112,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
           onClick={() => setActiveSection('workflow')}
           className={`flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-xs font-bold transition-all border ${
             activeSection === 'workflow'
-              ? 'bg-slate-900 text-amber-400 border-slate-900 shadow-md ring-2 ring-amber-500/30'
+              ? 'bg-slate-900 text-teal-400 border-slate-900 shadow-md ring-2 ring-teal-500/30'
               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
           }`}
         >
@@ -124,7 +124,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
           onClick={() => setActiveSection('upload')}
           className={`flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-xs font-bold transition-all border ${
             activeSection === 'upload'
-              ? 'bg-slate-900 text-amber-400 border-slate-900 shadow-md ring-2 ring-amber-500/30'
+              ? 'bg-slate-900 text-teal-400 border-slate-900 shadow-md ring-2 ring-teal-500/30'
               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
           }`}
         >
@@ -136,7 +136,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
           onClick={() => setActiveSection('save')}
           className={`flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-xs font-bold transition-all border ${
             activeSection === 'save'
-              ? 'bg-slate-900 text-amber-400 border-slate-900 shadow-md ring-2 ring-amber-500/30'
+              ? 'bg-slate-900 text-teal-400 border-slate-900 shadow-md ring-2 ring-teal-500/30'
               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
           }`}
         >
@@ -148,7 +148,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
           onClick={() => setActiveSection('generate')}
           className={`flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-xs font-bold transition-all border ${
             activeSection === 'generate'
-              ? 'bg-slate-900 text-amber-400 border-slate-900 shadow-md ring-2 ring-amber-500/30'
+              ? 'bg-slate-900 text-teal-400 border-slate-900 shadow-md ring-2 ring-teal-500/30'
               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
           }`}
         >
@@ -160,7 +160,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
           onClick={() => setActiveSection('templates')}
           className={`flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-xs font-bold transition-all border ${
             activeSection === 'templates'
-              ? 'bg-slate-900 text-amber-400 border-slate-900 shadow-md ring-2 ring-amber-500/30'
+              ? 'bg-slate-900 text-teal-400 border-slate-900 shadow-md ring-2 ring-teal-500/30'
               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
           }`}
         >
@@ -174,7 +174,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
           onClick={() => setActiveSection('faq')}
           className={`flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-xs font-bold transition-all border ${
             activeSection === 'faq'
-              ? 'bg-slate-900 text-amber-400 border-slate-900 shadow-md ring-2 ring-amber-500/30'
+              ? 'bg-slate-900 text-teal-400 border-slate-900 shadow-md ring-2 ring-teal-500/30'
               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
           }`}
         >
@@ -199,13 +199,13 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
             {/* Visual Step Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Step 1 Card */}
-              <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-50 to-white border border-slate-200 relative group hover:border-amber-400 transition-all flex flex-col justify-between">
+              <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-50 to-white border border-slate-200 relative group hover:border-teal-400 transition-all flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-bold flex items-center justify-center text-sm shadow-sm">
+                    <span className="w-8 h-8 rounded-xl bg-teal-500 text-slate-950 font-bold flex items-center justify-center text-sm shadow-sm">
                       1
                     </span>
-                    <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                    <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
                       Entrada / OCR
                     </span>
                   </div>
@@ -226,7 +226,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
               </div>
 
               {/* Step 2 Card */}
-              <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-50 to-white border border-slate-200 relative group hover:border-amber-400 transition-all flex flex-col justify-between">
+              <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-50 to-white border border-slate-200 relative group hover:border-teal-400 transition-all flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <span className="w-8 h-8 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center text-sm shadow-sm">
@@ -240,7 +240,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                     Verificar y Guardar Cliente
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                    Revisa los nombres, número de pasaporte, nacionalidad y la condición <code className="text-amber-800 bg-amber-50 px-1 py-0.5 rounded font-mono font-bold">(sexo/edad)</code>. Al confirmar, el cliente queda guardado permanentemente en el directorio.
+                    Revisa los nombres, número de pasaporte, nacionalidad y la condición <code className="text-teal-800 bg-teal-50 px-1 py-0.5 rounded font-mono font-bold">(sexo/edad)</code>. Al confirmar, el cliente queda guardado permanentemente en el directorio.
                   </p>
                 </div>
                 <button
@@ -253,7 +253,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
               </div>
 
               {/* Step 3 Card */}
-              <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-50 to-white border border-slate-200 relative group hover:border-amber-400 transition-all flex flex-col justify-between">
+              <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-50 to-white border border-slate-200 relative group hover:border-teal-400 transition-all flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <span className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
@@ -326,7 +326,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
               <div>
-                <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 uppercase tracking-wider">
+                <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200 uppercase tracking-wider">
                   Módulo 1: Entrada de Documentos
                 </span>
                 <h2 className="font-serif font-bold text-xl sm:text-2xl text-slate-900 mt-2">
@@ -340,7 +340,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                 onClick={() => onNavigateTab('wizard')}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shrink-0"
               >
-                <Upload className="w-3.5 h-3.5 text-amber-400" />
+                <Upload className="w-3.5 h-3.5 text-teal-400" />
                 <span>Probar Escáner Ahora</span>
               </button>
             </div>
@@ -348,7 +348,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
             {/* Methods list */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center border border-amber-500/20 font-bold">
+                <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-700 flex items-center justify-center border border-teal-500/20 font-bold">
                   <Upload className="w-5 h-5" />
                 </div>
                 <h3 className="font-bold text-slate-900 text-sm">
@@ -385,9 +385,9 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
             </div>
 
             {/* Best practices for Passport Scanning */}
-            <div className="p-6 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-3">
+            <div className="p-6 rounded-2xl bg-teal-50/50 border border-teal-200 space-y-3">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0" />
+                <AlertTriangle className="w-5 h-5 text-teal-700 shrink-0" />
                 <h4 className="font-bold text-slate-900 text-sm">
                   Consejos para Mejorar la Lectura y Revisar los Datos
                 </h4>
@@ -431,7 +431,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                 onClick={() => onNavigateTab('clients')}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shrink-0"
               >
-                <Users className="w-3.5 h-3.5 text-amber-400" />
+                <Users className="w-3.5 h-3.5 text-teal-400" />
                 <span>Explorar Directorio CRM</span>
               </button>
             </div>
@@ -499,7 +499,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                 onClick={() => onNavigateTab('generator')}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shrink-0"
               >
-                <FileDown className="w-3.5 h-3.5 text-amber-400" />
+                <FileDown className="w-3.5 h-3.5 text-teal-400" />
                 <span>Abrir Generador Directo</span>
               </button>
             </div>
@@ -575,44 +575,44 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                 onClick={() => onNavigateTab('templates')}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shrink-0"
               >
-                <Code2 className="w-3.5 h-3.5 text-amber-400" />
+                <Code2 className="w-3.5 h-3.5 text-teal-400" />
                 <span>Gestor de Plantillas</span>
               </button>
             </div>
 
             {/* Idóneos Panel Guide */}
-            <div className="p-6 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-3">
+            <div className="p-6 rounded-2xl bg-teal-50/50 border border-teal-200 space-y-3">
               <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                <Scale className="w-4 h-4 text-amber-600" />
+                <Scale className="w-4 h-4 text-teal-600" />
                 <span>Pestañas Organizadas por Letrado Idóneo</span>
               </h3>
               <p className="text-xs text-slate-700 leading-relaxed">
                 En el apartado de plantillas, las categorías han sido reemplazadas por pestañas dedicadas a cada profesional idóneo de la firma:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-1">
-                <div className="p-3 bg-white rounded-xl border border-amber-200 text-xs shadow-2xs">
+                <div className="p-3 bg-white rounded-xl border border-teal-200 text-xs shadow-2xs">
                   <strong className="text-slate-900 block font-serif font-bold">Susana Sabalza</strong>
-                  <span className="text-[11px] text-amber-800 font-mono block">Idónea Nº 101</span>
+                  <span className="text-[11px] text-teal-800 font-mono block">Idónea Nº 101</span>
                   <span className="text-[10px] text-slate-500 block mt-1">Poderes Notariales & Contratos Civiles</span>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-amber-200 text-xs shadow-2xs">
+                <div className="p-3 bg-white rounded-xl border border-teal-200 text-xs shadow-2xs">
                   <strong className="text-slate-900 block font-serif font-bold">Marta Aparicio</strong>
-                  <span className="text-[11px] text-amber-800 font-mono block">Idónea Nº 102</span>
+                  <span className="text-[11px] text-teal-800 font-mono block">Idónea Nº 102</span>
                   <span className="text-[10px] text-slate-500 block mt-1">Extranjería & Residencias</span>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-amber-200 text-xs shadow-2xs">
+                <div className="p-3 bg-white rounded-xl border border-teal-200 text-xs shadow-2xs">
                   <strong className="text-slate-900 block font-serif font-bold">Lizohar Godoy</strong>
-                  <span className="text-[11px] text-amber-800 font-mono block">Idónea Nº 103</span>
+                  <span className="text-[11px] text-teal-800 font-mono block">Idónea Nº 103</span>
                   <span className="text-[10px] text-slate-500 block mt-1">Contratos de Prestación & Defensa</span>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-amber-200 text-xs shadow-2xs">
+                <div className="p-3 bg-white rounded-xl border border-teal-200 text-xs shadow-2xs">
                   <strong className="text-slate-900 block font-serif font-bold">Martín Downer</strong>
-                  <span className="text-[11px] text-amber-800 font-mono block">Idóneo Nº 104</span>
+                  <span className="text-[11px] text-teal-800 font-mono block">Idóneo Nº 104</span>
                   <span className="text-[10px] text-slate-500 block mt-1">Corporativo & Representación</span>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-amber-200 text-xs shadow-2xs">
+                <div className="p-3 bg-white rounded-xl border border-teal-200 text-xs shadow-2xs">
                   <strong className="text-slate-900 block font-serif font-bold">Antony Talla</strong>
-                  <span className="text-[11px] text-amber-800 font-mono block">Idóneo Nº 105</span>
+                  <span className="text-[11px] text-teal-800 font-mono block">Idóneo Nº 105</span>
                   <span className="text-[10px] text-slate-500 block mt-1">Notarial, Visados & Recursos</span>
                 </div>
               </div>
@@ -635,7 +635,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                 <div className="p-4 rounded-xl bg-white border border-slate-200">
                   <span className="w-6 h-6 rounded-lg bg-slate-900 text-white font-bold flex items-center justify-center text-xs mb-2">2</span>
                   <strong className="text-slate-900 block font-semibold mb-1">Inserta Etiquetas</strong>
-                  <span>Escribe las variables entre paréntesis, ej: <code className="font-mono text-amber-800">(nombre)</code> o <code className="font-mono text-amber-800">(numero de identidad)</code>.</span>
+                  <span>Escribe las variables entre paréntesis, ej: <code className="font-mono text-teal-800">(nombre)</code> o <code className="font-mono text-teal-800">(numero de identidad)</code>.</span>
                 </div>
                 <div className="p-4 rounded-xl bg-white border border-slate-200">
                   <span className="w-6 h-6 rounded-lg bg-slate-900 text-white font-bold flex items-center justify-center text-xs mb-2">3</span>
@@ -663,7 +663,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar variable..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
               </div>
@@ -683,7 +683,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
                     <tbody className="divide-y divide-slate-100">
                       {filteredVariables.map((item, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
-                          <td className="py-3 px-4 font-mono font-bold text-amber-900">
+                          <td className="py-3 px-4 font-mono font-bold text-teal-900">
                             {item.tag}
                           </td>
                           <td className="py-3 px-4">
@@ -728,7 +728,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
         <div className="space-y-6">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <div>
-              <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 uppercase tracking-wider">
+              <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200 uppercase tracking-wider">
                 Soporte & Resolución de Dudas
               </span>
               <h2 className="font-serif font-bold text-xl sm:text-2xl text-slate-900 mt-2">
@@ -739,7 +739,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
             <div className="space-y-4">
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                 <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4 text-amber-600" />
+                  <HelpCircle className="w-4 h-4 text-teal-600" />
                   <span>¿Qué sucede si la foto es de baja calidad o falla la conexión?</span>
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
@@ -749,7 +749,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
 
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                 <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4 text-amber-600" />
+                  <HelpCircle className="w-4 h-4 text-teal-600" />
                   <span>¿Por qué es importante el campo (sexo/edad)?</span>
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
@@ -759,7 +759,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
 
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                 <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4 text-amber-600" />
+                  <HelpCircle className="w-4 h-4 text-teal-600" />
                   <span>¿Puedo abrir los documentos generados en Microsoft Word de escritorio?</span>
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
@@ -769,7 +769,7 @@ export const UserManual: React.FC<UserManualProps> = ({ onNavigateTab }) => {
 
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                 <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4 text-amber-600" />
+                  <HelpCircle className="w-4 h-4 text-teal-600" />
                   <span>¿Dónde se guardan los datos de mis clientes y pasaportes?</span>
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">

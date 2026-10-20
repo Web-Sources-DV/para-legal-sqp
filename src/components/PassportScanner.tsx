@@ -16,14 +16,12 @@ import {
   Camera,
   SwitchCamera,
   RotateCw,
-  Sliders,
   Zap,
 } from "lucide-react";
 import { ExtractionResult } from "../types";
 import { extractWithTesseract } from "../services/ocrService";
 import {
   preprocessDocumentForOCR,
-  PreprocessedImages,
 } from "../services/imagePreprocessing";
 
 interface PassportScannerProps {
@@ -38,11 +36,6 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   const [ocrLanguage, setOcrLanguage] = useState<OcrLanguage>("spa+eng");
   const [reversePreview, setReversePreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"upload" | "camera">("upload");
-  const [opticalFilter, setOpticalFilter] = useState<
-    "enhanced" | "binarized" | "original"
-  >("enhanced");
-  const [preprocessedPreview, setPreprocessedPreview] =
-    useState<PreprocessedImages | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>("");
   const [progressPercent, setProgressPercent] = useState<number>(0);
@@ -267,15 +260,8 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
       );
       setProgressPercent(30);
       const preprocessed = await preprocessDocumentForOCR(optimizedBase64);
-      setPreprocessedPreview(preprocessed);
 
-      // Select active image based on optical filter
-      const imageToScan =
-        opticalFilter === "binarized"
-          ? preprocessed.binarized
-          : opticalFilter === "original"
-            ? preprocessed.original
-            : preprocessed.enhanced;
+      const imageToScan = preprocessed.enhanced;
 
       setProcessingStatus("Iniciando OCR local (idioma elegido)...");
       let result = await extractWithTesseract(
@@ -373,33 +359,29 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
       {/* Header bar */}
       <div className="bg-slate-900 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-amber-500/20 text-amber-400 rounded-lg border border-amber-500/30">
-            <Cpu className="w-5 h-5 text-amber-400" />
+          <div className="p-2 bg-teal-500/20 text-teal-400 rounded-lg border border-teal-500/30">
+            <Cpu className="w-5 h-5 text-teal-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-serif font-bold text-lg text-slate-100">
                 Lector OCR de Pasaporte, Cédula y Carnet
               </h3>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                JSON Estructurado
-              </span>
             </div>
             <p className="text-xs text-slate-400">
-              Lectura óptica de caracteres (OCR) sin inventar texto: detecta
-              datos para revisar y guardar en formato JSON para plasmar en tu
-              documento Word
+              Extrae los datos del documento. Revísalos antes de guardarlos y generar tu Word.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs text-amber-300">
+        <div className="flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs text-teal-300">
           <Cpu className="w-4 h-4" />
-          <span>OCR local · Tesseract · Sin IA generativa</span>
+          <span>Lectura en tu navegador</span>
         </div>
 
         {onCancel && (
           <button
+            aria-label="Cerrar lector de documentos"
             onClick={() => {
               stopCameraStream();
               onCancel();
@@ -425,7 +407,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                   : "bg-transparent text-slate-500 border-transparent hover:text-slate-800"
               }`}
             >
-              <Upload className="w-4 h-4 text-amber-600" />
+              <Upload className="w-4 h-4 text-teal-600" />
               <span>Subir o Arrastrar Archivo</span>
             </button>
 
@@ -439,9 +421,9 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                   : "bg-transparent text-slate-500 border-transparent hover:text-slate-800"
               }`}
             >
-              <Camera className="w-4 h-4 text-amber-600" />
+              <Camera className="w-4 h-4 text-teal-600" />
               <span>Tomar Foto con Cámara</span>
-              <span className="text-[10px] bg-amber-500/20 text-amber-800 px-1.5 py-0.2 rounded-full font-bold">
+              <span className="text-[10px] bg-teal-500/20 text-teal-800 px-1.5 py-0.2 rounded-full font-bold">
                 En vivo
               </span>
             </button>
@@ -473,9 +455,9 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
         {/* Processing overlay state */}
         {isProcessing && (
           <div className="py-12 px-6 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mb-4 relative shadow-md">
-              <RefreshCw className="w-8 h-8 text-amber-600 animate-spin" />
-              <Sparkles className="w-4 h-4 text-amber-500 absolute -top-1 -right-1 animate-pulse" />
+            <div className="w-16 h-16 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center mb-4 relative shadow-md">
+              <RefreshCw className="w-8 h-8 text-teal-600 animate-spin" />
+              <Sparkles className="w-4 h-4 text-teal-500 absolute -top-1 -right-1 animate-pulse" />
             </div>
             <h4 className="font-serif font-bold text-lg text-slate-800 mb-1">
               Leyendo y extrayendo datos del pasaporte
@@ -486,7 +468,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
 
             <div className="w-full max-w-md bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200">
               <div
-                className="bg-gradient-to-r from-amber-500 to-amber-600 h-full transition-all duration-300 ease-out"
+                className="bg-gradient-to-r from-teal-500 to-teal-600 h-full transition-all duration-300 ease-out"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -511,15 +493,15 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
               onDrop={handleDrop}
               className={`border-2 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center text-center transition-all ${
                 isDragging
-                  ? "border-amber-500 bg-amber-50/60 scale-[1.01]"
-                  : "border-slate-300 hover:border-amber-500 bg-slate-50 hover:bg-amber-50/30"
+                  ? "border-teal-500 bg-teal-50/60 scale-[1.01]"
+                  : "border-slate-300 hover:border-teal-500 bg-slate-50 hover:bg-teal-50/30"
               }`}
             >
               <label
                 htmlFor="passport-file-input"
                 className="cursor-pointer flex flex-col items-center justify-center w-full"
               >
-                <div className="w-16 h-16 rounded-2xl bg-white shadow-md border border-slate-200 flex items-center justify-center mb-4 text-amber-600">
+                <div className="w-16 h-16 rounded-2xl bg-white shadow-md border border-slate-200 flex items-center justify-center mb-4 text-teal-600">
                   <Upload className="w-8 h-8" />
                 </div>
                 <h4 className="font-bold text-slate-800 text-base mb-1">
@@ -550,7 +532,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-md hover:bg-slate-800 transition-colors">
-                    <FileSearch className="w-4 h-4 text-amber-400" />
+                    <FileSearch className="w-4 h-4 text-teal-400" />
                     Seleccionar Archivo de Imagen
                   </span>
                   <button
@@ -559,7 +541,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                       e.preventDefault();
                       setActiveTab("camera");
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold shadow-md transition-colors"
                   >
                     <Camera className="w-4 h-4 text-slate-950" />
                     Usar Cámara Web
@@ -669,51 +651,6 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                 letras y signos &lt; de la parte inferior.
               </p>
             </div>
-            {/* Optical Preprocessing Filter Selector */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-amber-600" />
-                <span className="text-xs font-bold text-slate-800">
-                  Filtro de Preprocesamiento Óptico OCR:
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setOpticalFilter("enhanced")}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    opticalFilter === "enhanced"
-                      ? "bg-amber-500 text-slate-950 font-bold shadow-xs"
-                      : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
-                  }`}
-                >
-                  Realce Óptico (Recomendado)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOpticalFilter("binarized")}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    opticalFilter === "binarized"
-                      ? "bg-amber-500 text-slate-950 font-bold shadow-xs"
-                      : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
-                  }`}
-                >
-                  Binarización B/N (Alto Contraste Otsu)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOpticalFilter("original")}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    opticalFilter === "original"
-                      ? "bg-amber-500 text-slate-950 font-bold shadow-xs"
-                      : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
-                  }`}
-                >
-                  Original
-                </button>
-              </div>
-            </div>
-
             {/* Helpful instructions card */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
@@ -729,7 +666,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                 </div>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
-                <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
                 <div>
                   <h5 className="text-xs font-bold text-slate-800">
                     Campos Legales Clave
@@ -760,8 +697,8 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
         {!isProcessing && activeTab === "camera" && (
           <div className="space-y-4">
             {cameraError ? (
-              <div className="p-8 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+              <div className="p-8 rounded-2xl bg-teal-50 border border-teal-200 text-center space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center mx-auto">
                   <Camera className="w-6 h-6" />
                 </div>
                 <div>
@@ -806,23 +743,23 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                   {/* Viewfinder Passport Guide Overlay */}
                   <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6">
                     {/* Outer darken frame */}
-                    <div className="w-full max-w-lg aspect-[1.42/1] border-2 border-amber-400/80 rounded-xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
+                    <div className="w-full max-w-lg aspect-[1.42/1] border-2 border-teal-400/80 rounded-xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
                       {/* Corner accents */}
-                      <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-amber-400 rounded-tl-sm" />
-                      <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-amber-400 rounded-tr-sm" />
-                      <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-amber-400 rounded-bl-sm" />
-                      <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-amber-400 rounded-br-sm" />
+                      <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-teal-400 rounded-tl-sm" />
+                      <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-teal-400 rounded-tr-sm" />
+                      <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-teal-400 rounded-bl-sm" />
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-teal-400 rounded-br-sm" />
 
                       {/* MRZ Zone Target Line at bottom */}
-                      <div className="absolute bottom-2 left-3 right-3 h-10 border border-dashed border-amber-300/60 rounded-md bg-amber-500/10 flex items-center justify-center">
-                        <span className="text-[10px] text-amber-200 font-mono tracking-wider font-semibold">
+                      <div className="absolute bottom-2 left-3 right-3 h-10 border border-dashed border-teal-300/60 rounded-md bg-teal-500/10 flex items-center justify-center">
+                        <span className="text-[10px] text-teal-200 font-mono tracking-wider font-semibold">
                           Alinear Zona MRZ Inferior &lt;&lt;&lt;&lt;&lt;
                         </span>
                       </div>
 
                       {/* Guide Text */}
                       <div className="absolute top-3 left-3 right-3 text-center">
-                        <span className="text-[11px] bg-slate-900/80 text-amber-300 px-3 py-1 rounded-full font-medium shadow-sm backdrop-blur-xs">
+                        <span className="text-[11px] bg-slate-900/80 text-teal-300 px-3 py-1 rounded-full font-medium shadow-sm backdrop-blur-xs">
                           Coloca la página principal del pasaporte dentro del
                           marco
                         </span>
@@ -838,7 +775,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                       className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-slate-700 shadow-md backdrop-blur-xs transition-all"
                       title="Cambiar Cámara (Frontal / Trasera)"
                     >
-                      <SwitchCamera className="w-4 h-4 text-amber-400" />
+                      <SwitchCamera className="w-4 h-4 text-teal-400" />
                     </button>
                   </div>
                 </div>
@@ -850,7 +787,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                     type="button"
                     onClick={capturePhoto}
                     disabled={isCameraStarting}
-                    className="inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm sm:text-base shadow-lg shadow-amber-500/25 transition-all w-full sm:w-auto"
+                    className="inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-2xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-sm sm:text-base shadow-lg shadow-teal-500/25 transition-all w-full sm:w-auto"
                   >
                     <Camera className="w-5 h-5 text-slate-950" />
                     <span>📸 Capturar Foto y Extraer Datos</span>

@@ -151,7 +151,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-800 border border-amber-500/30 text-[11px] font-bold tracking-wide uppercase">
+              <span className="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-800 border border-teal-500/30 text-[11px] font-bold tracking-wide uppercase">
                 Paso {currentStep} de 3
               </span>
               <h2 className="font-serif font-bold text-slate-900 text-xl">
@@ -177,10 +177,11 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
             {onOpenManualTab && (
               <button
                 onClick={onOpenManualTab}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/30 text-xs font-semibold transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-900 border border-teal-500/30 text-xs font-semibold transition-all"
+                aria-label="Ver Manual de Uso y Guía Paso a Paso"
                 title="Ver Manual de Uso y Guía Paso a Paso"
               >
-                <BookOpen className="w-3.5 h-3.5 text-amber-700" />
+                <BookOpen className="w-3.5 h-3.5 text-teal-700" />
                 <span className="hidden sm:inline">Manual de Uso</span>
               </button>
             )}
@@ -198,13 +199,15 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
         </div>
 
         {/* Steps Indicators */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 relative">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 relative">
           {/* Step 1 */}
-          <div
+          <button
+            type="button"
+            aria-current={currentStep === 1 ? "step" : undefined}
             onClick={() => setCurrentStep(1)}
-            className={`p-3.5 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${
+            className={`text-left p-3.5 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${
               currentStep === 1
-                ? "bg-amber-500/15 border-amber-500 text-slate-950 shadow-sm ring-1 ring-amber-500/50"
+                ? "bg-teal-500/15 border-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500/50"
                 : currentStep > 1
                   ? "bg-emerald-50 border-emerald-200 text-emerald-900"
                   : "bg-slate-50 border-slate-200 text-slate-400"
@@ -213,7 +216,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
             <div
               className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
                 currentStep === 1
-                  ? "bg-amber-500 text-slate-950 font-extrabold"
+                  ? "bg-teal-500 text-slate-950 font-extrabold"
                   : currentStep > 1
                     ? "bg-emerald-500 text-white"
                     : "bg-slate-200 text-slate-600"
@@ -229,18 +232,21 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                 {activeClient ? activeClient.fullName : "Identificar Cliente"}
               </span>
             </div>
-          </div>
+          </button>
 
           {/* Step 2 */}
-          <div
+          <button
+            type="button"
+            aria-current={currentStep === 2 ? "step" : undefined}
+            disabled={!extractionResult}
             onClick={() => extractionResult && setCurrentStep(2)}
-            className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
+            className={`text-left p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
               !extractionResult
                 ? "cursor-not-allowed opacity-60"
                 : "cursor-pointer"
             } ${
               currentStep === 2
-                ? "bg-amber-500/15 border-amber-500 text-slate-950 shadow-sm ring-1 ring-amber-500/50"
+                ? "bg-teal-500/15 border-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500/50"
                 : currentStep > 2
                   ? "bg-emerald-50 border-emerald-200 text-emerald-900"
                   : "bg-slate-50 border-slate-200 text-slate-400"
@@ -249,7 +255,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
             <div
               className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
                 currentStep === 2
-                  ? "bg-amber-500 text-slate-950 font-extrabold"
+                  ? "bg-teal-500 text-slate-950 font-extrabold"
                   : currentStep > 2
                     ? "bg-emerald-500 text-white"
                     : "bg-slate-200 text-slate-600"
@@ -265,23 +271,26 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                 Revisar Datos
               </span>
             </div>
-          </div>
+          </button>
 
           {/* Step 3 */}
-          <div
+          <button
+            type="button"
+            aria-current={currentStep === 3 ? "step" : undefined}
+            disabled={!activeClient}
             onClick={() => activeClient && setCurrentStep(3)}
-            className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
+            className={`text-left p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
               !activeClient ? "cursor-not-allowed opacity-60" : "cursor-pointer"
             } ${
               currentStep === 3
-                ? "bg-amber-500/15 border-amber-500 text-slate-950 shadow-sm ring-1 ring-amber-500/50"
+                ? "bg-teal-500/15 border-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500/50"
                 : "bg-slate-50 border-slate-200 text-slate-400"
             }`}
           >
             <div
               className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
                 currentStep === 3
-                  ? "bg-amber-500 text-slate-950 font-extrabold"
+                  ? "bg-teal-500 text-slate-950 font-extrabold"
                   : "bg-slate-200 text-slate-600"
               }`}
             >
@@ -295,7 +304,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                 Generar Word (.docx)
               </span>
             </div>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -308,18 +317,18 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
               onClick={() => setStep1Mode("scan")}
               className={`p-4 rounded-xl border text-left flex items-center gap-3.5 transition-all ${
                 step1Mode === "scan"
-                  ? "bg-white border-amber-500 ring-2 ring-amber-500/20 shadow-md"
+                  ? "bg-white border-teal-500 ring-2 ring-teal-500/20 shadow-md"
                   : "bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white text-slate-600"
               }`}
             >
               <div
-                className={`p-2.5 rounded-xl ${step1Mode === "scan" ? "bg-amber-500 text-slate-950" : "bg-slate-100 text-slate-600"}`}
+                className={`p-2.5 rounded-xl ${step1Mode === "scan" ? "bg-teal-500 text-slate-950" : "bg-slate-100 text-slate-600"}`}
               >
                 <Camera className="w-5 h-5" />
               </div>
               <div>
                 <span className="font-bold text-xs text-slate-900 block">
-                  Escanear Pasaporte
+                  Escanear Documento
                 </span>
                 <span className="text-[11px] text-slate-500 block">
                   Con OCR local Tesseract
@@ -331,12 +340,12 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
               onClick={() => setStep1Mode("select_client")}
               className={`p-4 rounded-xl border text-left flex items-center gap-3.5 transition-all ${
                 step1Mode === "select_client"
-                  ? "bg-white border-amber-500 ring-2 ring-amber-500/20 shadow-md"
+                  ? "bg-white border-teal-500 ring-2 ring-teal-500/20 shadow-md"
                   : "bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white text-slate-600"
               }`}
             >
               <div
-                className={`p-2.5 rounded-xl ${step1Mode === "select_client" ? "bg-amber-500 text-slate-950" : "bg-slate-100 text-slate-600"}`}
+                className={`p-2.5 rounded-xl ${step1Mode === "select_client" ? "bg-teal-500 text-slate-950" : "bg-slate-100 text-slate-600"}`}
               >
                 <Users className="w-5 h-5" />
               </div>
@@ -354,7 +363,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
               onClick={handleStartManual}
               className={`p-4 rounded-xl border text-left flex items-center gap-3.5 transition-all ${
                 step1Mode === "manual"
-                  ? "bg-white border-amber-500 ring-2 ring-amber-500/20 shadow-md"
+                  ? "bg-white border-teal-500 ring-2 ring-teal-500/20 shadow-md"
                   : "bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white text-slate-600"
               }`}
             >
@@ -397,7 +406,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                     value={clientSearchQuery}
                     onChange={(e) => setClientSearchQuery(e.target.value)}
                     placeholder="Buscar por nombre o pasaporte..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/50"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/50"
                   />
                 </div>
               </div>
@@ -414,9 +423,9 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                   </p>
                   <button
                     onClick={() => setStep1Mode("scan")}
-                    className="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs"
+                    className="px-4 py-2 rounded-lg bg-teal-500 text-slate-950 font-bold text-xs"
                   >
-                    Escanear Pasaporte Ahora
+                    Escanear Documento Ahora
                   </button>
                 </div>
               ) : filteredClients.length === 0 ? (
@@ -429,18 +438,18 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                     <div
                       key={c.id}
                       onClick={() => handleSelectExistingClient(c)}
-                      className="p-4 rounded-xl border border-slate-200 hover:border-amber-500 hover:bg-amber-50/20 cursor-pointer transition-all flex flex-col justify-between group shadow-xs hover:shadow-md"
+                      className="p-4 rounded-xl border border-slate-200 hover:border-teal-500 hover:bg-teal-50/20 cursor-pointer transition-all flex flex-col justify-between group shadow-xs hover:shadow-md"
                     >
                       <div>
                         <div className="flex items-center justify-between gap-2 mb-2">
                           <span className="text-[10px] font-bold uppercase bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
                             {c.docType === "cedula" ? "Cédula" : "Pasaporte"}
                           </span>
-                          <span className="text-[11px] font-semibold text-amber-700">
+                          <span className="text-[11px] font-semibold text-teal-700">
                             {c.nationality}
                           </span>
                         </div>
-                        <h4 className="font-bold text-sm text-slate-900 group-hover:text-amber-800 transition-colors">
+                        <h4 className="font-bold text-sm text-slate-900 group-hover:text-teal-800 transition-colors">
                           {c.fullName}
                         </h4>
                         <p className="text-xs text-slate-600 font-mono mt-0.5">
@@ -448,7 +457,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                         </p>
                       </div>
 
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-amber-700 font-bold">
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-teal-700 font-bold">
                         <span>⚡ Usar y Generar Word</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </div>
@@ -503,7 +512,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
 
             <button
               onClick={() => setCurrentStep(2)}
-              className="text-amber-800 hover:text-amber-900 font-bold text-xs flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-200 transition-colors"
+              className="text-teal-800 hover:text-teal-900 font-bold text-xs flex items-center gap-1.5 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg border border-teal-200 transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Modificar o Corregir Datos</span>

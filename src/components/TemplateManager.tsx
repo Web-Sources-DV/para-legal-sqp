@@ -236,7 +236,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
               <h3 className="font-serif font-bold text-slate-900 text-xl sm:text-2xl">
                 Plantillas por Idóneo / Letrado
               </h3>
-              <span className="bg-amber-100 text-amber-900 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-200">
+              <span className="bg-teal-100 text-teal-900 text-xs font-bold px-2.5 py-0.5 rounded-full border border-teal-200">
                 5 Idóneos Registrados
               </span>
             </div>
@@ -264,14 +264,14 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                   onClick={() => setSelectedIdoneoId(idoneo.id)}
                   className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all ${
                     isSelected
-                      ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-amber-500/50 scale-[1.02]"
+                      ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-teal-500/50 scale-[1.02]"
                       : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
                   }`}
                 >
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
                       isSelected
-                        ? "bg-amber-500 text-slate-950 font-extrabold"
+                        ? "bg-teal-500 text-slate-950 font-extrabold"
                         : "bg-white text-slate-800 border border-slate-200"
                     }`}
                   >
@@ -284,7 +284,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                       {idoneo.name}
                     </span>
                     <span
-                      className={`text-[10px] block truncate ${isSelected ? "text-amber-300" : "text-slate-500"}`}
+                      className={`text-[10px] block truncate ${isSelected ? "text-teal-300" : "text-slate-500"}`}
                     >
                       {idoneo.colegiado.split("·")[0].trim()}
                     </span>
@@ -298,7 +298,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
         {/* Selected Idóneo Profile Highlight Card */}
         <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white border border-slate-800 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-serif font-extrabold text-xl flex items-center justify-center shrink-0 shadow-lg border-2 border-amber-300/40">
+            <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-600 text-slate-950 font-serif font-extrabold text-xl flex items-center justify-center shrink-0 shadow-lg border-2 border-teal-300/40">
               {activeIdoneo.initials}
             </div>
             <div>
@@ -306,7 +306,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                 <h4 className="font-serif font-bold text-lg text-slate-100">
                   {activeIdoneo.formalTitle}
                 </h4>
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-semibold">
+                <span className="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 text-[11px] font-semibold">
                   {activeIdoneo.role}
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold flex items-center gap-1">
@@ -318,7 +318,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                 {activeIdoneo.description}
               </p>
               <div className="flex flex-wrap items-center gap-4 mt-2 text-[11px] text-slate-400">
-                <span className="flex items-center gap-1 text-amber-300 font-mono">
+                <span className="flex items-center gap-1 text-teal-300 font-mono">
                   <Award className="w-3.5 h-3.5" />
                   {activeIdoneo.colegiado}
                 </span>
@@ -336,9 +336,9 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
         </div>
 
         {/* Upload Zone */}
-        <div className="border-2 border-dashed border-slate-300 hover:border-amber-500 rounded-2xl p-6 sm:p-8 bg-slate-50 hover:bg-amber-50/20 transition-all text-center">
+        <div className="border-2 border-dashed border-slate-300 hover:border-teal-500 rounded-2xl p-6 sm:p-8 bg-slate-50 hover:bg-teal-50/20 transition-all text-center">
           <label htmlFor="docx-template-input" className="cursor-pointer block">
-            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center mx-auto mb-2.5 text-amber-600">
+            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center mx-auto mb-2.5 text-teal-600">
               <Upload className="w-6 h-6" />
             </div>
             <h4 className="font-bold text-slate-800 text-sm mb-1">
@@ -352,7 +352,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
               dejarla disponible para todos los Idóneos.
             </p>
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-sm hover:bg-slate-800 transition-colors">
-              <FileText className="w-4 h-4 text-amber-400" />
+              <FileText className="w-4 h-4 text-teal-400" />
               Seleccionar Archivo .docx
             </span>
             <input
@@ -392,7 +392,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
           <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <h4 className="font-serif font-bold text-base flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" />
+                <Sparkles className="w-4 h-4 text-teal-400" />
                 Configurar Nueva Plantilla Word
               </h4>
               <button
@@ -413,16 +413,16 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                   {uploadError}
                 </p>
               )}
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
+              <div className="p-3 bg-teal-50 rounded-xl border border-teal-200 flex items-center justify-between">
                 <div>
                   <span className="font-semibold text-slate-800">
                     Archivo detectado:{" "}
                   </span>
-                  <span className="font-mono text-amber-900">
+                  <span className="font-mono text-teal-900">
                     {newTemplateData.fileName}
                   </span>
                 </div>
-                <span className="bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded-full text-[10px]">
+                <span className="bg-teal-500 text-slate-950 font-bold px-2 py-0.5 rounded-full text-[10px]">
                   {newTemplateData.placeholders.length} marcadores
                 </span>
               </div>
@@ -440,7 +440,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                       name: e.target.value,
                     })
                   }
-                  className="w-full text-sm font-bold p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500"
+                  className="w-full text-sm font-bold p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500"
                 />
               </div>
 
@@ -457,7 +457,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                         targetIdoneo: e.target.value,
                       })
                     }
-                    className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 bg-white font-semibold"
+                    className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 bg-white font-semibold"
                   >
                     <option value="all">
                       🌐 Disponible para todos los Idóneos
@@ -482,7 +482,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                         category: e.target.value as any,
                       })
                     }
-                    className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 bg-white"
+                    className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 bg-white"
                   >
                     <option value="Notarial">Notarial</option>
                     <option value="Contratos">Contratos</option>
@@ -507,7 +507,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                       description: e.target.value,
                     })
                   }
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500"
+                  className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500"
                 />
               </div>
 
@@ -517,7 +517,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                   Marcadores Encontrados en el Documento:
                 </label>
                 {newTemplateData.placeholders.length === 0 ? (
-                  <div className="p-3 bg-amber-50/60 rounded-lg text-amber-800 text-[11px]">
+                  <div className="p-3 bg-teal-50/60 rounded-lg text-teal-800 text-[11px]">
                     ⚠️ No se encontraron marcadores con formato{" "}
                     <code className="font-mono">{`{{nombre}}`}</code> o{" "}
                     <code className="font-mono">(nombre)</code>. La plantilla
@@ -531,7 +531,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                         key={tag}
                         className="font-mono text-[11px] bg-white text-slate-800 px-2 py-1 rounded border border-slate-300 font-semibold flex items-center gap-1 shadow-xs"
                       >
-                        <Tag className="w-3 h-3 text-amber-600" />
+                        <Tag className="w-3 h-3 text-teal-600" />
                         {tag.startsWith("(") ? tag : tag}
                       </span>
                     ))}
@@ -552,7 +552,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                   type="button"
                   disabled={isUploading}
                   onClick={handleSaveNewTemplate}
-                  className="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm"
+                  className="px-5 py-2 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold shadow-sm"
                 >
                   {isUploading ? "Guardando…" : "Guardar plantilla"}
                 </button>
@@ -566,9 +566,9 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h4 className="font-serif font-bold text-slate-900 text-base flex items-center gap-2">
-            <Scale className="w-4 h-4 text-amber-600" />
+            <Scale className="w-4 h-4 text-teal-600" />
             Documentos Disponibles para:{" "}
-            <span className="text-amber-800">{activeIdoneo.name}</span>
+            <span className="text-teal-800">{activeIdoneo.name}</span>
           </h4>
           <span className="text-xs text-slate-500 font-medium">
             {templatesForActiveIdoneo.length} documentos listos para generar
@@ -577,7 +577,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
 
         {templatesForActiveIdoneo.length === 0 ? (
           <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200/60 shadow-xs">
+            <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto border border-teal-200/60 shadow-xs">
               <FileText className="w-7 h-7" />
             </div>
             <div className="max-w-md mx-auto">
@@ -594,7 +594,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
             <div>
               <label
                 htmlFor="docx-template-input"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 cursor-pointer transition-all active:scale-95"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs shadow-md shadow-teal-500/20 cursor-pointer transition-all active:scale-95"
               >
                 <Upload className="w-4 h-4" />
                 <span>Subir Primera Plantilla .docx</span>
@@ -612,11 +612,11 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
               return (
                 <div
                   key={`${template.id}-${activeIdoneo.id}`}
-                  className="bg-white rounded-2xl border border-slate-200 hover:border-amber-400 shadow-sm hover:shadow-md transition-all p-6 flex flex-col justify-between group"
+                  className="bg-white rounded-2xl border border-slate-200 hover:border-teal-400 shadow-sm hover:shadow-md transition-all p-6 flex flex-col justify-between group"
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 group-hover:bg-amber-100 group-hover:text-amber-900 transition-colors">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 group-hover:bg-teal-100 group-hover:text-teal-900 transition-colors">
                         {template.category}
                       </span>
                       <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
@@ -625,11 +625,11 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                     </div>
 
                     <div className="flex items-start gap-3 mb-3">
-                      <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 shrink-0 border border-amber-200/60">
+                      <div className="p-2.5 rounded-xl bg-teal-50 text-teal-600 shrink-0 border border-teal-200/60">
                         <FileText className="w-5 h-5" />
                       </div>
                       <div>
-                        <h4 className="font-serif font-bold text-slate-900 text-sm leading-snug group-hover:text-amber-900">
+                        <h4 className="font-serif font-bold text-slate-900 text-sm leading-snug group-hover:text-teal-900">
                           {template.name}
                         </h4>
                         <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
@@ -650,7 +650,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono flex items-center justify-between">
                         <span>Nº Colegiado:</span>
-                        <span className="text-amber-800 font-bold">
+                        <span className="text-teal-800 font-bold">
                           {activeIdoneo.colegiado}
                         </span>
                       </div>
@@ -671,7 +671,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                           </span>
                         ))}
                         {template.placeholders.length > 4 && (
-                          <span className="text-[10px] font-bold text-amber-700 self-center">
+                          <span className="text-[10px] font-bold text-teal-700 self-center">
                             +{template.placeholders.length - 4} más
                           </span>
                         )}
@@ -680,7 +680,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                   </div>
 
                   {template.approved === false && (
-                    <div role="status" className="bg-amber-50 p-3">
+                    <div role="status" className="bg-teal-50 p-3">
                       Pendiente de aprobación{" "}
                       {canApprove && (
                         <button
@@ -739,7 +739,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
                       type="button"
                       disabled={template.approved === false}
                       onClick={() => onUseTemplate(customizedTemplate)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-sm transition-all active:scale-95"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs shadow-sm transition-all active:scale-95"
                     >
                       <span>⚡ Usar con {activeIdoneo.name.split(" ")[0]}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -755,7 +755,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
       {/* Helper Box: Guide for Lawyer / Admin */}
       <div className="bg-slate-900 text-white rounded-2xl p-6 border border-slate-800 shadow-md">
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-amber-500/20 text-amber-400 rounded-xl shrink-0 border border-amber-500/30">
+          <div className="p-3 bg-teal-500/20 text-teal-400 rounded-xl shrink-0 border border-teal-500/30">
             <Info className="w-6 h-6" />
           </div>
           <div>
@@ -764,30 +764,30 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
             </h4>
             <p className="text-xs text-slate-400 leading-relaxed max-w-3xl mb-3">
               Cada pestaña representa a uno de los letrados idóneos:{" "}
-              <strong className="text-amber-300">Susana Sabalza</strong>,{" "}
-              <strong className="text-amber-300">Marta Aparicio</strong>,{" "}
-              <strong className="text-amber-300">Lizohar Godoy</strong>,{" "}
-              <strong className="text-amber-300">Martín Downer</strong> y{" "}
-              <strong className="text-amber-300">Antony Talla</strong>. Al
+              <strong className="text-teal-300">Susana Sabalza</strong>,{" "}
+              <strong className="text-teal-300">Marta Aparicio</strong>,{" "}
+              <strong className="text-teal-300">Lizohar Godoy</strong>,{" "}
+              <strong className="text-teal-300">Martín Downer</strong> y{" "}
+              <strong className="text-teal-300">Antony Talla</strong>. Al
               seleccionar una plantilla desde cualquier pestaña, los campos{" "}
-              <code className="text-amber-300 font-mono">(abogado_nombre)</code>{" "}
+              <code className="text-teal-300 font-mono">(abogado_nombre)</code>{" "}
               y{" "}
-              <code className="text-amber-300 font-mono">
+              <code className="text-teal-300 font-mono">
                 (abogado_colegiado)
               </code>{" "}
               se completan automáticamente con los datos del letrado elegido.
             </p>
-            <p className="text-xs text-amber-200/90 leading-relaxed max-w-3xl mb-3 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
-              <strong className="text-amber-300">
+            <p className="text-xs text-teal-200/90 leading-relaxed max-w-3xl mb-3 bg-teal-500/10 p-2.5 rounded-lg border border-teal-500/20">
+              <strong className="text-teal-300">
                 Reglas automáticas de formato:
               </strong>{" "}
               Todos los datos reemplazados se insertan en{" "}
               <strong>MAYÚSCULAS Y EN NEGRITA</strong>, excepto{" "}
-              <code className="text-amber-300 font-mono">(nacionalidad)</code>{" "}
+              <code className="text-teal-300 font-mono">(nacionalidad)</code>{" "}
               que se mantiene en <em>minúsculas y sin negrita</em> según las
               normas notariales.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 font-mono text-[11px] text-amber-300 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 font-mono text-[11px] text-teal-300 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
               <div>• (nombre)</div>
               <div>• (numero de identidad)</div>
               <div>• (nacionalidad)</div>
