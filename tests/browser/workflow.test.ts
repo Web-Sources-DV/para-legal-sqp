@@ -4,8 +4,12 @@ import { existsSync } from "node:fs";
 import { chromium, type Page } from "playwright";
 async function openTool(page: Page, tab: string) {
   const target = page.locator(`#nav-tab-${tab}`);
-  if (!(await target.isVisible()))
+  const desktop = await page.evaluate(
+    () => window.matchMedia("(min-width: 1024px)").matches,
+  );
+  if (!desktop && !(await target.isVisible()))
     await page.locator('[data-tour="tools"] > summary').click();
+  await target.waitFor({ state: "visible" });
   return target;
 }
 import PizZip from "pizzip";
@@ -764,7 +768,18 @@ test(
         });
         const checkPanel = async () => {
           await page.locator("[data-tour-highlight]").waitFor();
-          const box = await page.locator(".tour-card").boundingBox();
+          // Read both rectangles in one browser task: ResizeObserver can move
+          // the panel between separate Playwright geometry requests.
+          const { box, primary, title } = await page
+            .locator(".tour-card")
+            .evaluate((card) => ({
+              box: card.getBoundingClientRect().toJSON(),
+              primary: card
+                .querySelector(".tour-primary")
+                ?.getBoundingClientRect()
+                .toJSON(),
+              title: card.querySelector("h2")?.textContent,
+            }));
           assert.ok(
             box &&
               box.x >= 0 &&
@@ -774,14 +789,11 @@ test(
             `tour fits ${viewport.width}×${viewport.height}`,
           );
           assert.equal(await page.locator(".tour-arrow").count(), 1);
-          const primary = await page
-            .locator(".tour-card .tour-primary")
-            .boundingBox();
           assert.ok(
             primary &&
               primary.y >= box!.y &&
               primary.y + primary.height <= box!.y + box!.height + 1,
-            "next/finish remains fully visible",
+            `next/finish remains fully visible: ${JSON.stringify({ title, box, primary, viewport })}`,
           );
         };
         const finishTour = async () => {
