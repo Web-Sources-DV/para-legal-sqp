@@ -145,7 +145,9 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   // Trigger camera start when camera tab is active
   useEffect(() => {
     if (activeTab === "camera") {
-      void getOcrSession(ocrLanguage).warm().catch(() => {});
+      void getOcrSession(ocrLanguage)
+        .warm()
+        .catch(() => {});
       startCamera(cameraFacingMode);
     } else {
       stopCameraStream();
@@ -164,7 +166,10 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
   }, [cameraStream]);
 
   useEffect(() => {
-    if (selectedFilePreview) void getOcrSession(ocrLanguage).warm().catch(() => {});
+    if (selectedFilePreview)
+      void getOcrSession(ocrLanguage)
+        .warm()
+        .catch(() => {});
   }, [ocrLanguage, selectedFilePreview]);
 
   // Switch between front and back cameras
@@ -484,7 +489,10 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                   Foto nítida, sin reflejos y con todos los bordes visibles.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
-                  <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-md hover:bg-slate-800 transition-colors">
+                  <span
+                    data-tour="upload"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-md hover:bg-slate-800 transition-colors"
+                  >
                     <FileSearch className="w-4 h-4 text-brand-400" />
                     Seleccionar Archivo de Imagen
                   </span>
@@ -529,6 +537,7 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                 </button>
                 <button
                   className="bg-slate-900 text-white rounded p-3"
+                  id="btn-read-identity"
                   onClick={() => void processImage(selectedFilePreview)}
                 >
                   Leer y revisar identidad
@@ -541,7 +550,10 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({
                 </label>
               </div>
             )}
-            <details className="bg-white border rounded-xl p-4 space-y-3">
+            <details
+              data-tour="ocr-options"
+              className="bg-white border rounded-xl p-4 space-y-3"
+            >
               <summary className="cursor-pointer text-sm font-semibold">
                 Idioma y reverso (opcional)
               </summary>

@@ -138,6 +138,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
           Documento en 3 pasos
         </h2>
         <ol
+          data-tour="progress"
           aria-label="Progreso del documento"
           className="grid grid-cols-3 gap-2 mt-4"
         >
@@ -169,6 +170,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
         <div className="space-y-6">
           <div
             className="flex flex-wrap gap-2"
+            data-tour="identity-modes"
             aria-label="Cómo identificar al cliente"
           >
             <button
@@ -215,6 +217,7 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                     type="text"
                     value={clientSearchQuery}
                     onChange={(e) => setClientSearchQuery(e.target.value)}
+                    data-tour="client-picker"
                     placeholder="Buscar por nombre o pasaporte..."
                     className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-500/50"
                   />
@@ -319,8 +322,6 @@ export const GenerationWizard: React.FC<GenerationWizardProps> = ({
                 ) · {activeClient?.nationality || extractionResult?.nationality}
               </span>
             </div>
-
-
           </div>
 
           <DocumentGenerator

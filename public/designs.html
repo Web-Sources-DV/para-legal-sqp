@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Propuestas de interfaz · SQP Para Legal</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        color-scheme: light;
+        --blue: #065687;
+        --ink: #143c55;
+        --gold: #e5bf29;
+        --muted: #5c7184;
+        --line: #dfe6e8;
+        --paper: #f5f5f0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font:
+          15px/1.6 system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+      button,
+      a {
+        touch-action: manipulation;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:focus-visible,
+      a:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid var(--blue);
+        outline-offset: 4px;
+      }
+      a {
+        color: var(--blue);
+      }
+      .showcase {
+        max-width: 1440px;
+        margin: auto;
+        padding: 36px 40px 56px;
+      }
+      .eyebrow {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: #77621d;
+      }
+      .heading {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        align-items: center;
+      }
+      h1 {
+        font-size: clamp(26px, 4vw, 42px);
+        font-weight: 750;
+        letter-spacing: -0.045em;
+        line-height: 1.15;
+        margin: 8px 0 12px;
+      }
+      h1 em {
+        font-style: normal;
+        color: var(--blue);
+      }
+      .lede {
+        color: var(--muted);
+        margin: 0;
+        max-width: 780px;
+      }
+      .app-link {
+        background: white;
+        padding: 12px 18px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        font-weight: 700;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .options {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin: 28px 0 18px;
+      }
+      .option {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 18px;
+        text-align: left;
+        color: var(--ink);
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
+      }
+      .option[aria-pressed="true"] {
+        border: 2px solid var(--blue);
+        padding: 17px;
+        box-shadow: 0 4px 16px #06568710;
+      }
+      .option b {
+        display: block;
+        font-size: 15px;
+        margin-bottom: 3px;
+      }
+      .option span {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .recommend {
+        font-size: 10px;
+        background: #faf2d0;
+        color: #6b5a1d;
+        padding: 3px 7px;
+        border-radius: 20px;
+        margin-left: 6px;
+        vertical-align: middle;
+        white-space: nowrap;
+      }
+      .preview-note {
+        font-size: 12px;
+        color: var(--muted);
+        margin: 0 0 12px;
+      }
+      .workspace {
+        display: grid;
+        grid-template-areas: "head head" "nav nav" "main main";
+        grid-template-columns: 220px 1fr;
+        background: #fcfcf9;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px #163e5410;
+        min-height: 720px;
+      }
+      .workspace-head {
+        grid-area: head;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 28px;
+        border-bottom: 1px solid var(--line);
+        gap: 12px;
+        background: white;
+      }
+      .brand {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .brand img {
+        width: 43px;
+        height: 43px;
+      }
+      .brand strong {
+        display: block;
+        font-family: Georgia, serif;
+        font-size: 21px;
+        letter-spacing: -0.03em;
+      }
+      .brand small {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .workspace-head .meta {
+        font-size: 11px;
+        color: var(--muted);
+        background: #f3f5f7;
+        border-radius: 20px;
+        padding: 6px 12px;
+      }
+      .workspace-nav {
+        grid-area: nav;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 12px 28px;
+        border-bottom: 1px solid var(--line);
+        background: white;
+      }
+      .nav-item {
+        border: 0;
+        background: transparent;
+        border-radius: 10px;
+        padding: 10px 16px;
+        color: var(--muted);
+        text-align: left;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .nav-item[aria-current="page"] {
+        background: #eaf1f6;
+        color: var(--blue);
+        font-weight: 750;
+      }
+      .nav-icon {
+        font-size: 17px;
+        margin-right: 9px;
+        vertical-align: middle;
+      }
+      .workspace-main {
+        grid-area: main;
+        padding: 32px 40px 40px;
+        min-width: 0;
+      }
+      .intro {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        max-width: 900px;
+        margin: 0 auto 24px;
+      }
+      .intro h2 {
+        margin: 0;
+        font-size: 25px;
+        letter-spacing: -0.035em;
+        line-height: 1.3;
+      }
+      .intro p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .tour-link {
+        font-size: 12px;
+        white-space: nowrap;
+        color: var(--blue);
+        border: 1px solid var(--line);
+        padding: 9px 12px;
+        border-radius: 10px;
+        background: white;
+        text-decoration: none;
+      }
+      .stepper {
+        display: flex;
+        list-style: none;
+        margin: 0 auto 24px;
+        padding: 0;
+        max-width: 900px;
+        gap: 0;
+        align-items: center;
+      }
+      .stepper li {
+        font-size: 12px;
+        color: var(--muted);
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      .stepper li:not(:last-child):after {
+        content: "";
+        height: 1px;
+        background: var(--line);
+        flex: 1;
+        margin: 0 16px 0 10px;
+      }
+      .stepper i {
+        font-style: normal;
+        width: 28px;
+        height: 28px;
+        border: 1px solid #bdced6;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        font-size: 11px;
+        font-weight: 750;
+      }
+      .stepper .active {
+        color: var(--blue);
+        font-weight: 750;
+      }
+      .stepper .active i {
+        background: var(--gold);
+        border-color: var(--gold);
+      }
+      .stage {
+        max-width: 900px;
+        margin: auto;
+      }
+      .stage-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 22px;
+      }
+      .surface {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 26px;
+      }
+      .surface h3 {
+        font-size: 17px;
+        letter-spacing: -0.02em;
+        margin: 0 0 6px;
+      }
+      .surface p {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 0 0 20px;
+      }
+      .dropzone {
+        background: #f7f9fb;
+        border: 1.5px dashed #aac1d0;
+        border-radius: 15px;
+        padding: 30px 20px;
+        text-align: center;
+      }
+      .passport {
+        width: 72px;
+        height: 88px;
+        margin: 0 auto 18px;
+        border: 1px solid #c6d6e1;
+        border-radius: 12px;
+        box-shadow: 0 6px 15px #123b5510;
+        background: white;
+        display: grid;
+        place-items: center;
+        position: relative;
+        color: var(--blue);
+      }
+      .passport:before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 10px;
+        background: var(--blue);
+        border-radius: 11px 0 0 11px;
+      }
+      .passport svg {
+        width: 30px;
+        height: 30px;
+        margin-left: 8px;
+      }
+      .dropzone strong {
+        display: block;
+        font-size: 15px;
+      }
+      .dropzone p {
+        margin: 7px 0 18px;
+        font-size: 12px;
+      }
+      .primary,
+      .secondary {
+        min-height: 42px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 13px;
+        padding: 10px 18px;
+      }
+      .primary {
+        background: var(--gold);
+        color: var(--ink);
+        border: 1px solid var(--gold);
+      }
+      .secondary {
+        background: white;
+        color: var(--blue);
+        border: 1px solid var(--line);
+      }
+      .sub-actions {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin-top: 18px;
+        flex-wrap: wrap;
+      }
+      .text-action {
+        border: 0;
+        background: none;
+        color: var(--blue);
+        font-size: 12px;
+        text-decoration: underline;
+      }
+      .field {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 650;
+        margin-bottom: 14px;
+      }
+      .field input,
+      .field select {
+        display: block;
+        width: 100%;
+        padding: 10px 12px;
+        margin-top: 5px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: white;
+        color: var(--ink);
+        font-size: 13px;
+      }
+      .fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 14px;
+      }
+      .wide {
+        grid-column: 1/-1;
+      }
+      .details-pane {
+        display: none;
+      }
+      .footer-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding-top: 18px;
+        margin-top: 20px;
+        border-top: 1px solid var(--line);
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+        margin: 18px 0 0;
+      }
+      .notice {
+        background: #fdfaf0;
+        border: 1px solid #f1dfa0;
+        color: #6b5a1d;
+        border-radius: 12px;
+        padding: 12px;
+        font-size: 12px;
+        margin-top: 16px;
+      }
+      .demo-status {
+        color: var(--blue);
+        font-size: 13px;
+        min-height: 22px;
+        margin: 14px 0 0;
+      }
+      .demo-panel {
+        display: none;
+        max-width: 900px;
+        margin: auto;
+      }
+      .list {
+        display: grid;
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .list-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: white;
+      }
+      .list-row small {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .design-caption {
+        margin: 22px 0 0;
+        padding: 18px 22px;
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .design-caption strong {
+        color: var(--blue);
+      }
+      .side-label {
+        display: none;
+      }
+      .workspace[data-layout="sidebar"] {
+        grid-template-areas: "nav head" "nav main";
+        grid-template-rows: auto 1fr;
+      }
+      .workspace[data-layout="sidebar"] .workspace-nav {
+        flex-direction: column;
+        align-items: stretch;
+        background: var(--blue);
+        color: white;
+        border: 0;
+        padding: 28px 18px;
+        gap: 6px;
+      }
+      .workspace[data-layout="sidebar"] .nav-item {
+        color: #d4e4ee;
+        padding: 12px;
+      }
+      .workspace[data-layout="sidebar"] .nav-item[aria-current="page"] {
+        background: #ffffff18;
+        color: white;
+        box-shadow: inset 3px 0 var(--gold);
+      }
+      .workspace[data-layout="sidebar"] .side-label {
+        display: block;
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.15em;
+        color: #efda87;
+        padding: 0 12px 22px;
+      }
+      .workspace[data-layout="sidebar"] .workspace-head {
+        padding: 18px 30px;
+      }
+      .workspace[data-layout="sidebar"] .workspace-main {
+        padding: 30px;
+      }
+      .workspace[data-layout="compact"] .stage-grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+      .workspace[data-layout="compact"] .details-pane {
+        display: block;
+      }
+      .workspace[data-layout="compact"] .dropzone {
+        padding: 24px 14px;
+      }
+      .workspace[data-layout="compact"] .surface {
+        padding: 22px;
+      }
+      .workspace[data-layout="compact"] .workspace-main {
+        padding-top: 26px;
+      }
+      .workspace[data-layout="compact"] .workspace-nav {
+        padding-block: 6px;
+      }
+      .workspace[data-layout="compact"] .workspace-head {
+        padding-block: 15px;
+      }
+      .workspace[data-stage="2"] .details-pane,
+      .workspace[data-stage="3"] .details-pane {
+        display: block;
+      }
+      .workspace[data-stage="2"] .capture,
+      .workspace[data-stage="3"] .capture {
+        display: none;
+      }
+      .workspace[data-stage="2"] .stage-grid,
+      .workspace[data-stage="3"] .stage-grid {
+        grid-template-columns: 1fr;
+      }
+      .workspace[data-stage="2"] .details-pane,
+      .workspace[data-stage="3"] .details-pane {
+        max-width: 680px;
+        width: 100%;
+        margin: auto;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      @media (max-width: 850px) {
+        .showcase {
+          padding: 24px 20px 40px;
+        }
+        .workspace-main {
+          padding: 26px;
+        }
+        .workspace[data-layout="sidebar"] {
+          grid-template-columns: 170px 1fr;
+        }
+        .workspace[data-layout="sidebar"] .workspace-main {
+          padding: 24px;
+        }
+        .workspace[data-layout="compact"] .stage-grid {
+          grid-template-columns: 1fr;
+        }
+        .intro {
+          align-items: flex-start;
+        }
+        .options {
+          gap: 8px;
+        }
+        .option {
+          padding: 14px;
+        }
+        .option[aria-pressed="true"] {
+          padding: 13px;
+        }
+      }
+      @media (max-width: 600px) {
+        .showcase {
+          padding: 24px 12px;
+        }
+        .heading {
+          display: block;
+        }
+        .app-link {
+          display: inline-block;
+          margin-top: 16px;
+          font-size: 12px;
+        }
+        .options {
+          grid-template-columns: 1fr;
+          margin-top: 20px;
+        }
+        .option {
+          padding: 12px 14px;
+        }
+        .option[aria-pressed="true"] {
+          padding: 11px 13px;
+        }
+        .workspace {
+          border-radius: 16px;
+          min-height: 0;
+          grid-template-columns: 1fr;
+          grid-template-areas: "head" "nav" "main";
+        }
+        .workspace-head {
+          padding: 16px;
+          flex-wrap: wrap;
+        }
+        .workspace-head .meta {
+          display: none;
+        }
+        .workspace-nav {
+          padding: 10px;
+          flex-wrap: wrap;
+          gap: 4px;
+        }
+        .nav-item {
+          padding: 8px 10px;
+          font-size: 12px;
+        }
+        .nav-icon {
+          display: none;
+        }
+        .workspace-main {
+          padding: 22px 14px;
+        }
+        .intro {
+          display: block;
+        }
+        .tour-link {
+          display: inline-block;
+          margin-top: 14px;
+        }
+        .intro h2 {
+          font-size: 22px;
+        }
+        .stepper {
+          gap: 6px;
+        }
+        .stepper li {
+          font-size: 10px;
+          gap: 5px;
+          align-items: center;
+          line-height: 1.3;
+        }
+        .stepper li:not(:last-child):after {
+          display: none;
+        }
+        .stepper i {
+          width: 24px;
+          height: 24px;
+        }
+        .surface {
+          padding: 20px 16px;
+        }
+        .fields {
+          grid-template-columns: 1fr;
+        }
+        .footer-actions {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+        .footer-actions .primary {
+          width: 100%;
+        }
+        .workspace[data-layout="sidebar"] {
+          grid-template-columns: 1fr;
+          grid-template-areas: "head" "nav" "main";
+          grid-template-rows: auto auto 1fr;
+        }
+        .workspace[data-layout="sidebar"] .workspace-nav {
+          flex-direction: row;
+          flex-wrap: wrap;
+          padding: 10px;
+        }
+        .workspace[data-layout="sidebar"] .workspace-head {
+          padding: 16px;
+        }
+        .workspace[data-layout="sidebar"] .workspace-main {
+          padding: 22px 14px;
+        }
+        .workspace[data-layout="sidebar"] .side-label {
+          display: none;
+        }
+        .workspace[data-layout="sidebar"] .nav-item {
+          padding: 8px 10px;
+        }
+        .list-row {
+          flex-wrap: wrap;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="showcase">
+      <div class="heading">
+        <div>
+          <div class="eyebrow">Tres propuestas para SQP</div>
+          <h1>Tu trabajo, <em>más fácil de hacer.</em></h1>
+          <p class="lede">
+            Compara distribuciones más claras con los colores de tu marca.
+            Selecciona una propuesta y prueba el recorrido con datos ficticios.
+          </p>
+        </div>
+        <a class="app-link" href="./">Abrir la app actual</a>
+      </div>
+      <div class="options" aria-label="Propuestas de interfaz">
+        <button class="option" data-layout-choice="focused" aria-pressed="true">
+          <b
+            >A · Asistente enfocado
+            <small class="recommend">Recomendado</small></b
+          ><span
+            >Una tarea a la vez. Ideal para empezar y para el teléfono.</span
+          >
+        </button>
+        <button
+          class="option"
+          data-layout-choice="sidebar"
+          aria-pressed="false"
+        >
+          <b>B · Escritorio organizado</b
+          ><span
+            >Menú lateral visible. Para quienes alternan entre
+            herramientas.</span
+          >
+        </button>
+        <button
+          class="option"
+          data-layout-choice="compact"
+          aria-pressed="false"
+        >
+          <b>C · Mesa de trabajo</b
+          ><span
+            >Imagen y datos juntos. Para usuarios que revisan muchos
+            documentos.</span
+          >
+        </button>
+      </div>
+      <p class="preview-note">
+        VISTA PREVIA INTERACTIVA · Datos de ejemplo · No usa cámara, OCR ni base
+        de datos
+      </p>
+      <section
+        class="workspace"
+        data-layout="focused"
+        data-stage="1"
+        aria-label="Ejemplo interactivo"
+      >
+        <header class="workspace-head">
+          <div class="brand">
+            <img src="./favicon.svg" alt="Logo oficial SQP" />
+            <div>
+              <strong>Para Legal</strong
+              ><small>Tu documentación, en orden.</small>
+            </div>
+          </div>
+          <span class="meta">Diseño de ejemplo</span
+          ><button class="secondary" id="demo-new">+ Nuevo documento</button>
+        </header>
+        <nav class="workspace-nav" aria-label="Navegación de ejemplo">
+          <div class="side-label">ESPACIO DE TRABAJO</div>
+          <button class="nav-item" data-pane="create" aria-current="page">
+            <span class="nav-icon">＋</span>Crear documento</button
+          ><button class="nav-item" data-pane="clients">
+            <span class="nav-icon">◎</span>Clientes</button
+          ><button class="nav-item" data-pane="templates">
+            <span class="nav-icon">▤</span>Plantillas</button
+          ><button class="nav-item" data-pane="history">
+            <span class="nav-icon">◷</span>Historial
+          </button>
+        </nav>
+        <div class="workspace-main">
+          <section id="create-pane">
+            <div class="intro">
+              <div>
+                <div class="eyebrow">TODO EMPIEZA AQUÍ</div>
+                <h2 id="stage-title">¿Para quién es el documento?</h2>
+                <p id="stage-subtitle">
+                  Una foto de su identificación es suficiente para comenzar.
+                </p>
+              </div>
+              <a class="tour-link" href="./">Abrir la app y su tour</a>
+            </div>
+            <ol class="stepper" aria-label="Pasos de ejemplo">
+              <li class="active"><i>1</i>Identificar cliente</li>
+              <li><i>2</i>Revisar datos</li>
+              <li><i>3</i>Generar Word</li>
+            </ol>
+            <div class="stage">
+              <div class="stage-grid">
+                <div class="surface capture">
+                  <h3>Lee su documento</h3>
+                  <p>Pasaporte, cédula o documento de identidad.</p>
+                  <div class="dropzone">
+                    <div class="passport" aria-hidden="true">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.3"
+                      >
+                        <circle cx="12" cy="10" r="6" />
+                        <path
+                          d="M6 10h12M12 4c4 4 4 8 0 12-4-4-4-8 0-12M7 20h10"
+                        />
+                      </svg>
+                    </div>
+                    <strong>Arrastra una foto aquí</strong>
+                    <p>O elige una imagen guardada en tu dispositivo.</p>
+                    <button class="primary" data-next>
+                      Probar con un documento de ejemplo
+                    </button>
+                  </div>
+                  <div class="sub-actions">
+                    <button class="text-action" data-next>
+                      Usar cámara de ejemplo</button
+                    ><button class="text-action" data-next>
+                      Elegir cliente guardado
+                    </button>
+                  </div>
+                  <p class="hint">
+                    En la app real, la lectura se realiza en tu navegador.
+                  </p>
+                </div>
+                <div class="surface details-pane">
+                  <h3 id="detail-title">Datos del cliente</h3>
+                  <p id="detail-subtitle">
+                    Revisa los datos antes de continuar.
+                  </p>
+                  <div class="fields">
+                    <label class="field wide"
+                      >Nombre completo<input
+                        value="CLIENTE DE EJEMPLO"
+                        autocomplete="off" /></label
+                    ><label class="field"
+                      >Documento<input
+                        value="DEMO-0001"
+                        autocomplete="off" /></label
+                    ><label class="field"
+                      >Tipo<select>
+                        <option>Pasaporte</option>
+                        <option>Cédula de identidad</option>
+                      </select></label
+                    ><label class="field"
+                      >Nacimiento<input type="date" value="1990-06-15" /></label
+                    ><label class="field"
+                      >Vencimiento<input type="date" value="2030-06-14"
+                    /></label>
+                  </div>
+                  <div id="model-fields" hidden>
+                    <label class="field"
+                      >Plantilla<select>
+                        <option>Modelo Word de ejemplo</option>
+                        <option>Otro modelo de ejemplo</option>
+                      </select></label
+                    ><label class="field"
+                      >Letrado<select>
+                        <option>Profesional de ejemplo</option>
+                      </select></label
+                    >
+                  </div>
+                  <div class="notice" id="review-notice">
+                    Compara siempre los datos con el documento original. Esta
+                    identidad es ficticia.
+                  </div>
+                  <div class="footer-actions">
+                    <span>Los datos de esta vista no se guardan.</span
+                    ><button class="primary" data-next id="continue-demo">
+                      Elegir plantilla
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p class="demo-status" id="demo-status" role="status"></p>
+            </div>
+          </section>
+          <section class="demo-panel" id="other-pane">
+            <div class="intro">
+              <div>
+                <div class="eyebrow">TODO EN SU LUGAR</div>
+                <h2 id="panel-title">Clientes</h2>
+                <p>Ejemplo de cómo se organiza esta herramienta.</p>
+              </div>
+            </div>
+            <label class="field"
+              >Buscar en esta vista<input
+                id="demo-search"
+                placeholder="Escribe para filtrar los ejemplos"
+            /></label>
+            <div class="list" id="example-list"></div>
+            <p class="demo-status" role="status" id="panel-status"></p>
+          </section>
+        </div>
+      </section>
+      <p class="design-caption" id="design-caption">
+        <strong>A · Asistente enfocado.</strong> Recomiendo esta opción para
+        SQP: menos decisiones visibles, botones amplios y un recorrido guiado de
+        tres pasos. Las herramientas secundarias permanecen disponibles sin
+        competir con la tarea principal.
+      </p>
+    </main>
+    <script>
+      const workspace = document.querySelector(".workspace");
+      let stage = 1;
+      let pane = "create";
+      const captions = {
+        focused:
+          "<strong>A · Asistente enfocado.</strong> Recomiendo esta opción para SQP: menos decisiones visibles, botones amplios y un recorrido guiado de tres pasos. Las herramientas secundarias permanecen disponibles sin competir con la tarea principal.",
+        sidebar:
+          "<strong>B · Escritorio organizado.</strong> Recomendable para trabajo de oficina frecuente: acceso permanente a clientes, plantillas e historial. En el teléfono, el menú se transforma en una barra compacta.",
+        compact:
+          "<strong>C · Mesa de trabajo.</strong> Recomendable para usuarios con experiencia: permite ver la captura y los datos al mismo tiempo, con menos desplazamiento en pantallas grandes. En móvil se apila en una columna.",
+      };
+      for (const button of document.querySelectorAll("[data-layout-choice]"))
+        button.addEventListener("click", () => {
+          workspace.dataset.layout = button.dataset.layoutChoice;
+          for (const item of document.querySelectorAll("[data-layout-choice]"))
+            item.setAttribute("aria-pressed", String(item === button));
+          document.querySelector("#design-caption").innerHTML =
+            captions[button.dataset.layoutChoice];
+        });
+      function renderStage() {
+        workspace.dataset.stage = stage;
+        document.querySelector("#stage-title").textContent = [
+          "¿Para quién es el documento?",
+          "Comprueba que los datos sean correctos",
+          "Tu documento, listo para preparar",
+        ][stage - 1];
+        document.querySelector("#stage-subtitle").textContent = [
+          "Una foto de su identificación es suficiente para comenzar.",
+          "Corrige lo necesario antes de elegir la plantilla.",
+          "Selecciona el modelo y el profesional responsable.",
+        ][stage - 1];
+        for (const [i, item] of [
+          ...document.querySelectorAll(".stepper li"),
+        ].entries())
+          item.classList.toggle("active", i + 1 === stage);
+        document.querySelector("#model-fields").hidden = stage !== 3;
+        document.querySelector("#continue-demo").textContent =
+          stage === 3 ? "Generar Word de ejemplo" : "Elegir plantilla";
+        document.querySelector("#demo-status").textContent = "";
+      }
+      for (const button of document.querySelectorAll("[data-next]"))
+        button.addEventListener("click", () => {
+          if (stage < 3) {
+            stage++;
+            renderStage();
+          } else
+            document.querySelector("#demo-status").textContent =
+              "Vista previa completada. En la app real, este paso genera, archiva y descarga el Word. Aquí no se crea ningún archivo.";
+        });
+      const labels = {
+        clients: "Clientes",
+        templates: "Plantillas",
+        history: "Historial",
+      };
+      const rows = {
+        clients: [
+          "Cliente de ejemplo 01",
+          "Cliente de ejemplo 02",
+          "Cliente de ejemplo 03",
+        ],
+        templates: [
+          "Modelo Word de ejemplo",
+          "Otra plantilla de ejemplo",
+          "Plantilla de demostración",
+        ],
+        history: [
+          "Documento de ejemplo 001",
+          "Documento de ejemplo 002",
+          "Documento de ejemplo 003",
+        ],
+      };
+      function renderList() {
+        const list = document.querySelector("#example-list");
+        list.replaceChildren();
+        const query = document
+          .querySelector("#demo-search")
+          .value.toLocaleLowerCase("es");
+        for (const title of rows[pane] || []) {
+          if (!title.toLocaleLowerCase("es").includes(query)) continue;
+          const row = document.createElement("div");
+          row.className = "list-row";
+          const name = document.createElement("div");
+          const strong = document.createElement("strong");
+          strong.textContent = title;
+          name.append(strong);
+          const small = document.createElement("small");
+          small.textContent = "Dato ficticio · Solo para visualizar el diseño";
+          name.append(small);
+          const button = document.createElement("button");
+          button.className = "secondary";
+          button.textContent = "Ver ejemplo";
+          button.onclick = () =>
+            (document.querySelector("#panel-status").textContent =
+              title +
+              ": esta ficha es una demostración visual. No contiene datos reales.");
+          row.append(name, button);
+          list.append(row);
+        }
+        if (!list.children.length)
+          list.textContent = "No hay ejemplos que coincidan con la búsqueda.";
+      }
+      function selectPane(value) {
+        pane = value;
+        document.querySelector("#create-pane").hidden = pane !== "create";
+        document.querySelector("#other-pane").style.display =
+          pane === "create" ? "none" : "block";
+        for (const button of document.querySelectorAll("[data-pane]")) {
+          if (button.dataset.pane === pane)
+            button.setAttribute("aria-current", "page");
+          else button.removeAttribute("aria-current");
+        }
+        if (pane !== "create") {
+          document.querySelector("#panel-title").textContent = labels[pane];
+          document.querySelector("#demo-search").value = "";
+          document.querySelector("#panel-status").textContent = "";
+          renderList();
+        }
+      }
+      for (const button of document.querySelectorAll("[data-pane]"))
+        button.addEventListener("click", () => selectPane(button.dataset.pane));
+      document.querySelector("#demo-new").onclick = () => {
+        stage = 1;
+        renderStage();
+        selectPane("create");
+      };
+      document
+        .querySelector("#demo-search")
+        .addEventListener("input", renderList);
+    </script>
+  </body>
+</html>

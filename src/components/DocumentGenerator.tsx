@@ -424,6 +424,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         <label className="block text-sm font-semibold text-slate-700">
           Letrado responsable
           <select
+            data-tour="lawyer"
             aria-label="Letrado responsable"
             value={selectedIdoneoId}
             disabled={isGenerating || !!pendingDocument.current}
@@ -819,7 +820,10 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div>
-              <h3 className="font-serif font-bold text-slate-900 text-lg">
+              <h3
+                data-tour="document-fields"
+                className="font-serif font-bold text-slate-900 text-lg"
+              >
                 Datos del documento
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -922,7 +926,10 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
           </div>
 
           <details className="border-t border-slate-200 pt-4">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+            <summary
+              data-tour="signature-options"
+              className="cursor-pointer text-sm font-semibold text-slate-700"
+            >
               Opciones de firma (opcional)
             </summary>
             <SignatureStudio
