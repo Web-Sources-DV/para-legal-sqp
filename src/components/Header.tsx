@@ -1,5 +1,5 @@
 import { GuidedTour } from "./GuidedTour";
-import React, { useEffect, useRef } from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import {
   Sparkles,
   Users,
@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
   onStartNewDocument,
 }) => {
   const menu = useRef<HTMLDetailsElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const desktop = window.matchMedia("(min-width: 1024px)");
     const update = () => {
       if (menu.current) menu.current.open = desktop.matches;
