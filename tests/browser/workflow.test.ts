@@ -5,7 +5,7 @@ import { chromium, type Page } from "playwright";
 async function openTool(page: Page, tab: string) {
   const target = page.locator(`#nav-tab-${tab}`);
   if (!(await target.isVisible()))
-    await page.getByText("Herramientas", { exact: true }).click();
+    await page.locator('[data-tour="tools"] > summary').click();
   return target;
 }
 import PizZip from "pizzip";
@@ -897,7 +897,7 @@ test(
           await page
             .locator('[data-tour="tools"]')
             .evaluate((element) => (element as HTMLDetailsElement).open),
-          false,
+          viewport.width >= 1024,
         );
         if (viewport.width === 1440)
           for (const tab of [
@@ -1007,6 +1007,110 @@ test("three interface previews work on mobile and desktop without real records",
         await page.locator("#demo-search").fill("02");
         assert.equal(await page.locator(".list-row").count(), 1);
       }
+    }
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});
+
+test("desktop sidebar and focused mobile mode switch without losing edits or breaking the tour", async () => {
+  const browser = await chromium.launch({
+    executablePath:
+      process.env.PL_CHROMIUM_PATH ||
+      (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined),
+    args: ["--no-sandbox"],
+  });
+  try {
+    const page = await browser.newPage({
+      viewport: { width: 375, height: 900 },
+    });
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.route("https://*.supabase.co/**", async (route) => {
+      const name = new URL(route.request().url()).pathname.split("/").at(-1);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          name?.endsWith("entity_counts")
+            ? { clients: 0, templates: 0, documents: 0 }
+            : name?.endsWith("sync_cursor")
+              ? 0
+              : [],
+        ),
+      });
+    });
+    await page.goto(process.env.PL_BROWSER_URL!);
+    await page
+      .getByRole("button", { name: "Ingreso Manual Rápido", exact: true })
+      .click();
+    const name = page.getByPlaceholder("Ej. CARLOS ANDRÉS");
+    await name.fill("PRUEBA CAMBIO DE PANTALLA");
+    for (const width of [1023, 1024, 1440, 768, 375]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page
+        .getByText(
+          width >= 1024 ? "Escritorio organizado" : "Asistente enfocado",
+          { exact: true },
+        )
+        .waitFor();
+      await page
+        .locator("#nav-tab-clients")
+        .waitFor({ state: width >= 1024 ? "visible" : "hidden" });
+      assert.equal(
+        await page.locator("#nav-tab-clients").isVisible(),
+        width >= 1024,
+      );
+      const header = await page.locator(".workspace-header").boundingBox();
+      const main = await page.locator(".workspace-main").boundingBox();
+      assert.ok(header && main);
+      if (width >= 1024) {
+        assert.ok(
+          header.width < 300 && header.height >= 899,
+          "desktop has a full-height sidebar",
+        );
+        assert.ok(
+          main.x >= header.x + header.width,
+          "workspace is beside the sidebar",
+        );
+      } else {
+        assert.ok(
+          header.width === width && main.x === 0,
+          "mobile uses the focused full-width assistant",
+        );
+      }
+      assert.equal(await name.inputValue(), "PRUEBA CAMBIO DE PANTALLA");
+      assert.equal(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth > innerWidth,
+        ),
+        false,
+      );
+    }
+    for (const width of [1440, 375]) {
+      await page
+        .getByRole("button", { name: "Tour guiado", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Conocer las herramientas", exact: true })
+        .click();
+      await page.setViewportSize({ width, height: 900 });
+      await page.locator("[data-tour-highlight]").waitFor();
+      assert.equal(
+        await page
+          .getByText("Este control no está visible ahora.", { exact: false })
+          .count(),
+        0,
+      );
+      await page.keyboard.press("Escape");
+      assert.equal(
+        await page
+          .locator('[data-tour="tools"]')
+          .evaluate((element) => (element as HTMLDetailsElement).open),
+        width >= 1024,
+      );
+      assert.equal(await name.inputValue(), "PRUEBA CAMBIO DE PANTALLA");
     }
     assert.deepEqual(errors, []);
   } finally {

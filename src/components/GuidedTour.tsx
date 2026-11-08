@@ -2,9 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import type { ActiveTab } from "../types";
 
 type Step = { target: string; title: string; text: string };
+function visibleTarget(selector: string) {
+  return [...document.querySelectorAll<HTMLElement>(selector)].find(
+    (element) => element.getClientRects().length,
+  );
+}
+
 const tools: Step[] = [
   {
-    target: '[data-tour="tools"] > summary',
+    target: '[data-tour="tools"] > summary, [data-tour="desktop-tools-label"]',
     title: "Tus herramientas, en un solo menú",
     text: "Aquí encontrarás las funciones de administración. El tour las señala sin abrir fichas, modificar datos ni salir de tu trabajo.",
   },
@@ -228,7 +234,12 @@ export function GuidedTour({ activeTab }: { activeTab: ActiveTab }) {
   } | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const card = useRef<HTMLDivElement>(null);
-  const restore = useRef({ scroll: 0, menu: false });
+  const restore = useRef({
+    scroll: 0,
+    menu: false,
+    desktop: false,
+    headerScroll: 0,
+  });
   const step = steps[index];
   const open = mode !== null;
 
@@ -237,10 +248,7 @@ export function GuidedTour({ activeTab }: { activeTab: ActiveTab }) {
     const visible =
       kind === "tools"
         ? candidates
-        : candidates.filter(
-            (item) =>
-              document.querySelector(item.target)?.getClientRects().length,
-          );
+        : candidates.filter((item) => visibleTarget(item.target));
     setSteps(
       visible.length
         ? visible
@@ -267,14 +275,28 @@ export function GuidedTour({ activeTab }: { activeTab: ActiveTab }) {
     const menu = document.querySelector<HTMLDetailsElement>(
       '[data-tour="tools"]',
     );
-    restore.current = { scroll: window.scrollY, menu: !!menu?.open };
+    restore.current = {
+      scroll: window.scrollY,
+      menu: !!menu?.open,
+      desktop: window.matchMedia("(min-width: 1024px)").matches,
+      headerScroll:
+        document.querySelector<HTMLElement>(".workspace-header")?.scrollTop ||
+        0,
+    };
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     element.showModal();
     return () => {
       element.close();
       document.body.style.overflow = overflow;
-      if (menu) menu.open = restore.current.menu;
+      const desktop = window.matchMedia("(min-width: 1024px)").matches;
+      if (menu)
+        menu.open =
+          desktop ||
+          (desktop === restore.current.desktop && restore.current.menu);
+      document
+        .querySelector<HTMLElement>(".workspace-header")
+        ?.scrollTo({ top: restore.current.headerScroll, behavior: "instant" });
       window.scrollTo({ top: restore.current.scroll, behavior: "instant" });
     };
   }, [open]);
@@ -287,20 +309,31 @@ export function GuidedTour({ activeTab }: { activeTab: ActiveTab }) {
     const menu = document.querySelector<HTMLDetailsElement>(
       '[data-tour="tools"]',
     );
-    if (mode === "tools" && menu) menu.open = index > 0 || restore.current.menu;
-    const target = document.querySelector<HTMLElement>(step.target);
+    if (mode === "tools" && menu)
+      menu.open =
+        window.matchMedia("(min-width: 1024px)").matches ||
+        index > 0 ||
+        restore.current.menu;
+    const target = visibleTarget(step.target);
     target?.scrollIntoView({
       block: "nearest",
       inline: "nearest",
       behavior: "instant",
     });
     const measure = () => {
+      if (mode === "tools" && menu)
+        menu.open =
+          window.matchMedia("(min-width: 1024px)").matches ||
+          index > 0 ||
+          restore.current.menu;
+      const target = visibleTarget(step.target);
       if (!target?.getClientRects().length) {
         setLayout(null);
         return;
       }
       const rect = target.getBoundingClientRect();
-      const width = card.current?.offsetWidth || Math.min(360, window.innerWidth - 32);
+      const width =
+        card.current?.offsetWidth || Math.min(360, window.innerWidth - 32);
       const height =
         (card.current?.querySelector<HTMLElement>(".tour-body")?.scrollHeight ||
           120) +
@@ -347,7 +380,9 @@ export function GuidedTour({ activeTab }: { activeTab: ActiveTab }) {
       ?.querySelector<HTMLButtonElement>(".tour-primary")
       ?.focus({ preventScroll: true });
     const observer = new ResizeObserver(measure);
-    if (target) observer.observe(target);
+    document
+      .querySelectorAll(step.target)
+      .forEach((element) => observer.observe(element));
     if (card.current) observer.observe(card.current);
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);

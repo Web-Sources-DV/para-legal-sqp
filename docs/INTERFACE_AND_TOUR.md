@@ -8,7 +8,7 @@
 - **B. Escritorio organizado:** menú lateral permanente en escritorio; se adapta a una barra en móvil.
 - **C. Mesa de trabajo:** captura y datos juntos en pantallas grandes, apilados en móvil.
 
-El comparador utiliza únicamente datos ficticios. Los botones simulan el recorrido y las búsquedas; no usa OCR, cámara, Supabase, archivos reales ni descargas. La selección cambia solo la vista previa y no impone un rediseño a los usuarios de la app. La interfaz de producción se podrá adaptar después de elegir una propuesta.
+El comparador utiliza únicamente datos ficticios. Los botones simulan el recorrido y las búsquedas; no usa OCR, cámara, Supabase, archivos reales ni descargas. La selección cambia solo la vista previa y no impone un rediseño a los usuarios de la app. La aplicación utiliza automáticamente **B (escritorio organizado)** desde 1024 px y **A (asistente enfocado)** por debajo de ese ancho. La propuesta C permanece como referencia visual del comparador, no como modo de la app. El cambio de distribución no recarga ni reinicia los formularios.
 
 ## Tour instalado en la app
 
