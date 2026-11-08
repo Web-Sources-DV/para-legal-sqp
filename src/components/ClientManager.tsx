@@ -290,6 +290,7 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            data-tour="client-search"
             placeholder="Buscar por nombre, pasaporte o email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -340,7 +341,10 @@ export const ClientManager: React.FC<ClientManagerProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
+            <table
+              data-tour="client-list"
+              className="w-full text-left text-xs text-slate-600"
+            >
               <thead className="bg-slate-50 text-slate-700 uppercase font-bold text-[11px] border-b border-slate-200">
                 <tr>
                   <th className="px-6 py-4">Cliente / Titular</th>

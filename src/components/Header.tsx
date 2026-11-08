@@ -1,3 +1,4 @@
+import { GuidedTour } from "./GuidedTour";
 import React from "react";
 import { Sparkles } from "lucide-react";
 import { ActiveTab, DatabaseStats } from "../types";
@@ -48,6 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Quick Action Button & Cloud Badge */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <GuidedTour activeTab={activeTab} />
             <button
               id="btn-quick-new-doc"
               onClick={onStartNewDocument}
@@ -71,6 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
             Documento
           </button>
           <details
+            data-tour="tools"
             className="relative"
             onKeyDown={(event) => {
               if (event.key === "Escape")

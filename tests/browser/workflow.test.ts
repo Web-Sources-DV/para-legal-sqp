@@ -687,3 +687,329 @@ test("three-step workflow saves a reviewed identity and downloads Word without c
     await browser.close();
   }
 });
+
+test(
+  "guided tours point to real controls, fit screens and leave data and camera untouched",
+  { timeout: 180000 },
+  async () => {
+    const browser = await chromium.launch({
+      executablePath:
+        process.env.PL_CHROMIUM_PATH ||
+        (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined),
+      args: ["--no-sandbox"],
+    });
+    try {
+      for (const viewport of [
+        { width: 375, height: 812 },
+        { width: 1440, height: 960 },
+        { width: 812, height: 375 },
+      ]) {
+        const context = await browser.newContext({ viewport });
+        const page = await context.newPage();
+        const errors: string[] = [],
+          writes: string[] = [];
+        page.on("pageerror", (error) => errors.push(error.message));
+        await page.addInitScript(
+          `window.__tourCameraCalls = 0; if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = function() { window.__tourCameraCalls++; return Promise.reject(new Error("Tour must not activate camera")); };`,
+        );
+        await page.route("https://*.supabase.co/**", async (route) => {
+          const name = new URL(route.request().url()).pathname
+            .split("/")
+            .at(-1);
+          if (/save_entity|record_document|archive|storage/.test(name || ""))
+            writes.push(name!);
+          const populated = viewport.width === 1440;
+          let result: unknown = name?.endsWith("entity_counts")
+            ? {
+                clients: populated ? 1 : 0,
+                templates: populated ? 1 : 0,
+                documents: populated ? 1 : 0,
+              }
+            : name?.endsWith("sync_cursor")
+              ? 0
+              : [];
+          if (populated && name?.endsWith("list_entities")) {
+            const entity = route.request().postDataJSON().entity;
+            const payload =
+              entity === "clients"
+                ? client
+                : entity === "templates"
+                  ? template
+                  : {
+                      id: "tour-document",
+                      title: "Documento ficticio de tour",
+                      clientId: client.id,
+                      clientName: client.fullName,
+                      templateId: template.id,
+                      templateName: template.name,
+                      fileName: "tour.docx",
+                      generatedAt: "2026-01-01",
+                      fileSizeFormatted: "1 KB",
+                    };
+            result = [
+              {
+                id: payload.id,
+                payload,
+                revision: 1,
+                approved: true,
+                archived: false,
+              },
+            ];
+          }
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(result),
+          });
+        });
+        const checkPanel = async () => {
+          await page.locator("[data-tour-highlight]").waitFor();
+          const box = await page.locator(".tour-card").boundingBox();
+          assert.ok(
+            box &&
+              box.x >= 0 &&
+              box.y >= 0 &&
+              box.x + box.width <= viewport.width + 1 &&
+              box.y + box.height <= viewport.height + 1,
+            `tour fits ${viewport.width}×${viewport.height}`,
+          );
+          assert.equal(await page.locator(".tour-arrow").count(), 1);
+          const primary = await page
+            .locator(".tour-card .tour-primary")
+            .boundingBox();
+          assert.ok(
+            primary &&
+              primary.y >= box!.y &&
+              primary.y + primary.height <= box!.y + box!.height + 1,
+            "next/finish remains fully visible",
+          );
+        };
+        const finishTour = async () => {
+          for (let i = 0; i < 15; i++) {
+            await checkPanel();
+            if (
+              await page
+                .getByRole("button", { name: "Terminar", exact: true })
+                .count()
+            ) {
+              await page
+                .getByRole("button", { name: "Terminar", exact: true })
+                .click();
+              return;
+            }
+            await page
+              .getByRole("button", { name: "Siguiente", exact: true })
+              .click();
+          }
+          assert.fail("tour did not finish");
+        };
+        await page.goto(process.env.PL_BROWSER_URL!);
+        await page
+          .getByRole("heading", { name: "Documento en 3 pasos", exact: true })
+          .waitFor();
+        await page
+          .getByRole("button", { name: "Tour guiado", exact: true })
+          .click();
+        await page
+          .getByRole("button", { name: "Recorrer esta pantalla", exact: true })
+          .click();
+        await checkPanel();
+        const firstTitle = await page.locator(".tour-card h2").textContent();
+        await page
+          .getByRole("button", { name: "Siguiente", exact: true })
+          .click();
+        await page
+          .getByRole("button", { name: "Anterior", exact: true })
+          .click();
+        assert.equal(
+          await page.locator(".tour-card h2").textContent(),
+          firstTitle,
+        );
+        if (process.env.PL_CAPTURE_UI === "1")
+          await page.screenshot({
+            path: `/tmp/sqp-tour-${viewport.width}.png`,
+          });
+        for (let i = 0; i < 10; i++) {
+          await page.keyboard.press("Tab");
+          const focus = await page.evaluate(() => ({
+            inside: document
+              .querySelector("dialog.guided-tour")
+              ?.contains(document.activeElement),
+            active: document.activeElement?.outerHTML.slice(0, 160),
+            modal: document
+              .querySelector("dialog.guided-tour")
+              ?.matches(":modal"),
+          }));
+          assert.equal(
+            focus.inside,
+            true,
+            `Tab ${i}: ${JSON.stringify(focus)}`,
+          );
+        }
+        await page.keyboard.press("Escape");
+        assert.equal(
+          await page
+            .getByRole("dialog", { name: "Tour guiado de Para Legal" })
+            .count(),
+          0,
+        );
+        assert.equal(
+          await page.evaluate(() => document.activeElement?.id),
+          "btn-guided-tour",
+        );
+        await page
+          .getByRole("button", { name: "Tour guiado", exact: true })
+          .click();
+        await page
+          .getByRole("button", {
+            name: "Conocer las herramientas",
+            exact: true,
+          })
+          .click();
+        for (const [i, title] of [
+          "Tus herramientas, en un solo menú",
+          "Clientes",
+          "Plantillas",
+          "Historial",
+          "Ayuda",
+          "Generador avanzado",
+        ].entries()) {
+          await checkPanel();
+          assert.equal(
+            await page.locator(".tour-card h2").textContent(),
+            title,
+          );
+          if (i)
+            assert.equal(
+              await page
+                .locator('[data-tour="tools"]')
+                .evaluate((element) => (element as HTMLDetailsElement).open),
+              true,
+            );
+          await page
+            .getByRole("button", {
+              name: i === 5 ? "Terminar" : "Siguiente",
+              exact: true,
+            })
+            .click();
+        }
+        assert.equal(
+          await page
+            .locator('[data-tour="tools"]')
+            .evaluate((element) => (element as HTMLDetailsElement).open),
+          false,
+        );
+        if (viewport.width === 1440)
+          for (const tab of [
+            "clients",
+            "templates",
+            "history",
+            "manual",
+            "generator",
+          ]) {
+            await (await openTool(page, tab)).click();
+            await page
+              .getByText("Cargando sección…", { exact: true })
+              .waitFor({ state: "hidden" });
+            await page
+              .getByRole("button", { name: "Tour guiado", exact: true })
+              .click();
+            await page
+              .getByRole("button", {
+                name: "Recorrer esta pantalla",
+                exact: true,
+              })
+              .click();
+            await finishTour();
+          }
+        await page.locator("#nav-tab-wizard").click();
+        await page
+          .getByRole("button", { name: "Ingreso Manual Rápido", exact: true })
+          .click();
+        await page
+          .getByPlaceholder("Ej. CARLOS ANDRÉS")
+          .fill("PRUEBA SIN GUARDAR");
+        await page
+          .getByRole("button", { name: "Tour guiado", exact: true })
+          .click();
+        await page
+          .getByRole("button", { name: "Recorrer esta pantalla", exact: true })
+          .click();
+        await finishTour();
+        assert.equal(
+          await page.getByPlaceholder("Ej. CARLOS ANDRÉS").inputValue(),
+          "PRUEBA SIN GUARDAR",
+        );
+        assert.equal(
+          await page.evaluate(() => (window as any).__tourCameraCalls),
+          0,
+        );
+        assert.deepEqual(writes, []);
+        assert.deepEqual(errors, []);
+        await context.close();
+      }
+    } finally {
+      await browser.close();
+    }
+  },
+);
+
+test("three interface previews work on mobile and desktop without real records", async () => {
+  const browser = await chromium.launch({
+    executablePath:
+      process.env.PL_CHROMIUM_PATH ||
+      (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined),
+    args: ["--no-sandbox"],
+  });
+  try {
+    const page = await browser.newPage();
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto(
+      new URL("./designs.html", process.env.PL_BROWSER_URL!).href,
+    );
+    for (const width of [375, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      for (const layout of ["focused", "sidebar", "compact"]) {
+        await page.locator(`[data-layout-choice="${layout}"]`).click();
+        await page.locator("#demo-new").click();
+        assert.equal(
+          await page.locator(".workspace").getAttribute("data-layout"),
+          layout,
+        );
+        assert.equal(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth > innerWidth,
+          ),
+          false,
+        );
+        if (process.env.PL_CAPTURE_UI === "1")
+          await page.screenshot({
+            path: `/tmp/sqp-design-${layout}-${width}.png`,
+            fullPage: true,
+          });
+        await page.locator(".capture .primary").click();
+        assert.equal(
+          await page.locator(".workspace").getAttribute("data-stage"),
+          "2",
+        );
+        await page.locator("#continue-demo").click();
+        assert.equal(
+          await page.locator(".workspace").getAttribute("data-stage"),
+          "3",
+        );
+        await page.locator("#continue-demo").click();
+        assert.match(
+          await page.locator("#demo-status").innerText(),
+          /no se crea ningún archivo/,
+        );
+        await page.locator('[data-pane="clients"]').click();
+        await page.locator("#demo-search").fill("02");
+        assert.equal(await page.locator(".list-row").count(), 1);
+      }
+    }
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});

@@ -680,6 +680,7 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
                   </label>
                   <input
                     type="text"
+                    data-tour="review-fields"
                     value={formData.fullName || ""}
                     onChange={(e) => handleChange("fullName", e.target.value)}
                     className="w-full text-sm font-bold text-slate-900 bg-slate-50 p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 uppercase"
@@ -1024,7 +1025,10 @@ export const DataReviewStep: React.FC<DataReviewStepProps> = ({
 
           {/* Action Footer Buttons */}
           <div className="border-t border-slate-200 pt-6 space-y-4">
-            <label className="flex items-start gap-3 bg-white border rounded-xl p-4">
+            <label
+              data-tour="identity-confirmation"
+              className="flex items-start gap-3 bg-white border rounded-xl p-4"
+            >
               <input
                 type="checkbox"
                 checked={identityConfirmed}

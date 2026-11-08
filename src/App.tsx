@@ -268,7 +268,9 @@ function WorkspaceApp() {
 
             {/* Tab 7: Comprehensive User Manual */}
             {activeTab === "manual" && (
-              <UserManual onNavigateTab={(tab) => setActiveTab(tab)} />
+              <div data-tour="manual">
+                <UserManual onNavigateTab={(tab) => setActiveTab(tab)} />
+              </div>
             )}
           </Suspense>
         </ErrorBoundary>

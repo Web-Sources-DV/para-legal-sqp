@@ -253,7 +253,10 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
           <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
             Seleccionar Idóneo / Letrado Responsable:
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          <div
+            data-tour="template-lawyers"
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5"
+          >
             {IDONEOS.map((idoneo) => {
               const isSelected = idoneo.id === activeIdoneo.id;
               return (
@@ -337,7 +340,11 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
 
         {/* Upload Zone */}
         <div className="border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-2xl p-6 sm:p-8 bg-slate-50 hover:bg-brand-50/20 transition-all text-center">
-          <label htmlFor="docx-template-input" className="cursor-pointer block">
+          <label
+            data-tour="template-upload"
+            htmlFor="docx-template-input"
+            className="cursor-pointer block"
+          >
             <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center mx-auto mb-2.5 text-brand-600">
               <Upload className="w-6 h-6" />
             </div>
@@ -565,7 +572,10 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
       {/* Templates Cards Grid for Selected Idóneo */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="font-serif font-bold text-slate-900 text-base flex items-center gap-2">
+          <h4
+            data-tour="template-list"
+            className="font-serif font-bold text-slate-900 text-base flex items-center gap-2"
+          >
             <Scale className="w-4 h-4 text-brand-600" />
             Documentos Disponibles para:{" "}
             <span className="text-brand-800">{activeIdoneo.name}</span>
@@ -593,6 +603,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
             </div>
             <div>
               <label
+                data-tour="template-upload"
                 htmlFor="docx-template-input"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-slate-950 font-bold text-xs shadow-md shadow-brand-500/20 cursor-pointer transition-all active:scale-95"
               >
