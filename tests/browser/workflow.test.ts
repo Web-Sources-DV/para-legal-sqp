@@ -72,7 +72,7 @@ test("public browser access, edits across refresh, stable archive retry and actu
   const zip = new PizZip();
   zip.file(
     "word/document.xml",
-    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>{{nombre}}</w:t></w:r></w:p></w:body></w:document>',
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>{{nombre}}</w:t></w:r></w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri"/><w:b w:val="0"/><w:sz w:val="22"/></w:rPr><w:t>{{tipo_documento}}</w:t></w:r></w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="Arial"/><w:b/><w:sz w:val="28"/></w:rPr><w:t>{{TIPO_DOCUMENTO}}</w:t></w:r></w:p></w:body></w:document>',
   );
   const fileData = zip.generate({ type: "base64" });
   const token = `${Buffer.from("{}").toString("base64url")}.${Buffer.from(JSON.stringify({ sub: id, role: "authenticated", aal: "aal1", exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url")}.test`;
@@ -268,6 +268,15 @@ test("public browser access, edits across refresh, stable archive retry and actu
     const generated = new PizZip(await readFile(path!));
     assert.ok(
       generated.file("word/document.xml")!.asText().includes("CORRECTED NAME"),
+    );
+    const wordXml = generated.file("word/document.xml")!.asText();
+    assert.match(
+      wordXml,
+      /<w:rPr><w:rFonts w:ascii="Calibri"\/><w:b w:val="0"\/><w:sz w:val="22"\/><\/w:rPr><w:t[^>]*>pasaporte<\/w:t>/,
+    );
+    assert.match(
+      wordXml,
+      /<w:rPr><w:rFonts w:ascii="Arial"\/><w:b\/><w:sz w:val="28"\/><\/w:rPr><w:t[^>]*>PASAPORTE<\/w:t>/,
     );
     const repeated = page.waitForEvent("download");
     await page

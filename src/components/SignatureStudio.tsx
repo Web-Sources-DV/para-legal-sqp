@@ -1,4 +1,7 @@
-import { buildComprehensiveReplacementMap } from "../services/docxService";
+import {
+  buildComprehensiveReplacementMap,
+  formatReplacementForMarker,
+} from "../services/docxService";
 import { canonicalField } from "../services/fieldMapping";
 import React from "react";
 import type { Client, Idoneo, Template } from "../types";
@@ -328,14 +331,14 @@ export function SignatureStudio({
                           formValues,
                           activeClient,
                         );
-                        return (
+                        const value =
                           map[marker] ??
                           Object.entries(map).find(
                             ([key]) =>
                               canonicalField(key) === canonicalField(marker),
                           )?.[1] ??
-                          marker
-                        );
+                          marker;
+                        return formatReplacementForMarker(marker, value);
                       },
                     )
                   : "Vista de texto no disponible para esta plantilla anterior. El documento Word conserva el contenido y formato del archivo cargado."}

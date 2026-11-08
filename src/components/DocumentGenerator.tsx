@@ -678,7 +678,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 text-xs">
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
                 <span className="text-[10px] text-slate-500 block font-mono">
-                  (nombre) [MAYÚSCULAS/NEGRITA]
+                  (nombre) · formato de la plantilla
                 </span>
                 <strong className="text-slate-900 font-bold block truncate">
                   {activeClient.fullName.toUpperCase()}
@@ -698,7 +698,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
                 <span className="text-[10px] text-slate-500 block font-mono">
-                  (nacionalidad) [minúsculas]
+                  (nacionalidad) · formato de la plantilla
                 </span>
                 <span className="text-slate-700 font-normal block truncate">
                   {activeClient.nationality.toLowerCase()}
@@ -830,7 +830,8 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                 Valores auto-rellenados con los datos del pasaporte y del
                 letrado idóneo{" "}
                 <strong className="text-slate-800">{activeIdoneo.name}</strong>.
-                Revisa y completa los datos que falten.
+                Revisa y completa los datos que falten. El Word conserva la
+                fuente, tamaño y estilo de cada tag de tu plantilla.
               </p>
             </div>
 

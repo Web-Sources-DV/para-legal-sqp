@@ -75,7 +75,7 @@ test('Word replacements preserve drawings, hyperlinks, breaks and entities in sp
   assert.ok(output.includes('<w:hyperlink r:id="rId2">'));
   assert.ok(!output.includes('{{nom'));
   assert.ok(!output.includes('bre}}'));
-  assert.ok(output.includes('<w:b/>'));
+  assert.ok(!output.includes('<w:b/>'));
 });
 
 test('DOCX upload detects each marker once and rejects unmarked/invalid documents', async () => {
