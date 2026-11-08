@@ -142,7 +142,7 @@ function WorkspaceApp() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800 antialiased selection:bg-brand-500 selection:text-slate-950">
+    <div className="workspace-shell min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800 antialiased selection:bg-brand-500 selection:text-slate-950">
       {/* Top Professional Legal Header */}
       <Header
         activeTab={activeTab}
@@ -163,7 +163,10 @@ function WorkspaceApp() {
       />
 
       {syncState.error && (
-        <div role="alert" className="bg-red-50 text-red-800 p-4 text-center">
+        <div
+          role="alert"
+          className="workspace-alert bg-red-50 text-red-800 p-4 text-center"
+        >
           No se pudieron cargar los datos: {syncState.error}{" "}
           <button
             onClick={() => void forceCloudSyncNow()}
@@ -174,7 +177,7 @@ function WorkspaceApp() {
         </div>
       )}
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="workspace-main flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <ErrorBoundary key={activeTab}>
           <Suspense fallback={<p role="status">Cargando sección…</p>}>
             {/* Tab 1: Guided Wizard */}
@@ -277,7 +280,7 @@ function WorkspaceApp() {
       </main>
 
       {/* Modern Legal Footer */}
-      <footer className="bg-white border-t border-slate-200 py-6 mt-12">
+      <footer className="workspace-footer bg-white border-t border-slate-200 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-2">
             <span className="font-serif font-bold text-slate-900">
