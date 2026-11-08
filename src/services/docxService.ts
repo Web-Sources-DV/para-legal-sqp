@@ -526,50 +526,11 @@ export function isNationalityKey(key: string): boolean {
 }
 
 /**
- * Helper to produce bold run properties (<w:rPr>) in OpenXML
- */
-function makeBoldRPr(baseRPr: string): string {
-  if (!baseRPr) {
-    return '<w:rPr><w:b/><w:bCs/></w:rPr>';
-  }
-  // Remove any non-bold attributes/tags
-  const rPr = baseRPr
-    .replace(/<w:b\b[^>]*\/>/gi, '')
-    .replace(/<w:bCs\b[^>]*\/>/gi, '');
-  if (/<w:rPr\b[^>]*>/i.test(rPr)) {
-    return rPr.replace(/(<w:rPr\b[^>]*>)/i, '$1<w:b/><w:bCs/>');
-  }
-  return `<w:rPr><w:b/><w:bCs/>${rPr}</w:rPr>`;
-}
-
-/**
- * Helper to produce non-bold run properties (<w:rPr>) in OpenXML (used specifically for nationality)
- */
-function makeNotBoldRPr(baseRPr: string): string {
-  if (!baseRPr) {
-    return '<w:rPr><w:b w:val="0"/><w:bCs w:val="0"/></w:rPr>';
-  }
-  // Remove any bold attributes/tags
-  const rPr = baseRPr
-    .replace(/<w:b\b[^>]*\/>/gi, '')
-    .replace(/<w:bCs\b[^>]*\/>/gi, '');
-  if (/<w:rPr\b[^>]*>/i.test(rPr)) {
-    return rPr.replace(/(<w:rPr\b[^>]*>)/i, '$1<w:b w:val="0"/><w:bCs w:val="0"/>');
-  }
-  return `<w:rPr><w:b w:val="0"/><w:bCs w:val="0"/>${rPr}</w:rPr>`;
-}
-
-function makePlainRPr(baseRPr: string): string {
-  return baseRPr || '';
-}
-
-/**
  * Builds a multi-alias dictionary ensuring EVERY spelling, capitalization and delimiter variation
  * of the core 4 fields and standard fields is accurately resolved.
  * 
- * FORMATTING RULES:
- * - All replaced fields are converted to UPPERCASE (MAYÚSCULAS).
- * - Exception: (nacionalidad) is converted to lowercase (minúsculas).
+ * Values retain their entered spelling. Presentation is resolved per marker occurrence,
+ * never by mutating Word run properties or globally forcing uppercase/bold.
  */
 export function buildComprehensiveReplacementMap(
   data: Record<string, any>,
@@ -587,9 +548,8 @@ export function buildComprehensiveReplacementMap(
   }
   const add = (key: string, value: string) => {
     const bare = key.replace(/^[({\[\s]+|[)}\]\s]+$/g, '');
-    const formatted = canonicalField(key) === 'nationality' ? value.toLowerCase() : value.toUpperCase();
     for (const alias of new Set([bare, bare.toLowerCase(), bare.toUpperCase()])) {
-      for (const [a,b] of [['(',')'], ['{{','}}'], ['{','}'], ['[',']']]) map[a+alias+b] = formatted;
+      for (const [a,b] of [['(',')'], ['{{','}}'], ['{','}'], ['[',']']]) map[a+alias+b] = value;
     }
   };
   for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
@@ -599,110 +559,66 @@ export function buildComprehensiveReplacementMap(
   return map;
 }
 
-interface ParsedRun {
-  rPr: string;
-  text: string;
-  startIndex: number;
-  endIndex: number;
-}
-
-/**
- * Reconstructs original runs slicing text exactly across their run boundaries,
- * preserving any pre-existing bold, italic, font or size formatting in the source document.
- */
-function sliceOriginalRunsToXml(
-  runs: ParsedRun[],
-  sliceStart: number,
-  sliceEnd: number,
-  fallbackRPr: string
-): string {
-  if (sliceStart >= sliceEnd) return '';
-  let xml = '';
-
-  for (const r of runs) {
-    const overlapStart = Math.max(r.startIndex, sliceStart);
-    const overlapEnd = Math.min(r.endIndex, sliceEnd);
-
-    if (overlapStart < overlapEnd) {
-      const offsetStart = overlapStart - r.startIndex;
-      const offsetEnd = overlapEnd - r.startIndex;
-      const sub = r.text.slice(offsetStart, offsetEnd);
-      if (sub) {
-        const rPr = r.rPr || fallbackRPr || '';
-        xml += `<w:r>${rPr}<w:t xml:space="preserve">${xmlEscape(sub)}</w:t></w:r>`;
-      }
-    }
+/** Descriptive labels follow the marker's case; identifiers retain their exact value. */
+export function formatReplacementForMarker(marker: string, value: string): string {
+  const field = canonicalField(marker);
+  if (['passportNumber', 'personalNumber', 'phone', 'email', 'lawyerCedula', 'lawyerIdoneidad', 'lawyerColegiado'].includes(field)) return value;
+  const letters = marker.replace(/[^\p{L}]/gu, '');
+  if (!letters) return value;
+  if (letters === letters.toUpperCase()) return value.toUpperCase();
+  if (['docType', 'nationality', 'sexAgeCategory'].includes(field)) {
+    if (letters === letters.toLowerCase()) return value.toLowerCase();
+    return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
   }
-
-  return xml;
+  return value;
 }
 
-/**
- * Robust XML token replacement across OpenXML document paragraphs, headers and footers.
- * 
- * STRICT RULES:
- * 1. ONLY placeholders enclosed inside delimiters (parentheses, braces, brackets) are replaced.
- * 2. Words outside delimiters in the legal text are PROTECTED and NEVER replaced.
- * 3. All replaced tokens are formatted in UPPERCASE and BOLD (<w:b/><w:bCs/>).
- * 4. EXCEPTION: (nacionalidad) is formatted in lowercase (minúsculas) and NOT bold (sin negrita).
- * 5. ALL pre-existing bold text and font formatting in the source document are 100% PRESERVED.
- */
+/** Decode text for matching; the source XML surrounding each text node stays intact. */
 function xmlUnescape(text: string): string {
   return text.replace(/&#(x[0-9a-f]+|\d+);/gi, (_, code) => String.fromCodePoint(code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : Number(code)))
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
 }
 
-// Keep drawings, hyperlinks, bookmarks, tables, breaks and field codes intact.
-// Only text nodes that overlap a marker are changed, including split Word runs.
+// Replace only w:t contents. Fonts, sizes, bold, inheritance, paragraph properties,
+// drawings, hyperlinks, headers and footers are never reconstructed or restyled.
 export function replaceTokensInWordXml(xml: string, replacementMap: Record<string, string>): string {
   const values = new Map(Object.entries(replacementMap).map(([key, value]) => [canonicalField(key), value]));
   return xml.replace(/<w:p\b([^>]*)>((?:(?!<w:p\b)[\s\S])*?)<\/w:p>/gi, (paragraph, attrs, inner) => {
-    const nodes: { start: number; end: number; text: string; replacement?: string }[] = [];
+    const nodes: { start: number; end: number; text: string }[] = [];
     let combined = '';
     for (const match of inner.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/gi)) {
       const text = xmlUnescape(match[1]);
       nodes.push({ start: combined.length, end: combined.length + text.length, text });
       combined += text;
     }
-    const edits: {start: number; end: number; value: string; nationality: boolean}[] = [];
+    const edits: {start: number; end: number; anchor: number; value: string}[] = [];
     for (const match of combined.matchAll(/\{\{[^{}]+\}\}|(?<!\{)\{[^{}]+\}(?!\})|\([^()]+\)|\[[^\[\]]+\]/g)) {
       const field = canonicalField(match[0]);
       if (!values.has(field)) continue;
-      edits.push({ start: match.index!, end: match.index! + match[0].length, value: values.get(field)!, nationality: field === 'nationality' });
+      // If Word split the tag, use the run of its first letter, not an unstyled brace.
+      const letterOffset = match[0].search(/[\p{L}\p{N}]/u);
+      edits.push({ start: match.index!, end: match.index! + match[0].length,
+        anchor: match.index! + Math.max(0, letterOffset), value: formatReplacementForMarker(match[0], values.get(field)!) });
     }
     if (!edits.length) return paragraph;
-    const replacements: {text: string; inserted?: boolean; nationality?: boolean}[][] = [];
-    for (const node of nodes) {
+    let index = 0;
+    const updated = inner.replace(/<w:t\b([^>]*)>([\s\S]*?)<\/w:t>/gi, (original: string, textAttrs: string) => {
+      const node = nodes[index++];
       let cursor = node.start;
-      const fragments: {text: string; inserted?: boolean; nationality?: boolean}[] = [];
+      let result = '';
+      let changed = false;
       for (const edit of edits) {
         if (edit.end <= node.start || edit.start >= node.end) continue;
-        if (edit.start > cursor) fragments.push({ text: node.text.slice(cursor - node.start, edit.start - node.start) });
-        if (edit.start >= node.start) fragments.push({ text: edit.value, inserted: true, nationality: edit.nationality });
+        changed = true;
+        if (edit.start > cursor) result += node.text.slice(cursor - node.start, edit.start - node.start);
+        if (edit.anchor >= node.start && edit.anchor < node.end) result += edit.value;
         cursor = Math.min(node.end, edit.end);
       }
-      if (cursor < node.end) fragments.push({ text: node.text.slice(cursor - node.start) });
-      replacements.push(fragments);
-    }
-    let index = 0;
-    const updated = inner.replace(/<w:r\b([^>]*)>([\s\S]*?)<\/w:r>/gi, (run: string, runAttrs: string, runInner: string) => {
-      const originalProps = runInner.match(/<w:rPr\b[^>]*>[\s\S]*?<\/w:rPr>/i)?.[0] || '';
-      const content = runInner.replace(originalProps, '');
-      let result = '';
-      let position = 0;
-      const wrap = (body: string, props = originalProps) => body ? `<w:r${runAttrs}>${props}${body}</w:r>` : '';
-      for (const match of content.matchAll(/<w:t\b([^>]*)>[\s\S]*?<\/w:t>/gi)) {
-        result += wrap(content.slice(position, match.index));
-        const fragments = replacements[index++] || [];
-        for (const fragment of fragments) {
-          const props = fragment.inserted ? (fragment.nationality ? makeNotBoldRPr(originalProps) : makeBoldRPr(originalProps)) : originalProps;
-          const text = xmlEscape(fragment.text).replace(/\r?\n/g, '</w:t><w:br/><w:t xml:space="preserve">');
-          result += wrap(`<w:t xml:space="preserve">${text}</w:t>`, props);
-        }
-        position = match.index! + match[0].length;
-      }
-      result += wrap(content.slice(position));
-      return result || `<w:r${runAttrs}>${originalProps}<w:t/></w:r>`;
+      if (!changed) return original;
+      if (cursor < node.end) result += node.text.slice(cursor - node.start);
+      const attributes = /\bxml:space\s*=/.test(textAttrs) ? textAttrs.replace(/xml:space\s*=\s*["'][^"']*["']/, 'xml:space="preserve"') : textAttrs + ' xml:space="preserve"';
+      const text = xmlEscape(result).replace(/\r\n?|\n/g, '</w:t><w:br/><w:t xml:space="preserve">');
+      return `<w:t${attributes}>${text}</w:t>`;
     });
     return `<w:p${attrs}>${updated}</w:p>`;
   });

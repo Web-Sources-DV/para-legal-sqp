@@ -51,6 +51,20 @@ Consulta [las propuestas visuales y el funcionamiento del tour](docs/INTERFACE_A
 
 Las imágenes poco legibles, los diseños no reconocidos o las lecturas discrepantes requieren revisión humana. El OCR no garantiza precisión absoluta ni determina por sí solo la validez jurídica de un documento.
 
+## El formato de la plantilla se respeta
+
+Al generar un Word, se sustituye el contenido de cada tag y se conservan su fuente, tamaño, negrita, cursiva, subrayado, color y estilos heredados, además del formato de los párrafos. Dos apariciones de un mismo campo pueden tener formatos distintos en el cuerpo y en la firma.
+
+Para etiquetas descriptivas como el tipo de documento, nacionalidad y condición:
+
+- `{{tipo_documento}}` → `pasaporte`.
+- `{{TIPO_DOCUMENTO}}` → `PASAPORTE`.
+- `{{Tipo_documento}}` → `Pasaporte`.
+
+Los nombres conservan el valor revisado, salvo que el tag esté expresamente en mayúsculas. Los identificadores, teléfonos y correos conservan su escritura exacta. Si Word fragmenta un tag en varios tramos, se usa el formato del tramo que contiene su primera letra. No se aplica negrita automáticamente ni se cambia el archivo de estilos del Word.
+
+La generación normal conserva también la firma existente. El editor opcional de firmas solo debe activarse si quieres añadir o rediseñar ese bloque. Los Word ya archivados no se modifican: para obtener el formato actualizado hay que generar un documento nuevo desde la plantilla original.
+
 ## Uso de inteligencia artificial (IA / AI)
 
 La IA se utiliza en dos ámbitos diferentes:
