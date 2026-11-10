@@ -51,6 +51,10 @@ Consulta [las propuestas visuales y el funcionamiento del tour](docs/INTERFACE_A
 
 Las imágenes poco legibles, los diseños no reconocidos o las lecturas discrepantes requieren revisión humana. El OCR no garantiza precisión absoluta ni determina por sí solo la validez jurídica de un documento.
 
+## Fecha automática en certificaciones de trámite
+
+Escribe `Panamá, (FECHA).` en la plantilla Word para obtener, por ejemplo, `Panamá, 10 DE NOVIEMBRE 2026.`. El sistema calcula `(FECHA)` al generar el documento usando la zona horaria de Panamá, incluso si el formulario se abrió el día anterior. El campo es automático y conserva la fuente, tamaño y estilo de la plantilla. Las fechas de nacimiento, emisión y vencimiento se mantienen como datos del documento de identidad.
+
 ## El formato de la plantilla se respeta
 
 Al generar un Word, se sustituye el contenido de cada tag y se conservan su fuente, tamaño, negrita, cursiva, subrayado, color y estilos heredados, además del formato de los párrafos. Dos apariciones de un mismo campo pueden tener formatos distintos en el cuerpo y en la firma.

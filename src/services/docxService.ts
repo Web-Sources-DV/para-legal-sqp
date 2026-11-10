@@ -2,7 +2,7 @@ import { entityFile, blobBase64 } from './fileStorage';
 import { parseCalendarDate } from './validation';
 import PizZip from 'pizzip';
 import saveAs from 'file-saver';
-import { FIELD_ALIASES, isDocumentInput, withDocumentInputs, canonicalField, fieldDefault, documentTypeLabel } from './fieldMapping';
+import { FIELD_ALIASES, isGenerationDate, formatGenerationDate, isDocumentInput, withDocumentInputs, canonicalField, fieldDefault, documentTypeLabel } from './fieldMapping';
 import { Template, PlaceholderDef, Client, SignatureLayoutOptions } from '../types';
 
 /**
@@ -390,7 +390,7 @@ export function inferPlaceholderDef(rawKey: string): PlaceholderDef {
   else if (cleanKey.includes('fecha') || cleanKey.includes('date')) {
     label = label || 'Fecha';
     category = 'fechas';
-    if (field === 'date') defaultValue = new Date().toLocaleDateString('es-PA', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Panama' });
+    if (field === 'date') defaultValue = fieldDefault(rawKey);
     else type = 'date';
   }
   // 11. Ciudad
@@ -557,6 +557,8 @@ export function buildComprehensiveReplacementMap(
     aliases.forEach(alias => add(alias, values[field] || ''));
   }
   Object.entries(data).filter(([key]) => isDocumentInput(key) && !key.startsWith('_')).forEach(([key]) => add(key, values[canonicalField(key)] || ''));
+  // FECHA always reflects this generation, never a saved or manually edited date.
+  add('fecha', formatGenerationDate());
   return map;
 }
 
@@ -599,7 +601,7 @@ export function replaceTokensInWordXml(xml: string, replacementMap: Record<strin
       // If Word split the tag, use the run of its first letter, not an unstyled brace.
       const letterOffset = match[0].search(/[\p{L}\p{N}]/u);
       edits.push({ start: match.index!, end: match.index! + match[0].length,
-        anchor: match.index! + Math.max(0, letterOffset), value: formatReplacementForMarker(match[0], values.get(field)!) });
+        anchor: match.index! + Math.max(0, letterOffset), value: formatReplacementForMarker(match[0], isGenerationDate(match[0]) ? formatGenerationDate() : values.get(field)!) });
     }
     if (!edits.length) return paragraph;
     let index = 0;
@@ -687,7 +689,7 @@ export async function generateAndDownloadDocx(
   if (!template.fileData) template = { ...template, fileData: await blobBase64(await entityFile('templates', template.sourceTemplateId || template.id)) };
   if (template.approved === false) throw new Error('La plantilla necesita aprobación antes de generar.');
 
-  const missing = template.placeholders.filter(key => !String(data[key] ?? '').trim());
+  const missing = template.placeholders.filter(key => !isGenerationDate(key) && !String(data[key] ?? '').trim());
   if (missing.length) throw new Error(`Completa los campos: ${missing.join(', ')}`);
   const binaryString = atob(template.fileData!);
   const bytes = new Uint8Array(binaryString.length);

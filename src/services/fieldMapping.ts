@@ -20,6 +20,18 @@ export function withDocumentInputs(template: Template): Template {
   return { ...template, placeholders, placeholderDefs };
 }
 
+export function isGenerationDate(key: string): boolean {
+  return normalizeField(key) === 'fecha';
+}
+
+export function formatGenerationDate(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat('es-PA', {
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Panama',
+  }).formatToParts(now);
+  const part = (type: string) => parts.find(item => item.type === type)!.value;
+  return `${part('day')} de ${part('month')} ${part('year')}`;
+}
+
 export const FIELD_ALIASES: Record<string, string[]> = {
   fullName: ['nombre', 'nombre_completo', 'fullname', 'cliente', 'nombre_cliente'],
   firstName: ['nombres', 'firstname', 'first_name'],
@@ -56,6 +68,7 @@ export function documentTypeLabel(type?: string): string {
 
 export function fieldDefault(key: string, client?: Client | null, lawyer?: Idoneo, category = ''): string {
   const field = canonicalField(key);
+  if (isGenerationDate(key)) return formatGenerationDate();
   if (field === 'docType') return documentTypeLabel(client?.docType);
   if (field === 'sexAgeCategory') return category;
   if (field === 'lawyerName') return lawyer?.formalTitle || '';

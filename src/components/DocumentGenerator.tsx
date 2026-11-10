@@ -1,3 +1,4 @@
+import { isGenerationDate, formatGenerationDate } from "../services/fieldMapping";
 import { SignatureStudio } from "./SignatureStudio";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import saveAs from "file-saver";
@@ -309,7 +310,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
     const missing = pendingDocument.current
       ? []
       : (activeTemplate?.placeholders || []).filter(
-          (key) => !formValues[key]?.trim(),
+          (key) => !isGenerationDate(key) && !formValues[key]?.trim(),
         );
     if (missing.length) {
       setErrorMessage(`Completa los campos: ${missing.join(", ")}`);
@@ -348,9 +349,13 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         lawyerSignatureIdoneidad: customSigLawyerIdoneidad,
       };
 
+      const generationValues = { ...formValues };
+      for (const key of activeTemplate.placeholders) {
+        if (isGenerationDate(key)) generationValues[key] = formatGenerationDate();
+      }
       const result = await generateAndDownloadDocx(
         activeTemplate,
-        formValues,
+        generationValues,
         customFileName,
         activeClient,
         signatureOptions,
@@ -369,7 +374,7 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
         passportNumber: activeClient ? activeClient.passportNumber : "",
         generatedAt: new Date().toISOString(),
         fileSizeFormatted: result.sizeFormatted,
-        dataSnapshot: { ...formValues, _idoneo: activeIdoneo.name },
+        dataSnapshot: { ...generationValues, _idoneo: activeIdoneo.name },
         signatureOptions,
         fileBase64: await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -911,6 +916,8 @@ export const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({
                     </select>
                   ) : (
                     <input
+                      readOnly={isGenerationDate(placeholderKey)}
+                      title={isGenerationDate(placeholderKey) ? "Fecha automática del día de generación en Panamá" : undefined}
                       type={def?.type === "date" ? "date" : "text"}
                       disabled={isGenerating || !!pendingDocument.current}
                       aria-label={def?.label || placeholderKey}
