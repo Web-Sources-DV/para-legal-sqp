@@ -1,8 +1,35 @@
-import type { Client, Idoneo } from '../types';
+import type { Client, Idoneo, Template } from '../types';
 
 export function normalizeField(key: string): string {
   return key.replace(/^[({\[\s]+|[)}\]\s]+$/g, '').normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s_-]+/g, '_');
+}
+
+// These are fixed template text, not fields to complete after scanning.
+export function isDocumentInput(key: string): boolean {
+  const normalized = normalizeField(key);
+  return !['acompanado_de_cedula', 'acompanado_de_copia_de_cedula_o_pasaporte_del_arrendatario',
+    'recibo_de_servicio', 'recibo_de_servicios', 'luz,_agua,_cable_e_internet',
+    '$100', '$_100', 'b/.100.00'].includes(normalized);
+}
+
+export function withDocumentInputs(template: Template): Template {
+  const placeholders = template.placeholders.filter(isDocumentInput);
+  const placeholderDefs = template.placeholderDefs?.filter(def => isDocumentInput(def.key));
+  if (placeholders.length === template.placeholders.length && placeholderDefs?.length === template.placeholderDefs?.length) return template;
+  return { ...template, placeholders, placeholderDefs };
+}
+
+export function isGenerationDate(key: string): boolean {
+  return normalizeField(key) === 'fecha';
+}
+
+export function formatGenerationDate(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat('es-PA', {
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Panama',
+  }).formatToParts(now);
+  const part = (type: string) => parts.find(item => item.type === type)!.value;
+  return `${part('day')} de ${part('month')} ${part('year')}`;
 }
 
 export const FIELD_ALIASES: Record<string, string[]> = {
@@ -41,6 +68,7 @@ export function documentTypeLabel(type?: string): string {
 
 export function fieldDefault(key: string, client?: Client | null, lawyer?: Idoneo, category = ''): string {
   const field = canonicalField(key);
+  if (isGenerationDate(key)) return formatGenerationDate();
   if (field === 'docType') return documentTypeLabel(client?.docType);
   if (field === 'sexAgeCategory') return category;
   if (field === 'lawyerName') return lawyer?.formalTitle || '';

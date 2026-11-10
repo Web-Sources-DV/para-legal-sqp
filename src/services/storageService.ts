@@ -1,3 +1,4 @@
+import { withDocumentInputs } from "./fieldMapping";
 import { normalizeSearchText as normalizeSearch } from "./search";
 import { updateLawyers } from "../data/idoneos";
 import type { Idoneo } from "../types";
@@ -97,7 +98,7 @@ export function getClients() {
   return clients;
 }
 export function getTemplates() {
-  return templates;
+  return templates.map(withDocumentInputs);
 }
 export function getGeneratedDocuments() {
   return documents;

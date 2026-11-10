@@ -150,7 +150,11 @@ test("public browser access, edits across refresh, stable archive retry and actu
                 ? [
                     {
                       id: template.id,
-                      payload: template,
+                      payload: {
+                        ...template,
+                        placeholders: [...template.placeholders, '(acompañado de copia de cédula o pasaporte del arrendatario)', '(Luz, agua, Cable e Internet)', '(B/.100.00)'],
+                        placeholderDefs: [...template.placeholderDefs, ...['(acompañado de copia de cédula o pasaporte del arrendatario)', '(Luz, agua, Cable e Internet)', '(B/.100.00)'].map(key => ({ key, label: key, type: 'text' }))],
+                      },
                       revision: 1,
                       archived: false,
                       approved: true,
@@ -225,6 +229,8 @@ test("public browser access, edits across refresh, stable archive retry and actu
       assert.equal(await page.locator(selector).count(), 0);
     await (await openTool(page, "generator")).click();
     await page.getByLabel("Nombre", { exact: true }).fill("CORRECTED NAME");
+    for (const label of ['(acompañado de copia de cédula o pasaporte del arrendatario)', '(Luz, agua, Cable e Internet)', '(B/.100.00)'])
+      assert.equal(await page.getByLabel(label, { exact: true }).count(), 0);
     modified = true;
     await page.evaluate(() => window.dispatchEvent(new Event("focus")));
     await page.waitForTimeout(400);

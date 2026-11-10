@@ -1,7 +1,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import PizZip from 'pizzip';
-import { canonicalField, fieldDefault } from '../src/services/fieldMapping';
+import { canonicalField, fieldDefault, withDocumentInputs } from '../src/services/fieldMapping';
 import { buildComprehensiveReplacementMap, parseDocxFile, replaceTokensInWordXml, formatAndAlignSignatureBlockInWordXml, generateAndDownloadDocx } from '../src/services/docxService';
 import { buildStructuredDocumentJson, parseVisualDocumentText, parseMRZ } from '../src/services/ocrService';
 import { saveClient, saveTemplate, saveDocumentLog, deleteDocumentLog, getClients, getTemplates, getGeneratedDocuments, importDatabaseJson, exportFullDatabaseJson } from '../src/services/localStorageService';
@@ -143,4 +143,22 @@ test('invalid backups leave current data intact; quota failure rolls back all af
 test('renaming an arbitrary ZIP to docx does not create a usable Word template',async()=>{
  const zip=new PizZip();zip.file('readme.txt','Synthetic invalid document');
  await assert.rejects(parseDocxFile(zip.generate({type:'arraybuffer'}),'renamed.docx'),/documento principal/);
+});
+
+
+test('fixed template phrases are excluded from new and saved fields without changing Word text', async () => {
+  const fixed = ['(acompañado de cédula)', '[Recibo de servicio]', '($100)', '{{ACOMPAÑADO_DE_CEDULA}}', '{recibo_de_servicios}', '($ 100)', '(acompañado de copia de cédula o pasaporte del arrendatario)', '(Luz, agua, Cable e Internet)', '(B/.100.00)'];
+  const xml = `<w:document><w:body><w:p><w:r><w:t xml:space="preserve">{{nombre}} {{referencia_interna}} ${fixed.join(' ')}</w:t></w:r></w:p></w:body></w:document>`;
+  const zip = new PizZip();
+  zip.file('word/document.xml', xml);
+  const parsed = await parseDocxFile(zip.generate({ type: 'arraybuffer' }), 'fixed-text.docx');
+  assert.deepEqual(parsed.placeholders, ['{{nombre}}', '{{referencia_interna}}']);
+  const saved = { ...template, fileData: parsed.fileBase64, placeholders: [...parsed.placeholders, ...fixed], placeholderDefs: fixed.map(key => ({ key, label: key, type: 'text' as const, category: 'personalizado' as const })) };
+  const cleaned = withDocumentInputs(saved);
+  assert.deepEqual(cleaned.placeholders, parsed.placeholders);
+  assert.deepEqual(cleaned.placeholderDefs, []);
+  assert.equal(saved.placeholders.length, parsed.placeholders.length + fixed.length);
+  const generated = await generateAndDownloadDocx(saved, { '{{nombre}}': 'CLIENTE PRUEBA', '{{referencia_interna}}': 'TEST-REF', ...Object.fromEntries(fixed.map(key => [key, 'NO REEMPLAZAR'])) }, undefined, client, undefined, false);
+  const result = new PizZip(await generated.blob.arrayBuffer()).file('word/document.xml')!.asText();
+  assert.equal(result, xml.replace('{{nombre}}', 'CLIENTE PRUEBA').replace('{{referencia_interna}}', 'TEST-REF'));
 });
